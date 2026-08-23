@@ -13,6 +13,14 @@ export function formatDistanceKm(meters?: number | null, unit: UnitSystem = "MET
   return `${(meters / 1000).toFixed(2)} กม.`;
 }
 
+// Split value/unit, for hero-sized stat displays that render the number and
+// unit at different font sizes (e.g. the share card).
+export function formatDistanceParts(meters: number | null, unit: UnitSystem = "METRIC"): { value: string; unitLabel: string } {
+  if (!meters) return { value: "0.00", unitLabel: unit === "IMPERIAL" ? "ไมล์" : "กม." };
+  const value = unit === "IMPERIAL" ? meters / METERS_PER_MILE : meters / 1000;
+  return { value: value.toFixed(2), unitLabel: unit === "IMPERIAL" ? "ไมล์" : "กม." };
+}
+
 export function formatSpeedKmh(metersPerSec?: number | null, unit: UnitSystem = "METRIC"): string {
   if (!metersPerSec) return "-";
   if (unit === "IMPERIAL") return `${(metersPerSec * 2.236936).toFixed(1)} ไมล์/ชม.`;

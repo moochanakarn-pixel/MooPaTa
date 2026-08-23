@@ -61,15 +61,33 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <Link
-        href="/dashboard"
-        className="mb-6 inline-flex items-center gap-1.5 text-sm text-neutral-500 transition hover:text-neutral-300"
-      >
-        <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-          <path d="M13 4 7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        กลับไปหน้ารวม
-      </Link>
+      <div className="mb-6 flex items-center justify-between">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 text-sm text-neutral-500 transition hover:text-neutral-300"
+        >
+          <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+            <path d="M13 4 7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          กลับไปหน้ารวม
+        </Link>
+        <a
+          href={`/api/share/${activity.id}`}
+          download
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#fc4c02] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#e04402]"
+        >
+          <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+            <path
+              d="M10 3v10m0 0 3.5-3.5M10 13l-3.5-3.5M4 15v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          แชร์
+        </a>
+      </div>
 
       <div className="mb-6 flex items-center gap-4">
         <div className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-[#fc4c02]/10 text-[#fc4c02]">
