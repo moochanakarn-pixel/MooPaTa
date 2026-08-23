@@ -51,7 +51,16 @@ export async function GET(req: NextRequest) {
   const distance = formatDistanceParts(agg._sum.distanceMeters ?? 0, unit);
   const dateRangeLabel = `${periodStart.toLocaleDateString("th-TH", { day: "numeric", month: "short" })} – ${now.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}`;
 
-  const fonts = await loadShareFonts();
+  let fonts;
+  try {
+    fonts = await loadShareFonts();
+  } catch (err) {
+    console.error("Share card: font load failed", err);
+    return new Response(
+      `Share card unavailable: could not load fonts (${err instanceof Error ? err.message : String(err)})`,
+      { status: 500 }
+    );
+  }
 
   return new ImageResponse(
     (

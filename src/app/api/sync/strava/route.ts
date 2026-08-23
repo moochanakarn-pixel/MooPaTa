@@ -31,6 +31,21 @@ export async function POST() {
         { status: 429 }
       );
     }
-    throw err;
+
+    // Anything else (expired/revoked token, Strava outage, network failure)
+    // used to rethrow, which Next turns into an empty-bodied 500 — the UI
+    // then had nothing to show but a generic "sync failed". Return the real
+    // reason instead so the user can act on it.
+    console.error("Strava sync failed", err);
+    const message = err instanceof Error ? err.message : String(err);
+    const isAuthFailure = /401|refresh failed|invalid/i.test(message);
+
+    return NextResponse.json(
+      {
+        error: isAuthFailure ? "strava_auth_expired" : "sync_failed",
+        detail: message,
+      },
+      { status: isAuthFailure ? 401 : 500 }
+    );
   }
 }

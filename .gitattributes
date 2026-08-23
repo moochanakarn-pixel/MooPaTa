@@ -1,0 +1,16 @@
+# Normalize text files, but never touch binaries. Without this, a Windows
+# checkout with core.autocrlf=true can rewrite line endings inside binary
+# assets and corrupt them — a corrupted .ttf makes the share-card image
+# generation fail at runtime.
+* text=auto
+
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.pdf binary

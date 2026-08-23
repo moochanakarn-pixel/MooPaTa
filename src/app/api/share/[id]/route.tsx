@@ -26,10 +26,18 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   const unit = user?.unitSystem ?? "METRIC";
   const isRun = activity.type === "Run";
-  const polyline = extractStravaPolyline(activity.raw);
-  const routeGeo = polyline ? buildRoutePath(polyline, 300, 20) : null;
-  const routeImg = routeGeo ? routeGeometryToSvgDataUri(routeGeo, "#ffffff") : null;
   const distance = formatDistanceParts(activity.distanceMeters, unit);
+
+  // A malformed/unsupported polyline shouldn't cost the user the whole
+  // card — fall back to a routeless layout instead of a 500.
+  let routeImg: string | null = null;
+  try {
+    const polyline = extractStravaPolyline(activity.raw);
+    const routeGeo = polyline ? buildRoutePath(polyline, 300, 20) : null;
+    routeImg = routeGeo ? routeGeometryToSvgDataUri(routeGeo, "#ffffff") : null;
+  } catch (err) {
+    console.error("Share card: could not draw route", err);
+  }
 
   const dateLabel = activity.startedAt.toLocaleDateString("th-TH", {
     day: "numeric",
@@ -37,7 +45,18 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     year: "numeric",
   });
 
-  const fonts = await loadShareFonts();
+  let fonts;
+  try {
+    fonts = await loadShareFonts();
+  } catch (err) {
+    // Most likely the bundled .ttf files are missing or corrupted (e.g. a
+    // checkout that mangled them). Say so plainly rather than 500-ing.
+    console.error("Share card: font load failed", err);
+    return new Response(
+      `Share card unavailable: could not load fonts (${err instanceof Error ? err.message : String(err)})`,
+      { status: 500 }
+    );
+  }
 
   return new ImageResponse(
     (

@@ -10,14 +10,35 @@ export function SyncButton() {
 
   async function handleSync() {
     setError(null);
-    const res = await fetch("/api/sync/strava", { method: "POST" });
+    let res: Response;
+    try {
+      res = await fetch("/api/sync/strava", { method: "POST" });
+    } catch {
+      setError("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบว่าแอพยังรันอยู่");
+      return;
+    }
+
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      if (body.error === "strava_rate_limited") {
-        const wait = body.retryAfterSec ? ` (ลองใหม่ได้ในอีก ${Math.ceil(body.retryAfterSec / 60)} นาที)` : "";
-        setError(`Strava จำกัดจำนวนคำขอชั่วคราว ลองใหม่อีกครั้ง${wait}`);
-      } else {
-        setError(body.error ?? "sync_failed");
+      switch (body.error) {
+        case "strava_rate_limited": {
+          const wait = body.retryAfterSec ? ` (ลองใหม่ได้ในอีก ${Math.ceil(body.retryAfterSec / 60)} นาที)` : "";
+          setError(`Strava จำกัดจำนวนคำขอชั่วคราว ลองใหม่อีกครั้ง${wait}`);
+          break;
+        }
+        case "strava_auth_expired":
+          setError("การเชื่อมต่อ Strava หมดอายุ กรุณาเชื่อมต่อใหม่ที่หน้าตั้งค่า");
+          break;
+        case "strava_not_connected":
+          setError("ยังไม่ได้เชื่อมต่อ Strava");
+          break;
+        case "not_authenticated":
+          setError("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่");
+          break;
+        default:
+          // Surface the server's actual message — a silent "sync_failed"
+          // gives the user nothing to act on or report.
+          setError(body.detail ? `ซิงค์ไม่สำเร็จ: ${body.detail}` : `ซิงค์ไม่สำเร็จ (HTTP ${res.status})`);
       }
       return;
     }
@@ -46,7 +67,7 @@ export function SyncButton() {
         </svg>
         {isPending ? "กำลังซิงค์..." : "ซิงค์ข้อมูลจาก Strava"}
       </button>
-      {error && <span className="text-xs text-red-400">ซิงค์ไม่สำเร็จ: {error}</span>}
+      {error && <span className="max-w-xs text-right text-xs text-red-400">{error}</span>}
     </div>
   );
 }
