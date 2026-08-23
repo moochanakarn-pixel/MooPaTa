@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { Logo } from "@/components/logo";
 import { getSessionUserId } from "@/lib/session";
 
 export default async function HomePage({
@@ -15,7 +14,8 @@ export default async function HomePage({
       <div className="pointer-events-none absolute inset-x-0 top-[-10%] h-[500px] bg-glow-orange" />
 
       <div className="relative z-10 flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 py-24 text-center">
-        <Logo aria-hidden className="h-20 w-20 shadow-lg shadow-black/40" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="MooPaTa" className="h-20 w-20 rounded-2xl shadow-lg shadow-black/40" />
 
         <div className="space-y-3">
           <h1 className="text-4xl font-extrabold tracking-tight">MooPaTa</h1>
