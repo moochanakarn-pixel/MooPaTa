@@ -29,7 +29,7 @@ export function ActivityFilters({ types }: { types: string[] }) {
   return (
     <div className="mb-4 flex flex-wrap gap-2">
       <select
-        defaultValue={searchParams.get("type") ?? "ALL"}
+        value={searchParams.get("type") ?? "ALL"}
         onChange={(e) => updateParam("type", e.target.value, "ALL")}
         className={selectClass}
       >
@@ -41,7 +41,7 @@ export function ActivityFilters({ types }: { types: string[] }) {
         ))}
       </select>
       <select
-        defaultValue={searchParams.get("range") ?? "all"}
+        value={searchParams.get("range") ?? "all"}
         onChange={(e) => updateParam("range", e.target.value, "all")}
         className={selectClass}
       >

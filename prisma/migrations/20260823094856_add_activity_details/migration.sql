@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `activity` ADD COLUMN `achievementCount` INTEGER NULL,
+ALTER TABLE `Activity` ADD COLUMN `achievementCount` INTEGER NULL,
     ADD COLUMN `avgCadence` DOUBLE NULL,
     ADD COLUMN `avgSpeedMs` DOUBLE NULL,
     ADD COLUMN `avgWatts` DOUBLE NULL,

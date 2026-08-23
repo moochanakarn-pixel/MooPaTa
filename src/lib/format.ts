@@ -8,7 +8,7 @@ export type UnitSystem = "METRIC" | "IMPERIAL";
 const METERS_PER_MILE = 1609.344;
 
 export function formatDistanceKm(meters?: number | null, unit: UnitSystem = "METRIC"): string {
-  if (!meters) return "-";
+  if (meters === null || meters === undefined) return "-";
   if (unit === "IMPERIAL") return `${(meters / METERS_PER_MILE).toFixed(2)} ไมล์`;
   return `${(meters / 1000).toFixed(2)} กม.`;
 }
@@ -16,20 +16,19 @@ export function formatDistanceKm(meters?: number | null, unit: UnitSystem = "MET
 // Split value/unit, for hero-sized stat displays that render the number and
 // unit at different font sizes (e.g. the share card).
 export function formatDistanceParts(meters: number | null, unit: UnitSystem = "METRIC"): { value: string; unitLabel: string } {
-  if (!meters) return { value: "0.00", unitLabel: unit === "IMPERIAL" ? "ไมล์" : "กม." };
-  const value = unit === "IMPERIAL" ? meters / METERS_PER_MILE : meters / 1000;
+  const value = unit === "IMPERIAL" ? (meters ?? 0) / METERS_PER_MILE : (meters ?? 0) / 1000;
   return { value: value.toFixed(2), unitLabel: unit === "IMPERIAL" ? "ไมล์" : "กม." };
 }
 
 export function formatSpeedKmh(metersPerSec?: number | null, unit: UnitSystem = "METRIC"): string {
-  if (!metersPerSec) return "-";
+  if (metersPerSec === null || metersPerSec === undefined) return "-";
   if (unit === "IMPERIAL") return `${(metersPerSec * 2.236936).toFixed(1)} ไมล์/ชม.`;
   return `${(metersPerSec * 3.6).toFixed(1)} กม./ชม.`;
 }
 
 // Running pace, expressed as minutes:seconds per km (or mile for imperial users).
 export function formatPace(metersPerSec?: number | null, unit: UnitSystem = "METRIC"): string {
-  if (!metersPerSec) return "-";
+  if (!metersPerSec) return "-"; // pace is undefined (division by zero) at 0 speed, not just missing
   const perUnitMeters = unit === "IMPERIAL" ? METERS_PER_MILE : 1000;
   const secPerUnit = perUnitMeters / metersPerSec;
   const m = Math.floor(secPerUnit / 60);

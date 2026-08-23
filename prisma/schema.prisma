@@ -42,6 +42,7 @@ model ProviderConnection {
   refreshTokenEnc    String   @db.Text
   expiresAt          DateTime
   scope              String?
+  lastReconciledAt   DateTime? // last time we scanned full history for deletions (throttled, see sync-strava.ts)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

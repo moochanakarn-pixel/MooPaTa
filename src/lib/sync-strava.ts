@@ -58,15 +58,32 @@ export async function syncStravaConnection(
     });
   }
 
-  const currentStravaIds = await fetchAllStravaActivityIds(accessToken);
-  const stored = await db.activity.findMany({
-    where: { userId, provider: "STRAVA" },
-    select: { id: true, providerActId: true },
-  });
-  const staleIds = stored.filter((s) => !currentStravaIds.has(s.providerActId)).map((s) => s.id);
-  if (staleIds.length > 0) {
-    await db.activity.deleteMany({ where: { id: { in: staleIds } } });
+  // Reconciling deletions means paging through the athlete's *entire*
+  // history — one of the pricier calls against Strava's rate limit. Worth
+  // it occasionally, not on every sync (the cron job alone calls this every
+  // 30 minutes per DEPLOY.md), so only run it once per RECONCILE_INTERVAL.
+  let deleted = 0;
+  const dueForReconcile =
+    !connection.lastReconciledAt || Date.now() - connection.lastReconciledAt.getTime() > RECONCILE_INTERVAL_MS;
+
+  if (dueForReconcile) {
+    const currentStravaIds = await fetchAllStravaActivityIds(accessToken);
+    const stored = await db.activity.findMany({
+      where: { userId, provider: "STRAVA" },
+      select: { id: true, providerActId: true },
+    });
+    const staleIds = stored.filter((s) => !currentStravaIds.has(s.providerActId)).map((s) => s.id);
+    if (staleIds.length > 0) {
+      await db.activity.deleteMany({ where: { id: { in: staleIds } } });
+    }
+    deleted = staleIds.length;
+    await db.providerConnection.update({
+      where: { id: connection.id },
+      data: { lastReconciledAt: new Date() },
+    });
   }
 
-  return { synced: activities.length, deleted: staleIds.length };
+  return { synced: activities.length, deleted };
 }
+
+const RECONCILE_INTERVAL_MS = 24 * 60 * 60 * 1000;
