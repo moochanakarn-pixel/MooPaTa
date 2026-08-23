@@ -11,10 +11,11 @@ datasource db {
 // they connect first (currently Strava); more providers can link to the
 // same user later.
 model User {
-  id        String   @id @default(cuid())
-  name      String?
-  avatarUrl String?  @db.VarChar(512)
-  createdAt DateTime @default(now())
+  id           String       @id @default(cuid())
+  name         String?
+  avatarUrl    String?      @db.VarChar(512)
+  unitSystem   UnitSystem   @default(METRIC)
+  createdAt    DateTime     @default(now())
 
   connections     ProviderConnection[]
   activities      Activity[]
@@ -23,6 +24,11 @@ model User {
 enum Provider {
   STRAVA
   HUAWEI_HEALTH
+}
+
+enum UnitSystem {
+  METRIC // km
+  IMPERIAL // miles
 }
 
 // One OAuth link between a User and an external fitness provider.

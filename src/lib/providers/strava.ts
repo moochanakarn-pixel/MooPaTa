@@ -2,7 +2,29 @@ import type { NormalizedActivity, OAuthTokenSet } from "./types";
 
 const STRAVA_AUTHORIZE_URL = "https://www.strava.com/oauth/authorize";
 const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
+const STRAVA_DEAUTHORIZE_URL = "https://www.strava.com/oauth/deauthorize";
 const STRAVA_API_BASE = "https://www.strava.com/api/v3";
+
+// Thrown when Strava responds 429 (200 req/15min or 2,000/day exceeded), so
+// callers can show a friendly "try again later" message instead of a raw
+// fetch error.
+export class StravaRateLimitError extends Error {
+  retryAfterSec?: number;
+  constructor(retryAfterSec?: number) {
+    super("Strava API rate limit exceeded");
+    this.name = "StravaRateLimitError";
+    this.retryAfterSec = retryAfterSec;
+  }
+}
+
+async function stravaFetch(url: string, init: RequestInit): Promise<Response> {
+  const res = await fetch(url, init);
+  if (res.status === 429) {
+    const retryAfter = res.headers.get("Retry-After");
+    throw new StravaRateLimitError(retryAfter ? Number(retryAfter) : undefined);
+  }
+  return res;
+}
 
 function config() {
   const clientId = process.env.STRAVA_CLIENT_ID;
@@ -41,7 +63,7 @@ export async function exchangeStravaCode(code: string): Promise<{
   athlete: { id: number; name?: string; avatarUrl?: string };
 }> {
   const { clientId, clientSecret } = config();
-  const res = await fetch(STRAVA_TOKEN_URL, {
+  const res = await stravaFetch(STRAVA_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -73,7 +95,7 @@ export async function exchangeStravaCode(code: string): Promise<{
 // Refresh an expired/expiring access token using the stored refresh token.
 export async function refreshStravaToken(refreshToken: string): Promise<OAuthTokenSet> {
   const { clientId, clientSecret } = config();
-  const res = await fetch(STRAVA_TOKEN_URL, {
+  const res = await stravaFetch(STRAVA_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -133,7 +155,7 @@ export async function fetchStravaActivities(
   const params = new URLSearchParams({ per_page: "50" });
   if (afterUnix) params.set("after", String(afterUnix));
 
-  const res = await fetch(`${STRAVA_API_BASE}/athlete/activities?${params.toString()}`, {
+  const res = await stravaFetch(`${STRAVA_API_BASE}/athlete/activities?${params.toString()}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!res.ok) {
@@ -181,7 +203,7 @@ export async function fetchAllStravaActivityIds(accessToken: string): Promise<Se
 
   for (let page = 1; page <= maxPages; page++) {
     const params = new URLSearchParams({ per_page: "200", page: String(page) });
-    const res = await fetch(`${STRAVA_API_BASE}/athlete/activities?${params.toString()}`, {
+    const res = await stravaFetch(`${STRAVA_API_BASE}/athlete/activities?${params.toString()}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) {
@@ -193,4 +215,13 @@ export async function fetchAllStravaActivityIds(accessToken: string): Promise<Se
   }
 
   return ids;
+}
+
+// Revokes MooPaTa's access on Strava's side too, so the app disappears from
+// the athlete's "My Apps" list instead of just being forgotten locally.
+export async function deauthorizeStrava(accessToken: string): Promise<void> {
+  await stravaFetch(STRAVA_DEAUTHORIZE_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
 }

@@ -5,12 +5,50 @@ import { getSessionUserId } from "@/lib/session";
 import { activityTypeLabel, formatActivityDate, formatDistanceKm, formatDuration } from "@/lib/format";
 import { ActivityIcon } from "./activity-icon";
 import { SyncButton } from "./sync-button";
+import { TrendChart, type WeekBucket } from "./trend-chart";
+
+const WEEKS_OF_HISTORY = 12;
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+function startOfWeek(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay(); // 0 = Sunday
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diffToMonday);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function buildWeeklyBuckets(rows: { startedAt: Date; distanceMeters: number | null }[]): WeekBucket[] {
+  const thisWeekStart = startOfWeek(new Date());
+  const buckets: WeekBucket[] = [];
+
+  for (let i = WEEKS_OF_HISTORY - 1; i >= 0; i--) {
+    const weekStart = new Date(thisWeekStart.getTime() - i * MS_PER_WEEK);
+    buckets.push({
+      label: weekStart.toLocaleDateString("th-TH", { day: "numeric", month: "short" }),
+      km: 0,
+    });
+  }
+
+  for (const row of rows) {
+    const weekStart = startOfWeek(row.startedAt);
+    const index = Math.round((weekStart.getTime() - (thisWeekStart.getTime() - (WEEKS_OF_HISTORY - 1) * MS_PER_WEEK)) / MS_PER_WEEK);
+    if (index >= 0 && index < buckets.length) {
+      buckets[index].km += (row.distanceMeters ?? 0) / 1000;
+    }
+  }
+
+  return buckets;
+}
 
 export default async function DashboardPage() {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
-  const [user, connection, activities, stats] = await Promise.all([
+  const chartSince = new Date(Date.now() - WEEKS_OF_HISTORY * MS_PER_WEEK);
+
+  const [user, connection, activities, stats, chartRows] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.providerConnection.findFirst({ where: { userId, provider: "STRAVA" } }),
     db.activity.findMany({
@@ -23,13 +61,21 @@ export default async function DashboardPage() {
       _count: { _all: true },
       _sum: { distanceMeters: true, durationSec: true },
     }),
+    db.activity.findMany({
+      where: { userId, startedAt: { gte: chartSince } },
+      select: { startedAt: true, distanceMeters: true },
+    }),
   ]);
+
+  const unit = user?.unitSystem ?? "METRIC";
 
   const statCards = [
     { label: "กิจกรรมทั้งหมด", value: stats._count._all.toLocaleString("th-TH") },
-    { label: "ระยะทางรวม", value: formatDistanceKm(stats._sum.distanceMeters) },
+    { label: "ระยะทางรวม", value: formatDistanceKm(stats._sum.distanceMeters, unit) },
     { label: "เวลารวม", value: formatDuration(stats._sum.durationSec ?? 0) },
   ];
+
+  const weeklyBuckets = buildWeeklyBuckets(chartRows);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
@@ -59,6 +105,24 @@ export default async function DashboardPage() {
         </div>
         <div className="flex items-center gap-4">
           {connection && <SyncButton />}
+          <a
+            href="/api/export/csv"
+            className="text-sm text-neutral-500 transition hover:text-neutral-300"
+            title="ดาวน์โหลด CSV"
+          >
+            Export CSV
+          </a>
+          <Link href="/dashboard/settings" className="text-neutral-500 transition hover:text-neutral-300" title="ตั้งค่า">
+            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+              <path
+                d="M10.5 3.5h3l.4 2.1a7 7 0 0 1 1.9 1.1l2-.8 1.5 2.6-1.6 1.4a7 7 0 0 1 0 2.2l1.6 1.4-1.5 2.6-2-.8a7 7 0 0 1-1.9 1.1l-.4 2.1h-3l-.4-2.1a7 7 0 0 1-1.9-1.1l-2 .8-1.5-2.6 1.6-1.4a7 7 0 0 1 0-2.2L4.7 8.5l1.5-2.6 2 .8a7 7 0 0 1 1.9-1.1l.4-2.1Z"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
+              <circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.4" />
+            </svg>
+          </Link>
           <form action="/api/auth/logout" method="POST">
             <button className="text-sm text-neutral-500 transition hover:text-neutral-300">
               ออกจากระบบ
@@ -67,7 +131,7 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <div className="mb-8 grid grid-cols-3 gap-3">
+      <div className="mb-6 grid grid-cols-3 gap-3">
         {statCards.map((s) => (
           <div
             key={s.label}
@@ -77,6 +141,10 @@ export default async function DashboardPage() {
             <p className="mt-0.5 text-xs text-neutral-500">{s.label}</p>
           </div>
         ))}
+      </div>
+
+      <div className="mb-8">
+        <TrendChart weeks={weeklyBuckets} />
       </div>
 
       {activities.length === 0 ? (
@@ -106,7 +174,7 @@ export default async function DashboardPage() {
                   </p>
                 </div>
                 <div className="flex-none text-right text-sm">
-                  <p className="font-medium text-neutral-200">{formatDistanceKm(a.distanceMeters)}</p>
+                  <p className="font-medium text-neutral-200">{formatDistanceKm(a.distanceMeters, unit)}</p>
                   <p className="text-neutral-500">{formatDuration(a.durationSec)}</p>
                 </div>
               </Link>

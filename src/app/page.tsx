@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
 
@@ -54,9 +55,18 @@ export default async function HomePage({
         </div>
       </div>
 
-      <p className="relative z-10 pb-8 text-xs text-neutral-600">
-        ข้อมูลของคุณถูกเข้ารหัสและเก็บไว้อย่างปลอดภัย
-      </p>
+      <div className="relative z-10 flex flex-col items-center gap-2 pb-8 text-xs text-neutral-600">
+        <p>ข้อมูลของคุณถูกเข้ารหัสและเก็บไว้อย่างปลอดภัย</p>
+        <p className="flex gap-3">
+          <Link href="/privacy" className="hover:text-neutral-400">
+            นโยบายความเป็นส่วนตัว
+          </Link>
+          <span>·</span>
+          <Link href="/terms" className="hover:text-neutral-400">
+            ข้อกำหนดการใช้งาน
+          </Link>
+        </p>
+      </div>
     </main>
   );
 }

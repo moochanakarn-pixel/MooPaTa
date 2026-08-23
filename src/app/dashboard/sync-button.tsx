@@ -13,7 +13,12 @@ export function SyncButton() {
     const res = await fetch("/api/sync/strava", { method: "POST" });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "sync_failed");
+      if (body.error === "strava_rate_limited") {
+        const wait = body.retryAfterSec ? ` (ลองใหม่ได้ในอีก ${Math.ceil(body.retryAfterSec / 60)} นาที)` : "";
+        setError(`Strava จำกัดจำนวนคำขอชั่วคราว ลองใหม่อีกครั้ง${wait}`);
+      } else {
+        setError(body.error ?? "sync_failed");
+      }
       return;
     }
     startTransition(() => router.refresh());

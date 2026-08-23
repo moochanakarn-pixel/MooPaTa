@@ -1,14 +1,13 @@
-import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { decryptToken, encryptToken } from "@/lib/crypto";
-import { fetchAllStravaActivityIds, fetchStravaActivities, refreshStravaToken } from "@/lib/providers/strava";
+import { StravaRateLimitError } from "@/lib/providers/strava";
 import { getSessionUserId } from "@/lib/session";
+import { syncStravaConnection } from "@/lib/sync-strava";
 
-// Pulls new activities from Strava for the logged-in user and upserts them
-// into the normalized Activity table. Safe to call repeatedly (e.g. from a
-// cron job or a "Sync now" button) — only activities after the most recent
-// one we already have are requested.
+// Pulls new activities from Strava for the logged-in user. Safe to call
+// repeatedly (e.g. from a "Sync now" button) — only activities after the
+// most recent one we already have are requested, and deletions on Strava's
+// side are reconciled too.
 export async function POST() {
   const userId = await getSessionUserId();
   if (!userId) {
@@ -22,79 +21,16 @@ export async function POST() {
     return NextResponse.json({ error: "strava_not_connected" }, { status: 400 });
   }
 
-  let accessToken = decryptToken(connection.accessTokenEnc);
-
-  // Refresh proactively if the token is expired or expiring within 5 minutes.
-  if (connection.expiresAt.getTime() < Date.now() + 5 * 60 * 1000) {
-    const refreshToken = decryptToken(connection.refreshTokenEnc);
-    const refreshed = await refreshStravaToken(refreshToken);
-    accessToken = refreshed.accessToken;
-    await db.providerConnection.update({
-      where: { id: connection.id },
-      data: {
-        accessTokenEnc: encryptToken(refreshed.accessToken),
-        refreshTokenEnc: encryptToken(refreshed.refreshToken),
-        expiresAt: refreshed.expiresAt,
-      },
-    });
+  try {
+    const result = await syncStravaConnection(connection);
+    return NextResponse.json(result);
+  } catch (err) {
+    if (err instanceof StravaRateLimitError) {
+      return NextResponse.json(
+        { error: "strava_rate_limited", retryAfterSec: err.retryAfterSec },
+        { status: 429 }
+      );
+    }
+    throw err;
   }
-
-  const latest = await db.activity.findFirst({
-    where: { userId, provider: "STRAVA" },
-    orderBy: { startedAt: "desc" },
-  });
-  const afterUnix = latest ? Math.floor(latest.startedAt.getTime() / 1000) : undefined;
-
-  const activities = await fetchStravaActivities(accessToken, afterUnix);
-
-  for (const a of activities) {
-    const fields = {
-      type: a.type,
-      name: a.name,
-      startedAt: a.startedAt,
-      durationSec: a.durationSec,
-      distanceMeters: a.distanceMeters,
-      elevationGainM: a.elevationGainM,
-      elevHighM: a.elevHighM,
-      elevLowM: a.elevLowM,
-      avgHeartRate: a.avgHeartRate,
-      maxHeartRate: a.maxHeartRate,
-      avgSpeedMs: a.avgSpeedMs,
-      maxSpeedMs: a.maxSpeedMs,
-      avgCadence: a.avgCadence,
-      avgWatts: a.avgWatts,
-      kilojoules: a.kilojoules,
-      sufferScore: a.sufferScore,
-      calories: a.calories,
-      kudosCount: a.kudosCount,
-      achievementCount: a.achievementCount,
-      prCount: a.prCount,
-      commentCount: a.commentCount,
-      gearId: a.gearId,
-      timezone: a.timezone,
-      startLat: a.startLat,
-      startLng: a.startLng,
-      raw: a.raw as Prisma.InputJsonValue,
-    };
-
-    await db.activity.upsert({
-      where: { provider_providerActId: { provider: "STRAVA", providerActId: a.providerActId } },
-      update: fields,
-      create: { ...fields, provider: "STRAVA", providerActId: a.providerActId, userId },
-    });
-  }
-
-  // Reconcile deletions: anything we have stored that Strava no longer lists
-  // (e.g. the user deleted it on Strava) gets removed here too.
-  const currentStravaIds = await fetchAllStravaActivityIds(accessToken);
-  const stored = await db.activity.findMany({
-    where: { userId, provider: "STRAVA" },
-    select: { id: true, providerActId: true },
-  });
-  const staleIds = stored.filter((s) => !currentStravaIds.has(s.providerActId)).map((s) => s.id);
-  if (staleIds.length > 0) {
-    await db.activity.deleteMany({ where: { id: { in: staleIds } } });
-  }
-
-  return NextResponse.json({ synced: activities.length, deleted: staleIds.length });
 }

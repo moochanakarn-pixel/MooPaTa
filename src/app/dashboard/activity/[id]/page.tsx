@@ -11,7 +11,9 @@ import {
   formatPace,
   formatSpeedKmh,
 } from "@/lib/format";
+import { extractStravaPolyline } from "@/lib/polyline";
 import { ActivityIcon } from "../../activity-icon";
+import { RouteSketch } from "./route-sketch";
 
 function Stat({ label, value }: { label: string; value: string }) {
   if (value === "-") return null;
@@ -27,10 +29,15 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
-  const activity = await db.activity.findUnique({ where: { id: params.id } });
+  const [user, activity] = await Promise.all([
+    db.user.findUnique({ where: { id: userId } }),
+    db.activity.findUnique({ where: { id: params.id } }),
+  ]);
   if (!activity || activity.userId !== userId) notFound();
 
+  const unit = user?.unitSystem ?? "METRIC";
   const isRun = activity.type === "Run";
+  const polyline = extractStravaPolyline(activity.raw);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
@@ -56,20 +63,26 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
         </div>
       </div>
 
+      {polyline && (
+        <div className="mb-6">
+          <RouteSketch polyline={polyline} />
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Stat label="ระยะทาง" value={formatDistanceKm(activity.distanceMeters)} />
+        <Stat label="ระยะทาง" value={formatDistanceKm(activity.distanceMeters, unit)} />
         <Stat label="เวลา" value={formatDuration(activity.durationSec)} />
         <Stat
           label={isRun ? "เพซเฉลี่ย" : "ความเร็วเฉลี่ย"}
-          value={isRun ? formatPace(activity.avgSpeedMs) : formatSpeedKmh(activity.avgSpeedMs)}
+          value={isRun ? formatPace(activity.avgSpeedMs, unit) : formatSpeedKmh(activity.avgSpeedMs, unit)}
         />
         <Stat
           label={isRun ? "เพซสูงสุด" : "ความเร็วสูงสุด"}
-          value={isRun ? formatPace(activity.maxSpeedMs) : formatSpeedKmh(activity.maxSpeedMs)}
+          value={isRun ? formatPace(activity.maxSpeedMs, unit) : formatSpeedKmh(activity.maxSpeedMs, unit)}
         />
-        <Stat label="ระยะไต่ระดับ" value={formatElevationM(activity.elevationGainM)} />
-        <Stat label="จุดสูงสุด" value={formatElevationM(activity.elevHighM)} />
-        <Stat label="จุดต่ำสุด" value={formatElevationM(activity.elevLowM)} />
+        <Stat label="ระยะไต่ระดับ" value={formatElevationM(activity.elevationGainM, unit)} />
+        <Stat label="จุดสูงสุด" value={formatElevationM(activity.elevHighM, unit)} />
+        <Stat label="จุดต่ำสุด" value={formatElevationM(activity.elevLowM, unit)} />
         <Stat
           label="หัวใจเฉลี่ย"
           value={activity.avgHeartRate ? `${Math.round(activity.avgHeartRate)} bpm` : "-"}
