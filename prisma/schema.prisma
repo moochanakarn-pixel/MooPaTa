@@ -106,6 +106,7 @@ model ActivityDetail {
   bestEfforts Json?    // named PR efforts, e.g. 5K, 1 mile
   laps        Json?    // manual/auto laps: distance, time, pace, elevation per lap
   streams     Json?    // { distance, altitude, velocity, heartrate, cadence }[] downsampled
+  weather     Json?    // { temperatureC, windKmh, weatherCode } from Open-Meteo, if GPS start coords exist
   fetchedAt   DateTime @default(now())
 
   activityId String   @unique

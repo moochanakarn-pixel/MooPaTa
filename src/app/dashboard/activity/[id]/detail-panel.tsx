@@ -1,6 +1,8 @@
 import { formatDistanceKm, formatDuration, formatElevationM, formatPace, formatSpeedKmh, type UnitSystem } from "@/lib/format";
 import type { StravaBestEffort, StravaLap, StravaSplit } from "@/lib/providers/strava";
 import type { StreamPoint } from "@/lib/streams";
+import type { ActivityWeather } from "@/lib/weather";
+import { weatherIcon, weatherLabel } from "@/lib/weather";
 import { ProfileChart } from "./profile-chart";
 
 export function DetailPanel({
@@ -8,6 +10,7 @@ export function DetailPanel({
   splits,
   bestEfforts,
   laps,
+  weather,
   deviceName,
   unit,
   isRun,
@@ -16,6 +19,7 @@ export function DetailPanel({
   splits: StravaSplit[];
   bestEfforts: StravaBestEffort[];
   laps: StravaLap[];
+  weather: ActivityWeather | null;
   deviceName?: string | null;
   unit: UnitSystem;
   isRun: boolean;
@@ -43,6 +47,18 @@ export function DetailPanel({
 
   return (
     <div className="space-y-4">
+      {weather && (
+        <div className="flex items-center gap-3 rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
+          <span className="text-2xl">{weatherIcon(weather.weatherCode)}</span>
+          <div>
+            <p className="text-sm font-medium text-neutral-200">
+              {Math.round(weather.temperatureC)}°C · {weatherLabel(weather.weatherCode)}
+            </p>
+            <p className="text-xs text-neutral-500">ลม {Math.round(weather.windKmh)} กม./ชม.</p>
+          </div>
+        </div>
+      )}
+
       {elevationPoints.length > 1 && (
         <ProfileChart
           points={elevationPoints}

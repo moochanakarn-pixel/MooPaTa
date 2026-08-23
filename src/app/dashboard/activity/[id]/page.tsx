@@ -14,6 +14,7 @@ import {
 import { extractStravaPolyline } from "@/lib/polyline";
 import type { StravaBestEffort, StravaLap, StravaSplit } from "@/lib/providers/strava";
 import type { StreamPoint } from "@/lib/streams";
+import type { ActivityWeather } from "@/lib/weather";
 import { ActivityIcon } from "../../activity-icon";
 import { ComparisonCard, PersonalRecordBadges } from "./comparison";
 import { DetailPanel } from "./detail-panel";
@@ -183,6 +184,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
             splits={(detail.splits as unknown as StravaSplit[]) ?? []}
             bestEfforts={(detail.bestEfforts as unknown as StravaBestEffort[]) ?? []}
             laps={(detail.laps as unknown as StravaLap[]) ?? []}
+            weather={(detail.weather as unknown as ActivityWeather) ?? null}
             deviceName={detail.deviceName}
             unit={unit}
             isRun={isRun}

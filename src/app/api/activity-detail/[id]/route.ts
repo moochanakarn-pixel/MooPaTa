@@ -10,6 +10,7 @@ import {
 import { getSessionUserId } from "@/lib/session";
 import { downsampleStreams } from "@/lib/streams";
 import { getValidStravaAccessToken } from "@/lib/strava-token";
+import { fetchActivityWeather } from "@/lib/weather";
 
 // Fetches and caches the richer per-activity data Strava's summary list
 // endpoint doesn't include (splits, best efforts, laps, device name,
@@ -50,6 +51,13 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       fetchStravaActivityLaps(accessToken, activity.providerActId),
     ]);
 
+    // Weather is best-effort: a third-party outage or a too-recent activity
+    // (reanalysis data lags a few days) shouldn't block saving everything else.
+    const weather =
+      activity.startLat && activity.startLng
+        ? await fetchActivityWeather(activity.startLat, activity.startLng, activity.startedAt).catch(() => null)
+        : null;
+
     await db.activityDetail.create({
       data: {
         activityId: activity.id,
@@ -58,6 +66,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         bestEfforts: detail.bestEfforts as unknown as Prisma.InputJsonValue,
         laps: laps as unknown as Prisma.InputJsonValue,
         streams: downsampleStreams(streams) as unknown as Prisma.InputJsonValue,
+        weather: weather as unknown as Prisma.InputJsonValue,
       },
     });
 
