@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// A person using MooPaTa. Identity is established by whichever provider
+// they connect first (currently Strava); more providers can link to the
+// same user later.
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  avatarUrl String?  @db.VarChar(512)
+  createdAt DateTime @default(now())
+
+  connections     ProviderConnection[]
+  activities      Activity[]
+}
+
+enum Provider {
+  STRAVA
+  HUAWEI_HEALTH
+}
+
+// One OAuth link between a User and an external fitness provider.
+// Tokens are stored encrypted (see src/lib/crypto.ts) - never store them in plaintext.
+model ProviderConnection {
+  id                 String   @id @default(cuid())
+  provider           Provider
+  providerAccountId  String   // athlete id / huawei union id, etc.
+  accessTokenEnc     String   @db.Text
+  refreshTokenEnc    String   @db.Text
+  expiresAt          DateTime
+  scope              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// Normalized activity shape shared across all providers so the rest of the
+// app (dashboard, stats, future features) never has to branch on provider.
+model Activity {
+  id              String   @id @default(cuid())
+  provider        Provider
+  providerActId   String   // original activity id from the source provider
+  type            String   // e.g. Run, Ride, Walk, Hike, Swim
+  name            String?
+  startedAt       DateTime
+  durationSec     Int
+  distanceMeters  Float?
+  elevationGainM  Float?
+  avgHeartRate    Float?
+  calories        Float?
+  raw             Json     // original provider payload, kept for debugging/future fields
+  createdAt       DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerActId])
+  @@index([userId, startedAt])
+}
