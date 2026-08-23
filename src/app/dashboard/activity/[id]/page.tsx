@@ -1,0 +1,115 @@
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import { getSessionUserId } from "@/lib/session";
+import {
+  activityTypeLabel,
+  formatActivityDate,
+  formatDistanceKm,
+  formatDuration,
+  formatElevationM,
+  formatPace,
+  formatSpeedKmh,
+} from "@/lib/format";
+import { ActivityIcon } from "../../activity-icon";
+
+function Stat({ label, value }: { label: string; value: string }) {
+  if (value === "-") return null;
+  return (
+    <div className="rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
+      <p className="text-lg font-bold tracking-tight">{value}</p>
+      <p className="mt-0.5 text-xs text-neutral-500">{label}</p>
+    </div>
+  );
+}
+
+export default async function ActivityDetailPage({ params }: { params: { id: string } }) {
+  const userId = await getSessionUserId();
+  if (!userId) redirect("/");
+
+  const activity = await db.activity.findUnique({ where: { id: params.id } });
+  if (!activity || activity.userId !== userId) notFound();
+
+  const isRun = activity.type === "Run";
+
+  return (
+    <main className="mx-auto max-w-3xl px-6 py-10">
+      <Link
+        href="/dashboard"
+        className="mb-6 inline-flex items-center gap-1.5 text-sm text-neutral-500 transition hover:text-neutral-300"
+      >
+        <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+          <path d="M13 4 7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        กลับไปหน้ารวม
+      </Link>
+
+      <div className="mb-6 flex items-center gap-4">
+        <div className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-[#fc4c02]/10 text-[#fc4c02]">
+          <ActivityIcon type={activity.type} className="h-6 w-6" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold leading-tight">{activity.name ?? activity.type}</h1>
+          <p className="text-sm text-neutral-500">
+            {activityTypeLabel(activity.type)} · {formatActivityDate(activity.startedAt)}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Stat label="ระยะทาง" value={formatDistanceKm(activity.distanceMeters)} />
+        <Stat label="เวลา" value={formatDuration(activity.durationSec)} />
+        <Stat
+          label={isRun ? "เพซเฉลี่ย" : "ความเร็วเฉลี่ย"}
+          value={isRun ? formatPace(activity.avgSpeedMs) : formatSpeedKmh(activity.avgSpeedMs)}
+        />
+        <Stat
+          label={isRun ? "เพซสูงสุด" : "ความเร็วสูงสุด"}
+          value={isRun ? formatPace(activity.maxSpeedMs) : formatSpeedKmh(activity.maxSpeedMs)}
+        />
+        <Stat label="ระยะไต่ระดับ" value={formatElevationM(activity.elevationGainM)} />
+        <Stat label="จุดสูงสุด" value={formatElevationM(activity.elevHighM)} />
+        <Stat label="จุดต่ำสุด" value={formatElevationM(activity.elevLowM)} />
+        <Stat
+          label="หัวใจเฉลี่ย"
+          value={activity.avgHeartRate ? `${Math.round(activity.avgHeartRate)} bpm` : "-"}
+        />
+        <Stat
+          label="หัวใจสูงสุด"
+          value={activity.maxHeartRate ? `${Math.round(activity.maxHeartRate)} bpm` : "-"}
+        />
+        <Stat label="แคลอรี่" value={activity.calories ? `${Math.round(activity.calories)} kcal` : "-"} />
+        <Stat label="เคเดนซ์เฉลี่ย" value={activity.avgCadence ? `${Math.round(activity.avgCadence)} rpm` : "-"} />
+        <Stat label="กำลังเฉลี่ย" value={activity.avgWatts ? `${Math.round(activity.avgWatts)} W` : "-"} />
+        <Stat label="พลังงาน" value={activity.kilojoules ? `${Math.round(activity.kilojoules)} kJ` : "-"} />
+        <Stat label="Suffer Score" value={activity.sufferScore ? String(activity.sufferScore) : "-"} />
+        <Stat label="Kudos" value={activity.kudosCount ? String(activity.kudosCount) : "-"} />
+        <Stat
+          label="สถิติที่ทำได้"
+          value={activity.achievementCount ? String(activity.achievementCount) : "-"}
+        />
+        <Stat label="PR" value={activity.prCount ? String(activity.prCount) : "-"} />
+        <Stat label="คอมเมนต์" value={activity.commentCount ? String(activity.commentCount) : "-"} />
+        <Stat label="โซนเวลา" value={activity.timezone ?? "-"} />
+        <Stat label="อุปกรณ์ (Gear ID)" value={activity.gearId ?? "-"} />
+        <Stat
+          label="พิกัดเริ่มต้น"
+          value={
+            activity.startLat && activity.startLng
+              ? `${activity.startLat.toFixed(4)}, ${activity.startLng.toFixed(4)}`
+              : "-"
+          }
+        />
+      </div>
+
+      <details className="mt-8 rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
+        <summary className="cursor-pointer text-sm font-medium text-neutral-400">
+          ข้อมูลดิบทั้งหมดจาก Strava
+        </summary>
+        <pre className="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap break-all text-xs text-neutral-400">
+          {JSON.stringify(activity.raw, null, 2)}
+        </pre>
+      </details>
+    </main>
+  );
+}

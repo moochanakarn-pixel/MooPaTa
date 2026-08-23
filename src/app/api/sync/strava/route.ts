@@ -48,33 +48,39 @@ export async function POST() {
   const activities = await fetchStravaActivities(accessToken, afterUnix);
 
   for (const a of activities) {
+    const fields = {
+      type: a.type,
+      name: a.name,
+      startedAt: a.startedAt,
+      durationSec: a.durationSec,
+      distanceMeters: a.distanceMeters,
+      elevationGainM: a.elevationGainM,
+      elevHighM: a.elevHighM,
+      elevLowM: a.elevLowM,
+      avgHeartRate: a.avgHeartRate,
+      maxHeartRate: a.maxHeartRate,
+      avgSpeedMs: a.avgSpeedMs,
+      maxSpeedMs: a.maxSpeedMs,
+      avgCadence: a.avgCadence,
+      avgWatts: a.avgWatts,
+      kilojoules: a.kilojoules,
+      sufferScore: a.sufferScore,
+      calories: a.calories,
+      kudosCount: a.kudosCount,
+      achievementCount: a.achievementCount,
+      prCount: a.prCount,
+      commentCount: a.commentCount,
+      gearId: a.gearId,
+      timezone: a.timezone,
+      startLat: a.startLat,
+      startLng: a.startLng,
+      raw: a.raw as Prisma.InputJsonValue,
+    };
+
     await db.activity.upsert({
       where: { provider_providerActId: { provider: "STRAVA", providerActId: a.providerActId } },
-      update: {
-        type: a.type,
-        name: a.name,
-        startedAt: a.startedAt,
-        durationSec: a.durationSec,
-        distanceMeters: a.distanceMeters,
-        elevationGainM: a.elevationGainM,
-        avgHeartRate: a.avgHeartRate,
-        calories: a.calories,
-        raw: a.raw as Prisma.InputJsonValue,
-      },
-      create: {
-        provider: "STRAVA",
-        providerActId: a.providerActId,
-        type: a.type,
-        name: a.name,
-        startedAt: a.startedAt,
-        durationSec: a.durationSec,
-        distanceMeters: a.distanceMeters,
-        elevationGainM: a.elevationGainM,
-        avgHeartRate: a.avgHeartRate,
-        calories: a.calories,
-        raw: a.raw as Prisma.InputJsonValue,
-        userId,
-      },
+      update: fields,
+      create: { ...fields, provider: "STRAVA", providerActId: a.providerActId, userId },
     });
   }
 

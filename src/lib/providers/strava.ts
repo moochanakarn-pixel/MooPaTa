@@ -104,8 +104,24 @@ interface StravaActivity {
   moving_time: number;
   distance?: number;
   total_elevation_gain?: number;
+  elev_high?: number;
+  elev_low?: number;
   average_heartrate?: number;
+  max_heartrate?: number;
+  average_speed?: number;
+  max_speed?: number;
+  average_cadence?: number;
+  average_watts?: number;
+  kilojoules?: number;
+  suffer_score?: number;
   calories?: number;
+  kudos_count?: number;
+  achievement_count?: number;
+  pr_count?: number;
+  comment_count?: number;
+  gear_id?: string;
+  timezone?: string;
+  start_latlng?: [number, number] | null;
 }
 
 // Pull recent activities for the athlete. `afterUnix` lets us do incremental
@@ -133,8 +149,25 @@ export async function fetchStravaActivities(
     durationSec: a.moving_time,
     distanceMeters: a.distance,
     elevationGainM: a.total_elevation_gain,
+    elevHighM: a.elev_high,
+    elevLowM: a.elev_low,
     avgHeartRate: a.average_heartrate,
+    maxHeartRate: a.max_heartrate,
+    avgSpeedMs: a.average_speed,
+    maxSpeedMs: a.max_speed,
+    avgCadence: a.average_cadence,
+    avgWatts: a.average_watts,
+    kilojoules: a.kilojoules,
+    sufferScore: a.suffer_score,
     calories: a.calories,
+    kudosCount: a.kudos_count,
+    achievementCount: a.achievement_count,
+    prCount: a.pr_count,
+    commentCount: a.comment_count,
+    gearId: a.gear_id,
+    timezone: a.timezone,
+    startLat: a.start_latlng?.[0],
+    startLng: a.start_latlng?.[1],
     raw: a,
   }));
 }

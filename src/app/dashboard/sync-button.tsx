@@ -24,8 +24,21 @@ export function SyncButton() {
       <button
         onClick={handleSync}
         disabled={isPending}
-        className="rounded-md bg-[#fc4c02] px-4 py-2 text-sm font-semibold text-white hover:bg-[#e04402] disabled:opacity-50"
+        className="flex items-center gap-2 rounded-xl bg-[#fc4c02] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-orange-950/20 transition hover:bg-[#e04402] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
       >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`}
+        >
+          <path
+            d="M20 12a8 8 0 1 1-2.34-5.66"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <path d="M20 4v5h-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
         {isPending ? "กำลังซิงค์..." : "ซิงค์ข้อมูลจาก Strava"}
       </button>
       {error && <span className="text-xs text-red-400">ซิงค์ไม่สำเร็จ: {error}</span>}

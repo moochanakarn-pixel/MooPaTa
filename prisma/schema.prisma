@@ -56,9 +56,26 @@ model Activity {
   durationSec     Int
   distanceMeters  Float?
   elevationGainM  Float?
+  elevHighM       Float?
+  elevLowM        Float?
   avgHeartRate    Float?
+  maxHeartRate    Float?
+  avgSpeedMs      Float?   // meters/second
+  maxSpeedMs      Float?   // meters/second
+  avgCadence      Float?
+  avgWatts        Float?
+  kilojoules      Float?
+  sufferScore     Int?
   calories        Float?
-  raw             Json     // original provider payload, kept for debugging/future fields
+  kudosCount      Int?
+  achievementCount Int?
+  prCount         Int?
+  commentCount    Int?
+  gearId          String?
+  timezone        String?
+  startLat        Float?
+  startLng        Float?
+  raw             Json     // original provider payload, kept for anything not normalized above
   createdAt       DateTime @default(now())
 
   userId String
