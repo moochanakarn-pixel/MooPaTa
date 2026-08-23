@@ -21,6 +21,8 @@ CREATE DATABASE moopata CHARACTER SET utf8mb4;
 ```
 
 > หมายเหตุ: โปรเจกต์นี้ใช้ Prisma ซึ่งรองรับ MySQL อย่างเป็นทางการตั้งแต่ 5.6/5.7 ขึ้นไป — MySQL 5.1 (EOL ตั้งแต่ปี 2013) ไม่รองรับและไม่ได้ทดสอบ
+>
+> ถ้ารัน MySQL 8.x คู่กับ instance เก่าบนเครื่องเดียวกัน (เช่น ลง MySQL 8.4 แยก service/port ไม่ให้ชนกับ 5.1 ที่มีอยู่แล้ว) อย่าลืมระบุ **port ที่ไม่ใช่ 3306** ใน `DATABASE_URL` ให้ตรงกับ instance ใหม่ และถ้าใช้ client ที่ยังไม่รองรับ `caching_sha2_password` (เช่น SQLyog รุ่นเก่า) ต้องเปลี่ยน root ให้ใช้ `mysql_native_password` ก่อน ไม่งั้น Prisma/mysql2 ก็จะต่อไม่ติดเหมือนกัน
 
 ### 2. ติดตั้ง dependency
 
@@ -36,7 +38,7 @@ cp .env.example .env
 
 แล้วแก้ค่าต่อไปนี้ใน `.env`:
 
-- `DATABASE_URL` — connection string ไปยัง MySQL ที่สร้างไว้ เช่น `mysql://root:password@localhost:3306/moopata`
+- `DATABASE_URL` — connection string ไปยัง MySQL ที่สร้างไว้ เช่น `mysql://root:password@localhost:3306/moopata` (เปลี่ยน port ตามที่ instance ของคุณรันจริง เช่น `3308` ถ้ามี MySQL ตัวอื่นครอง 3306/3307 อยู่แล้ว)
 - `TOKEN_ENCRYPTION_KEY` และ `SESSION_SECRET` — สร้างด้วย `openssl rand -hex 32` (คนละค่ากัน)
 - `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` — สมัครแอพได้ที่ https://www.strava.com/settings/api
   - ตั้ง **Authorization Callback Domain** เป็น `localhost` ตอน dev
