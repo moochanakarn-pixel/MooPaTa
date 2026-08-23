@@ -29,6 +29,14 @@ export function DetailPanel({
     .filter((p) => p.velocity !== undefined && p.velocity > 0)
     .map((p) => ({ x: p.distance / distDivisor, y: p.velocity! }));
 
+  const heartratePoints = streams
+    .filter((p) => p.heartrate !== undefined && p.heartrate > 0)
+    .map((p) => ({ x: p.distance / distDivisor, y: p.heartrate! }));
+
+  const cadencePoints = streams
+    .filter((p) => p.cadence !== undefined && p.cadence > 0)
+    .map((p) => ({ x: p.distance / distDivisor, y: p.cadence! }));
+
   const prEfforts = bestEfforts.filter((e) => e.pr_rank === 1);
 
   return (
@@ -50,6 +58,26 @@ export function DetailPanel({
           color="#fc4c02"
           formatX={(x) => `${x.toFixed(1)} ${distUnitLabel}`}
           formatY={(y) => (isRun ? formatPace(y, unit) : formatSpeedKmh(y, unit))}
+        />
+      )}
+
+      {heartratePoints.length > 1 && (
+        <ProfileChart
+          points={heartratePoints}
+          label="อัตราการเต้นหัวใจตลอดระยะทาง"
+          color="#f43f5e"
+          formatX={(x) => `${x.toFixed(1)} ${distUnitLabel}`}
+          formatY={(y) => `${Math.round(y)} bpm`}
+        />
+      )}
+
+      {cadencePoints.length > 1 && (
+        <ProfileChart
+          points={cadencePoints}
+          label="เคเดนซ์ตลอดระยะทาง"
+          color="#a855f7"
+          formatX={(x) => `${x.toFixed(1)} ${distUnitLabel}`}
+          formatY={(y) => `${Math.round(y)} rpm`}
         />
       )}
 
