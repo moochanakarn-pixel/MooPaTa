@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { activityTypeLabel, formatActivityDate, formatDistanceKm, formatDuration } from "@/lib/format";
 import { ActivityIcon } from "./activity-icon";
+import { PeriodComparison } from "./period-comparison";
 import { SyncButton } from "./sync-button";
 import { TrendChart, type WeekBucket } from "./trend-chart";
 
@@ -48,7 +49,11 @@ export default async function DashboardPage() {
 
   const chartSince = new Date(Date.now() - WEEKS_OF_HISTORY * MS_PER_WEEK);
 
-  const [user, connection, activities, stats, chartRows] = await Promise.all([
+  const now = new Date();
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+  const [user, connection, activities, stats, chartRows, thisMonthAgg, lastMonthAgg] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.providerConnection.findFirst({ where: { userId, provider: "STRAVA" } }),
     db.activity.findMany({
@@ -64,6 +69,16 @@ export default async function DashboardPage() {
     db.activity.findMany({
       where: { userId, startedAt: { gte: chartSince } },
       select: { startedAt: true, distanceMeters: true },
+    }),
+    db.activity.aggregate({
+      where: { userId, startedAt: { gte: thisMonthStart } },
+      _count: { _all: true },
+      _sum: { distanceMeters: true, durationSec: true },
+    }),
+    db.activity.aggregate({
+      where: { userId, startedAt: { gte: lastMonthStart, lt: thisMonthStart } },
+      _count: { _all: true },
+      _sum: { distanceMeters: true, durationSec: true },
     }),
   ]);
 
@@ -112,6 +127,9 @@ export default async function DashboardPage() {
           >
             Export CSV
           </a>
+          <Link href="/dashboard/records" className="text-sm text-neutral-500 transition hover:text-neutral-300">
+            สถิติสูงสุด
+          </Link>
           <Link href="/dashboard/settings" className="text-neutral-500 transition hover:text-neutral-300" title="ตั้งค่า">
             <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
               <path
@@ -141,6 +159,22 @@ export default async function DashboardPage() {
             <p className="mt-0.5 text-xs text-neutral-500">{s.label}</p>
           </div>
         ))}
+      </div>
+
+      <div className="mb-6">
+        <PeriodComparison
+          thisMonth={{
+            count: thisMonthAgg._count._all,
+            distanceMeters: thisMonthAgg._sum.distanceMeters ?? 0,
+            durationSec: thisMonthAgg._sum.durationSec ?? 0,
+          }}
+          lastMonth={{
+            count: lastMonthAgg._count._all,
+            distanceMeters: lastMonthAgg._sum.distanceMeters ?? 0,
+            durationSec: lastMonthAgg._sum.durationSec ?? 0,
+          }}
+          unit={unit}
+        />
       </div>
 
       <div className="mb-8">

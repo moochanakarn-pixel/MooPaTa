@@ -71,6 +71,11 @@ export function formatSignedPace(diffSecPerUnit: number, unit: UnitSystem = "MET
   return `${sign}${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? "ไมล์" : "กม."}`;
 }
 
+export function formatSignedCount(diff: number): string {
+  const sign = diff > 0 ? "+" : diff < 0 ? "-" : "";
+  return `${sign}${Math.abs(diff)}`;
+}
+
 export function formatActivityDate(date: Date): string {
   return new Date(date).toLocaleDateString("th-TH", {
     day: "numeric",
