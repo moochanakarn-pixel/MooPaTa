@@ -40,6 +40,51 @@ export function UnitToggle({ initial }: { initial: UnitSystem }) {
   );
 }
 
+const KM_PER_MILE = 1.609344;
+
+export function GoalInput({ initialGoalKm, unit }: { initialGoalKm: number | null; unit: UnitSystem }) {
+  const router = useRouter();
+  const unitLabel = unit === "IMPERIAL" ? "ไมล์" : "กม.";
+  const toDisplay = (km: number) => (unit === "IMPERIAL" ? km / KM_PER_MILE : km);
+  const toKm = (display: number) => (unit === "IMPERIAL" ? display * KM_PER_MILE : display);
+
+  const [value, setValue] = useState<string>(initialGoalKm ? toDisplay(initialGoalKm).toFixed(0) : "");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    const goalKm = value.trim() === "" ? null : toKm(Number(value));
+    await fetch("/api/settings/goal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goalKm }),
+    });
+    setSaving(false);
+    router.refresh();
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="number"
+        min="1"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="ไม่ได้ตั้งเป้าหมาย"
+        className="w-36 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:ring-1 focus:ring-neutral-600"
+      />
+      <span className="text-sm text-neutral-500">{unitLabel} / เดือน</span>
+      <button
+        onClick={save}
+        disabled={saving}
+        className="rounded-lg bg-[#fc4c02] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:opacity-50"
+      >
+        {saving ? "กำลังบันทึก..." : "บันทึก"}
+      </button>
+    </div>
+  );
+}
+
 export function DisconnectStravaButton() {
   const router = useRouter();
   const [pending, setPending] = useState(false);

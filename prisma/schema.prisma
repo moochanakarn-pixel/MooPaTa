@@ -11,11 +11,12 @@ datasource db {
 // they connect first (currently Strava); more providers can link to the
 // same user later.
 model User {
-  id           String       @id @default(cuid())
-  name         String?
-  avatarUrl    String?      @db.VarChar(512)
-  unitSystem   UnitSystem   @default(METRIC)
-  createdAt    DateTime     @default(now())
+  id             String       @id @default(cuid())
+  name           String?
+  avatarUrl      String?      @db.VarChar(512)
+  unitSystem     UnitSystem   @default(METRIC)
+  monthlyGoalKm  Float?       // distance goal for the current calendar month, always stored in km
+  createdAt      DateTime     @default(now())
 
   connections     ProviderConnection[]
   activities      Activity[]

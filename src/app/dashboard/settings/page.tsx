@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
-import { DeleteAccountButton, DisconnectStravaButton, UnitToggle } from "./settings-client";
+import { DeleteAccountButton, DisconnectStravaButton, GoalInput, UnitToggle } from "./settings-client";
 
 export default async function SettingsPage() {
   const userId = await getSessionUserId();
@@ -31,6 +31,12 @@ export default async function SettingsPage() {
         <h2 className="mb-1 font-medium">หน่วยแสดงผล</h2>
         <p className="mb-4 text-sm text-neutral-500">เลือกหน่วยระยะทาง/ความเร็วที่จะแสดงทั่วทั้งแอพ</p>
         <UnitToggle initial={user?.unitSystem ?? "METRIC"} />
+      </section>
+
+      <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+        <h2 className="mb-1 font-medium">เป้าหมายรายเดือน</h2>
+        <p className="mb-4 text-sm text-neutral-500">ตั้งเป้าระยะทางต่อเดือน จะเห็น progress bar ที่หน้ารวม เว้นว่างไว้เพื่อไม่ตั้งเป้าหมาย</p>
+        <GoalInput initialGoalKm={user?.monthlyGoalKm ?? null} unit={user?.unitSystem ?? "METRIC"} />
       </section>
 
       <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">

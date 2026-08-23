@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { activityTypeLabel, formatActivityDate, formatDistanceKm, formatDuration } from "@/lib/format";
+import { ActivityFilters } from "./activity-filters";
+import { ActivityHeatmap, buildHeatmapDays, computeStreaks } from "./activity-heatmap";
 import { ActivityIcon } from "./activity-icon";
+import { GoalProgress } from "./goal-progress";
 import { PeriodComparison } from "./period-comparison";
 import { SyncButton } from "./sync-button";
 import { TrendChart, type WeekBucket } from "./trend-chart";
@@ -43,44 +46,64 @@ function buildWeeklyBuckets(rows: { startedAt: Date; distanceMeters: number | nu
   return buckets;
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { type?: string; range?: string };
+}) {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
   const chartSince = new Date(Date.now() - WEEKS_OF_HISTORY * MS_PER_WEEK);
+  const heatmapSince = new Date(Date.now() - 53 * 7 * 24 * 60 * 60 * 1000);
 
   const now = new Date();
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-  const [user, connection, activities, stats, chartRows, thisMonthAgg, lastMonthAgg] = await Promise.all([
-    db.user.findUnique({ where: { id: userId } }),
-    db.providerConnection.findFirst({ where: { userId, provider: "STRAVA" } }),
-    db.activity.findMany({
-      where: { userId },
-      orderBy: { startedAt: "desc" },
-      take: 50,
-    }),
-    db.activity.aggregate({
-      where: { userId },
-      _count: { _all: true },
-      _sum: { distanceMeters: true, durationSec: true },
-    }),
-    db.activity.findMany({
-      where: { userId, startedAt: { gte: chartSince } },
-      select: { startedAt: true, distanceMeters: true },
-    }),
-    db.activity.aggregate({
-      where: { userId, startedAt: { gte: thisMonthStart } },
-      _count: { _all: true },
-      _sum: { distanceMeters: true, durationSec: true },
-    }),
-    db.activity.aggregate({
-      where: { userId, startedAt: { gte: lastMonthStart, lt: thisMonthStart } },
-      _count: { _all: true },
-      _sum: { distanceMeters: true, durationSec: true },
-    }),
-  ]);
+  const activityFilter: { type?: string; startedAt?: { gte: Date } } = {};
+  if (searchParams.type) activityFilter.type = searchParams.type;
+  if (searchParams.range && searchParams.range !== "all") {
+    const days = Number(searchParams.range);
+    if (Number.isFinite(days) && days > 0) {
+      activityFilter.startedAt = { gte: new Date(Date.now() - days * 24 * 60 * 60 * 1000) };
+    }
+  }
+
+  const [user, connection, activityTypes, activities, stats, chartRows, heatmapRows, thisMonthAgg, lastMonthAgg] =
+    await Promise.all([
+      db.user.findUnique({ where: { id: userId } }),
+      db.providerConnection.findFirst({ where: { userId, provider: "STRAVA" } }),
+      db.activity.findMany({ where: { userId }, select: { type: true }, distinct: ["type"] }),
+      db.activity.findMany({
+        where: { userId, ...activityFilter },
+        orderBy: { startedAt: "desc" },
+        take: 50,
+      }),
+      db.activity.aggregate({
+        where: { userId },
+        _count: { _all: true },
+        _sum: { distanceMeters: true, durationSec: true },
+      }),
+      db.activity.findMany({
+        where: { userId, startedAt: { gte: chartSince } },
+        select: { startedAt: true, distanceMeters: true },
+      }),
+      db.activity.findMany({
+        where: { userId, startedAt: { gte: heatmapSince } },
+        select: { startedAt: true, distanceMeters: true },
+      }),
+      db.activity.aggregate({
+        where: { userId, startedAt: { gte: thisMonthStart } },
+        _count: { _all: true },
+        _sum: { distanceMeters: true, durationSec: true },
+      }),
+      db.activity.aggregate({
+        where: { userId, startedAt: { gte: lastMonthStart, lt: thisMonthStart } },
+        _count: { _all: true },
+        _sum: { distanceMeters: true, durationSec: true },
+      }),
+    ]);
 
   const unit = user?.unitSystem ?? "METRIC";
 
@@ -89,6 +112,9 @@ export default async function DashboardPage() {
     { label: "ระยะทางรวม", value: formatDistanceKm(stats._sum.distanceMeters, unit) },
     { label: "เวลารวม", value: formatDuration(stats._sum.durationSec ?? 0) },
   ];
+
+  const heatmapDays = buildHeatmapDays(heatmapRows);
+  const streaks = computeStreaks(heatmapDays);
 
   const weeklyBuckets = buildWeeklyBuckets(chartRows);
 
@@ -161,6 +187,16 @@ export default async function DashboardPage() {
         ))}
       </div>
 
+      {user?.monthlyGoalKm && (
+        <div className="mb-6">
+          <GoalProgress
+            thisMonthDistanceMeters={thisMonthAgg._sum.distanceMeters ?? 0}
+            goalKm={user.monthlyGoalKm}
+            unit={unit}
+          />
+        </div>
+      )}
+
       <div className="mb-6">
         <PeriodComparison
           thisMonth={{
@@ -177,9 +213,15 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="mb-8">
+      <div className="mb-6">
         <TrendChart weeks={weeklyBuckets} />
       </div>
+
+      <div className="mb-8">
+        <ActivityHeatmap days={heatmapDays} streaks={streaks} />
+      </div>
+
+      <ActivityFilters types={activityTypes.map((t) => t.type)} />
 
       {activities.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-neutral-800 py-16 text-center">
@@ -187,7 +229,9 @@ export default async function DashboardPage() {
             <ActivityIcon type="Run" className="h-6 w-6" />
           </div>
           <p className="text-neutral-500">
-            ยังไม่มีข้อมูลกิจกรรม ลองกด &quot;ซิงค์ข้อมูลจาก Strava&quot; ด้านบน
+            {stats._count._all === 0
+              ? 'ยังไม่มีข้อมูลกิจกรรม ลองกด "ซิงค์ข้อมูลจาก Strava" ด้านบน'
+              : "ไม่พบกิจกรรมที่ตรงกับตัวกรองนี้"}
           </p>
         </div>
       ) : (
