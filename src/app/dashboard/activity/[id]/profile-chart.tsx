@@ -1,11 +1,18 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import { formatElevationM, formatPace, formatSpeedKmh, type UnitSystem } from "@/lib/format";
 
 interface Point {
   x: number;
   y: number;
 }
+
+// What the y values mean, so the chart can label its own axis. This is a
+// plain string rather than a formatter function on purpose: this is a Client
+// Component, and React can't serialize functions across the server/client
+// boundary — passing formatters in as props crashes the whole page at render.
+export type ChartValueKind = "elevation" | "pace" | "speed" | "heartrate" | "cadence";
 
 const WIDTH = 600;
 const HEIGHT = 160;
@@ -18,18 +25,35 @@ export function ProfileChart({
   points,
   label,
   color,
-  formatX,
-  formatY,
+  unit,
+  valueKind,
 }: {
   points: Point[];
   label: string;
   color: string;
-  formatX: (x: number) => string;
-  formatY: (y: number) => string;
+  unit: UnitSystem;
+  valueKind: ChartValueKind;
 }) {
   const gradientId = useId();
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
+  // x is always distance, in whichever unit the user prefers.
+  const formatX = (x: number) => `${x.toFixed(1)} ${unit === "IMPERIAL" ? "ไมล์" : "กม."}`;
+  const formatY = (y: number) => {
+    switch (valueKind) {
+      case "elevation":
+        return formatElevationM(y, unit);
+      case "pace":
+        return formatPace(y, unit);
+      case "speed":
+        return formatSpeedKmh(y, unit);
+      case "heartrate":
+        return `${Math.round(y)} bpm`;
+      case "cadence":
+        return `${Math.round(y)} rpm`;
+    }
+  };
 
   if (points.length < 2) return null;
 

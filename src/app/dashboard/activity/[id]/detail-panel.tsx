@@ -1,4 +1,4 @@
-import { formatDistanceKm, formatDuration, formatElevationM, formatPace, formatSpeedKmh, type UnitSystem } from "@/lib/format";
+import { formatDistanceKm, formatDuration, formatPace, type UnitSystem } from "@/lib/format";
 import type { StravaBestEffort, StravaLap, StravaSplit } from "@/lib/providers/strava";
 import type { StreamPoint } from "@/lib/streams";
 import type { ActivityWeather } from "@/lib/weather";
@@ -64,8 +64,8 @@ export function DetailPanel({
           points={elevationPoints}
           label="ระดับความสูงตลอดระยะทาง"
           color="#38bdf8"
-          formatX={(x) => `${x.toFixed(1)} ${distUnitLabel}`}
-          formatY={(y) => formatElevationM(y, unit)}
+          unit={unit}
+          valueKind="elevation"
         />
       )}
 
@@ -74,8 +74,8 @@ export function DetailPanel({
           points={pacePoints}
           label={isRun ? "เพซตลอดระยะทาง" : "ความเร็วตลอดระยะทาง"}
           color="#fc4c02"
-          formatX={(x) => `${x.toFixed(1)} ${distUnitLabel}`}
-          formatY={(y) => (isRun ? formatPace(y, unit) : formatSpeedKmh(y, unit))}
+          unit={unit}
+          valueKind={isRun ? "pace" : "speed"}
         />
       )}
 
@@ -84,8 +84,8 @@ export function DetailPanel({
           points={heartratePoints}
           label="อัตราการเต้นหัวใจตลอดระยะทาง"
           color="#f43f5e"
-          formatX={(x) => `${x.toFixed(1)} ${distUnitLabel}`}
-          formatY={(y) => `${Math.round(y)} bpm`}
+          unit={unit}
+          valueKind="heartrate"
         />
       )}
 
@@ -94,8 +94,8 @@ export function DetailPanel({
           points={cadencePoints}
           label="เคเดนซ์ตลอดระยะทาง"
           color="#a855f7"
-          formatX={(x) => `${x.toFixed(1)} ${distUnitLabel}`}
-          formatY={(y) => `${Math.round(y)} rpm`}
+          unit={unit}
+          valueKind="cadence"
         />
       )}
 

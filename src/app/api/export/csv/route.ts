@@ -31,18 +31,24 @@ export async function GET() {
     orderBy: { startedAt: "desc" },
   });
 
+  // Only genuinely-absent values become blank cells; a real 0 (a gym session
+  // with no distance, a flat route with no elevation gain) is exported as 0
+  // rather than looking like missing data.
+  const num = (value: number | null, transform: (n: number) => string): string =>
+    value === null || value === undefined ? "" : transform(value);
+
   const rows = activities.map((a) =>
     [
       a.startedAt.toISOString(),
       a.type,
       a.name ?? "",
-      a.distanceMeters ? (a.distanceMeters / 1000).toFixed(2) : "",
+      num(a.distanceMeters, (n) => (n / 1000).toFixed(2)),
       (a.durationSec / 60).toFixed(1),
-      a.elevationGainM ? Math.round(a.elevationGainM).toString() : "",
-      a.avgHeartRate ? Math.round(a.avgHeartRate).toString() : "",
-      a.maxHeartRate ? Math.round(a.maxHeartRate).toString() : "",
-      a.avgSpeedMs ? (a.avgSpeedMs * 3.6).toFixed(1) : "",
-      a.calories ? Math.round(a.calories).toString() : "",
+      num(a.elevationGainM, (n) => Math.round(n).toString()),
+      num(a.avgHeartRate, (n) => Math.round(n).toString()),
+      num(a.maxHeartRate, (n) => Math.round(n).toString()),
+      num(a.avgSpeedMs, (n) => (n * 3.6).toFixed(1)),
+      num(a.calories, (n) => Math.round(n).toString()),
     ]
       .map((v) => csvEscape(String(v)))
       .join(",")
