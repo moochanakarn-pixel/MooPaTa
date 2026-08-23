@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Logo } from "@/components/logo";
 import { getSessionUserId } from "@/lib/session";
 
 export default async function HomePage({
@@ -14,17 +15,7 @@ export default async function HomePage({
       <div className="pointer-events-none absolute inset-x-0 top-[-10%] h-[500px] bg-glow-orange" />
 
       <div className="relative z-10 flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 py-24 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fc4c02] to-[#ff8a3d] shadow-lg shadow-orange-950/40">
-          <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8 text-white">
-            <path
-              d="M13 3 6 14h5l-1 7 8-11h-5l1-7Z"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinejoin="round"
-              fill="currentColor"
-            />
-          </svg>
-        </div>
+        <Logo aria-hidden className="h-20 w-20 shadow-lg shadow-black/40" />
 
         <div className="space-y-3">
           <h1 className="text-4xl font-extrabold tracking-tight">MooPaTa</h1>
