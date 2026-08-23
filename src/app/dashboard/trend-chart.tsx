@@ -19,7 +19,16 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
     <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
       <div className="mb-4 flex items-baseline justify-between">
         <h2 className="font-medium">ระยะทางรายสัปดาห์</h2>
-        <p className="text-xs text-neutral-500">12 สัปดาห์ล่าสุด</p>
+        <div className="flex items-center gap-3">
+          <p className="text-xs text-neutral-500">12 สัปดาห์ล่าสุด</p>
+          <a
+            href="/api/share/period?range=week"
+            download
+            className="text-xs text-neutral-500 transition hover:text-neutral-300"
+          >
+            แชร์สรุปสัปดาห์นี้
+          </a>
+        </div>
       </div>
 
       <svg

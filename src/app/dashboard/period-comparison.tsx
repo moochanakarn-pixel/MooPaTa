@@ -44,7 +44,16 @@ export function PeriodComparison({
 
   return (
     <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-      <h2 className="mb-4 font-medium">เดือนนี้ เทียบกับเดือนที่แล้ว</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="font-medium">เดือนนี้ เทียบกับเดือนที่แล้ว</h2>
+        <a
+          href="/api/share/period?range=month"
+          download
+          className="text-xs text-neutral-500 transition hover:text-neutral-300"
+        >
+          แชร์สรุปเดือนนี้
+        </a>
+      </div>
       <div className="grid grid-cols-3 gap-3">
         <Metric
           value={thisMonth.count.toLocaleString("th-TH")}
