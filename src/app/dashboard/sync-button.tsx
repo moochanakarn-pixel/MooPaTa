@@ -35,6 +35,9 @@ export function SyncButton() {
         case "not_authenticated":
           setError("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่");
           break;
+        case "database_out_of_date":
+          setError(body.detail);
+          break;
         default:
           // Surface the server's actual message — a silent "sync_failed"
           // gives the user nothing to act on or report.

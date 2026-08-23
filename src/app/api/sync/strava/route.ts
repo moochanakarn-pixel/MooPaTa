@@ -14,14 +14,17 @@ export async function POST() {
     return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
   }
 
-  const connection = await db.providerConnection.findFirst({
-    where: { userId, provider: "STRAVA" },
-  });
-  if (!connection) {
-    return NextResponse.json({ error: "strava_not_connected" }, { status: 400 });
-  }
-
+  // The DB lookup is inside the try too: if the database is behind on
+  // migrations, Prisma throws right here, and leaving it uncaught produced
+  // exactly the empty-bodied 500 this handler exists to avoid.
   try {
+    const connection = await db.providerConnection.findFirst({
+      where: { userId, provider: "STRAVA" },
+    });
+    if (!connection) {
+      return NextResponse.json({ error: "strava_not_connected" }, { status: 400 });
+    }
+
     const result = await syncStravaConnection(connection);
     return NextResponse.json(result);
   } catch (err) {
@@ -32,13 +35,24 @@ export async function POST() {
       );
     }
 
-    // Anything else (expired/revoked token, Strava outage, network failure)
-    // used to rethrow, which Next turns into an empty-bodied 500 — the UI
-    // then had nothing to show but a generic "sync failed". Return the real
-    // reason instead so the user can act on it.
+    // Anything else (expired/revoked token, Strava outage, network failure,
+    // out-of-date database) used to rethrow, which Next turns into an
+    // empty-bodied 500 — the UI then had nothing to show but a generic
+    // "sync failed". Return the real reason so the user can act on it.
     console.error("Strava sync failed", err);
     const message = err instanceof Error ? err.message : String(err);
-    const isAuthFailure = /401|refresh failed|invalid/i.test(message);
+    const isAuthFailure = /401|refresh failed|invalid_grant/i.test(message);
+    const isSchemaMismatch = /does ?n[o']?t exist|Unknown column|Unknown argument|no such table/i.test(message);
+
+    if (isSchemaMismatch) {
+      return NextResponse.json(
+        {
+          error: "database_out_of_date",
+          detail: "ฐานข้อมูลยังไม่ได้อัปเดตตามโค้ดล่าสุด — รัน: npx prisma migrate deploy",
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
       {
