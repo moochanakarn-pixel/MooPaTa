@@ -171,3 +171,26 @@ export async function fetchStravaActivities(
     raw: a,
   }));
 }
+
+// Every activity id currently on Strava for this athlete, across all pages.
+// Used to reconcile deletions: an activity we have stored but that no longer
+// shows up here was removed on Strava's side and should be removed here too.
+export async function fetchAllStravaActivityIds(accessToken: string): Promise<Set<string>> {
+  const ids = new Set<string>();
+  const maxPages = 50; // 50 * 200 = 10,000 activities, generous safety cap
+
+  for (let page = 1; page <= maxPages; page++) {
+    const params = new URLSearchParams({ per_page: "200", page: String(page) });
+    const res = await fetch(`${STRAVA_API_BASE}/athlete/activities?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      throw new Error(`Strava activities fetch failed: ${res.status} ${await res.text()}`);
+    }
+    const batch = (await res.json()) as { id: number }[];
+    for (const a of batch) ids.add(String(a.id));
+    if (batch.length < 200) break;
+  }
+
+  return ids;
+}

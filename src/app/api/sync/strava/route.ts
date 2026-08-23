@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { decryptToken, encryptToken } from "@/lib/crypto";
-import { fetchStravaActivities, refreshStravaToken } from "@/lib/providers/strava";
+import { fetchAllStravaActivityIds, fetchStravaActivities, refreshStravaToken } from "@/lib/providers/strava";
 import { getSessionUserId } from "@/lib/session";
 
 // Pulls new activities from Strava for the logged-in user and upserts them
@@ -84,5 +84,17 @@ export async function POST() {
     });
   }
 
-  return NextResponse.json({ synced: activities.length });
+  // Reconcile deletions: anything we have stored that Strava no longer lists
+  // (e.g. the user deleted it on Strava) gets removed here too.
+  const currentStravaIds = await fetchAllStravaActivityIds(accessToken);
+  const stored = await db.activity.findMany({
+    where: { userId, provider: "STRAVA" },
+    select: { id: true, providerActId: true },
+  });
+  const staleIds = stored.filter((s) => !currentStravaIds.has(s.providerActId)).map((s) => s.id);
+  if (staleIds.length > 0) {
+    await db.activity.deleteMany({ where: { id: { in: staleIds } } });
+  }
+
+  return NextResponse.json({ synced: activities.length, deleted: staleIds.length });
 }
