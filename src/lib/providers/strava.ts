@@ -308,3 +308,25 @@ export async function fetchStravaActivityStreams(accessToken: string, activityId
     cadence: data.cadence?.data ?? [],
   };
 }
+
+export interface StravaLap {
+  lap_index: number;
+  distance: number;
+  moving_time: number;
+  average_speed: number;
+  total_elevation_gain: number;
+  average_heartrate?: number;
+}
+
+// Manual/auto laps (distinct from splits_metric, which is always fixed
+// per-km — laps follow the athlete's actual lap presses or auto-lap
+// setting). Another extra API call; fetch lazily and cache.
+export async function fetchStravaActivityLaps(accessToken: string, activityId: string): Promise<StravaLap[]> {
+  const res = await stravaFetch(`${STRAVA_API_BASE}/activities/${activityId}/laps`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Strava laps fetch failed: ${res.status} ${await res.text()}`);
+  }
+  return (await res.json()) as StravaLap[];
+}

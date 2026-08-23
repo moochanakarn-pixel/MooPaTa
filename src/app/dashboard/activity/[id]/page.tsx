@@ -12,7 +12,7 @@ import {
   formatSpeedKmh,
 } from "@/lib/format";
 import { extractStravaPolyline } from "@/lib/polyline";
-import type { StravaBestEffort, StravaSplit } from "@/lib/providers/strava";
+import type { StravaBestEffort, StravaLap, StravaSplit } from "@/lib/providers/strava";
 import type { StreamPoint } from "@/lib/streams";
 import { ActivityIcon } from "../../activity-icon";
 import { ComparisonCard, PersonalRecordBadges } from "./comparison";
@@ -182,6 +182,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
             streams={(detail.streams as unknown as StreamPoint[]) ?? []}
             splits={(detail.splits as unknown as StravaSplit[]) ?? []}
             bestEfforts={(detail.bestEfforts as unknown as StravaBestEffort[]) ?? []}
+            laps={(detail.laps as unknown as StravaLap[]) ?? []}
             deviceName={detail.deviceName}
             unit={unit}
             isRun={isRun}

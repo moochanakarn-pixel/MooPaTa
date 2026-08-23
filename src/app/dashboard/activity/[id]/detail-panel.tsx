@@ -1,5 +1,5 @@
-import { formatDuration, formatElevationM, formatPace, formatSpeedKmh, type UnitSystem } from "@/lib/format";
-import type { StravaBestEffort, StravaSplit } from "@/lib/providers/strava";
+import { formatDistanceKm, formatDuration, formatElevationM, formatPace, formatSpeedKmh, type UnitSystem } from "@/lib/format";
+import type { StravaBestEffort, StravaLap, StravaSplit } from "@/lib/providers/strava";
 import type { StreamPoint } from "@/lib/streams";
 import { ProfileChart } from "./profile-chart";
 
@@ -7,6 +7,7 @@ export function DetailPanel({
   streams,
   splits,
   bestEfforts,
+  laps,
   deviceName,
   unit,
   isRun,
@@ -14,6 +15,7 @@ export function DetailPanel({
   streams: StreamPoint[];
   splits: StravaSplit[];
   bestEfforts: StravaBestEffort[];
+  laps: StravaLap[];
   deviceName?: string | null;
   unit: UnitSystem;
   isRun: boolean;
@@ -93,6 +95,28 @@ export function DetailPanel({
                   <span className="text-xs text-neutral-500">
                     {s.elevation_difference > 0 ? "+" : ""}
                     {Math.round(s.elevation_difference)} ม.
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {laps.length > 1 && (
+        <div className="rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
+          <h3 className="mb-3 text-sm font-medium text-neutral-300">Laps</h3>
+          <div className="divide-y divide-neutral-800/60">
+            {laps.map((lap) => (
+              <div key={lap.lap_index} className="flex items-center justify-between py-2 text-sm">
+                <span className="text-neutral-500">#{lap.lap_index}</span>
+                <span className="text-neutral-400">{formatDistanceKm(lap.distance, unit)}</span>
+                <span className="text-neutral-400">{formatDuration(lap.moving_time)}</span>
+                <span className="flex items-center gap-3">
+                  <span className="font-medium text-neutral-200">{formatPace(lap.average_speed, unit)}</span>
+                  <span className="text-xs text-neutral-500">
+                    {lap.total_elevation_gain > 0 ? "+" : ""}
+                    {Math.round(lap.total_elevation_gain)} ม.
                   </span>
                 </span>
               </div>
