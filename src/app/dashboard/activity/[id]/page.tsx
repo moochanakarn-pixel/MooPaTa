@@ -12,8 +12,12 @@ import {
   formatSpeedKmh,
 } from "@/lib/format";
 import { extractStravaPolyline } from "@/lib/polyline";
+import type { StravaBestEffort, StravaSplit } from "@/lib/providers/strava";
+import type { StreamPoint } from "@/lib/streams";
 import { ActivityIcon } from "../../activity-icon";
 import { ComparisonCard, PersonalRecordBadges } from "./comparison";
+import { DetailPanel } from "./detail-panel";
+import { LoadDetailButton } from "./load-detail-button";
 import { RouteSketch } from "./route-sketch";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -40,7 +44,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
   const isRun = activity.type === "Run";
   const polyline = extractStravaPolyline(activity.raw);
 
-  const [previous, bests] = await Promise.all([
+  const [previous, bests, detail] = await Promise.all([
     db.activity.findFirst({
       where: { userId, type: activity.type, startedAt: { lt: activity.startedAt } },
       orderBy: { startedAt: "desc" },
@@ -49,6 +53,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
       where: { userId, type: activity.type },
       _max: { distanceMeters: true, avgSpeedMs: true },
     }),
+    db.activityDetail.findUnique({ where: { activityId: activity.id } }),
   ]);
 
   const badges: string[] = [];
@@ -168,6 +173,22 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
               : "-"
           }
         />
+      </div>
+
+      <div className="mt-8">
+        <h2 className="mb-4 font-medium">รายละเอียดเพิ่มเติม</h2>
+        {detail ? (
+          <DetailPanel
+            streams={(detail.streams as unknown as StreamPoint[]) ?? []}
+            splits={(detail.splits as unknown as StravaSplit[]) ?? []}
+            bestEfforts={(detail.bestEfforts as unknown as StravaBestEffort[]) ?? []}
+            deviceName={detail.deviceName}
+            unit={unit}
+            isRun={isRun}
+          />
+        ) : (
+          <LoadDetailButton activityId={activity.id} />
+        )}
       </div>
 
       <details className="mt-8 rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">

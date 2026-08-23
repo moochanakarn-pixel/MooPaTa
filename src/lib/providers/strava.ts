@@ -225,3 +225,86 @@ export async function deauthorizeStrava(accessToken: string): Promise<void> {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 }
+
+export interface StravaSplit {
+  distance: number;
+  elapsed_time: number;
+  elevation_difference: number;
+  moving_time: number;
+  split: number;
+  average_speed: number;
+}
+
+export interface StravaBestEffort {
+  name: string;
+  elapsed_time: number;
+  moving_time: number;
+  distance: number;
+  pr_rank: number | null; // 1 = current all-time PR for this effort
+}
+
+interface StravaDetailedActivity {
+  device_name?: string;
+  splits_metric?: StravaSplit[];
+  best_efforts?: StravaBestEffort[];
+}
+
+// The summary list endpoint (fetchStravaActivities) doesn't include splits,
+// best efforts, or device info — those live only on the single-activity
+// detail resource. One extra API call per activity, so callers should fetch
+// this lazily (only when a user opens that activity) and cache the result.
+export async function fetchStravaActivityDetail(
+  accessToken: string,
+  activityId: string
+): Promise<{ deviceName?: string; splits: StravaSplit[]; bestEfforts: StravaBestEffort[] }> {
+  const res = await stravaFetch(`${STRAVA_API_BASE}/activities/${activityId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Strava activity detail fetch failed: ${res.status} ${await res.text()}`);
+  }
+  const data = (await res.json()) as StravaDetailedActivity;
+  return {
+    deviceName: data.device_name,
+    splits: data.splits_metric ?? [],
+    bestEfforts: data.best_efforts ?? [],
+  };
+}
+
+export interface StravaStreams {
+  distance: number[];
+  altitude: number[];
+  velocity: number[];
+  heartrate: number[];
+  cadence: number[];
+}
+
+interface StravaStreamSet {
+  distance?: { data: number[] };
+  altitude?: { data: number[] };
+  velocity_smooth?: { data: number[] };
+  heartrate?: { data: number[] };
+  cadence?: { data: number[] };
+}
+
+// Time-series data behind Strava's elevation/pace/heart-rate/cadence charts
+// — one value per recording point (often 1/sec, so a long activity can be
+// thousands of points). Another extra API call; fetch lazily and cache.
+export async function fetchStravaActivityStreams(accessToken: string, activityId: string): Promise<StravaStreams> {
+  const keys = "distance,altitude,velocity_smooth,heartrate,cadence";
+  const res = await stravaFetch(
+    `${STRAVA_API_BASE}/activities/${activityId}/streams?keys=${keys}&key_by_type=true`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (!res.ok) {
+    throw new Error(`Strava streams fetch failed: ${res.status} ${await res.text()}`);
+  }
+  const data = (await res.json()) as StravaStreamSet;
+  return {
+    distance: data.distance?.data ?? [],
+    altitude: data.altitude?.data ?? [],
+    velocity: data.velocity_smooth?.data ?? [],
+    heartrate: data.heartrate?.data ?? [],
+    cadence: data.cadence?.data ?? [],
+  };
+}

@@ -87,6 +87,25 @@ model Activity {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  detail ActivityDetail?
+
   @@unique([provider, providerActId])
   @@index([userId, startedAt])
+}
+
+// Richer per-activity data (splits, best efforts, time-series streams) that
+// Strava's summary list endpoint doesn't include — fetched lazily, only when
+// a user opens that activity's detail page, since each fetch costs 2 extra
+// Strava API calls. Historical activities don't change, so once fetched
+// it's cached here indefinitely rather than re-synced.
+model ActivityDetail {
+  id          String   @id @default(cuid())
+  deviceName  String?
+  splits      Json?    // Strava's splits_metric: per-km pace/elevation
+  bestEfforts Json?    // named PR efforts, e.g. 5K, 1 mile
+  streams     Json?    // { distance, altitude, velocity, heartrate, cadence }[] downsampled
+  fetchedAt   DateTime @default(now())
+
+  activityId String   @unique
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 }

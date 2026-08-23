@@ -1,7 +1,7 @@
 import { Prisma, ProviderConnection } from "@prisma/client";
 import { db } from "@/lib/db";
-import { decryptToken, encryptToken } from "@/lib/crypto";
-import { fetchAllStravaActivityIds, fetchStravaActivities, refreshStravaToken } from "@/lib/providers/strava";
+import { fetchAllStravaActivityIds, fetchStravaActivities } from "@/lib/providers/strava";
+import { getValidStravaAccessToken } from "@/lib/strava-token";
 
 // Pulls new activities from Strava for one connection and upserts them into
 // the normalized Activity table, then reconciles deletions. Shared by the
@@ -11,21 +11,7 @@ export async function syncStravaConnection(
   connection: ProviderConnection
 ): Promise<{ synced: number; deleted: number }> {
   const userId = connection.userId;
-  let accessToken = decryptToken(connection.accessTokenEnc);
-
-  if (connection.expiresAt.getTime() < Date.now() + 5 * 60 * 1000) {
-    const refreshToken = decryptToken(connection.refreshTokenEnc);
-    const refreshed = await refreshStravaToken(refreshToken);
-    accessToken = refreshed.accessToken;
-    await db.providerConnection.update({
-      where: { id: connection.id },
-      data: {
-        accessTokenEnc: encryptToken(refreshed.accessToken),
-        refreshTokenEnc: encryptToken(refreshed.refreshToken),
-        expiresAt: refreshed.expiresAt,
-      },
-    });
-  }
+  const accessToken = await getValidStravaAccessToken(connection);
 
   const latest = await db.activity.findFirst({
     where: { userId, provider: "STRAVA" },
