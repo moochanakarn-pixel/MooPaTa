@@ -60,10 +60,13 @@ npm run dev
 
 ## Deploy จริง
 
-- เปลี่ยน `DATABASE_URL` ไปที่ MySQL ของ production (เช่น PlanetScale, RDS, หรือ MySQL server ของตัวเอง)
+ดูขั้นตอนละเอียดสำหรับ deploy ขึ้น VPS ของตัวเอง (Node, Nginx, PM2, HTTPS ผ่าน certbot, crontab สำหรับ auto-sync) ได้ที่ [DEPLOY.md](./DEPLOY.md)
+
+สรุปคร่าวๆ:
+- เปลี่ยน `DATABASE_URL` ไปที่ MySQL ของ production
 - รัน `npx prisma migrate deploy` ตอน deploy แทน `migrate dev`
-- อัปเดต `APP_BASE_URL`, `STRAVA_REDIRECT_URI` และ Authorization Callback Domain ในหน้า Strava API settings ให้เป็นโดเมนจริง
-- ตั้งค่า sync อัตโนมัติ: เรียก `POST /api/sync/strava` (ต้องมี session cookie ของผู้ใช้) ผ่าน cron หรือ webhook — ดูหัวข้อ "ขั้นต่อไป" ด้านล่าง
+- อัปเดต `APP_BASE_URL`, `STRAVA_REDIRECT_URI` และ Authorization Callback Domain ในหน้า Strava API settings ให้เป็นโดเมนจริง (ต้องเป็น HTTPS)
+- ตั้ง auto-sync ผ่าน `POST /api/cron/sync` (auth ด้วย `CRON_SECRET` แทน session cookie เพราะ cron ไม่มี browser session) — ตั้ง crontab เรียกทุก 30 นาที ดูตัวอย่างใน DEPLOY.md
 
 ## โครงสร้างไฟล์สำคัญ
 
