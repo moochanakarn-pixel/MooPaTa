@@ -1,0 +1,18 @@
+-- AlterTable
+ALTER TABLE `activity` ADD COLUMN `achievementCount` INTEGER NULL,
+    ADD COLUMN `avgCadence` DOUBLE NULL,
+    ADD COLUMN `avgSpeedMs` DOUBLE NULL,
+    ADD COLUMN `avgWatts` DOUBLE NULL,
+    ADD COLUMN `commentCount` INTEGER NULL,
+    ADD COLUMN `elevHighM` DOUBLE NULL,
+    ADD COLUMN `elevLowM` DOUBLE NULL,
+    ADD COLUMN `gearId` VARCHAR(191) NULL,
+    ADD COLUMN `kilojoules` DOUBLE NULL,
+    ADD COLUMN `kudosCount` INTEGER NULL,
+    ADD COLUMN `maxHeartRate` DOUBLE NULL,
+    ADD COLUMN `maxSpeedMs` DOUBLE NULL,
+    ADD COLUMN `prCount` INTEGER NULL,
+    ADD COLUMN `startLat` DOUBLE NULL,
+    ADD COLUMN `startLng` DOUBLE NULL,
+    ADD COLUMN `sufferScore` INTEGER NULL,
+    ADD COLUMN `timezone` VARCHAR(191) NULL;
