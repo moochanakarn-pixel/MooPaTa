@@ -51,11 +51,7 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
               opacity={hover === null || isHover ? 1 : 0.45}
               onMouseEnter={() => setHover(i)}
               onMouseLeave={() => setHover(null)}
-            >
-              <title>
-                {w.label}: {w.km.toFixed(1)} กม.
-              </title>
-            </rect>
+            />
           );
         })}
       </svg>
