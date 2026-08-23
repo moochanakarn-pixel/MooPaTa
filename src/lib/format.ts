@@ -35,6 +35,42 @@ export function formatElevationM(meters?: number | null, unit: UnitSystem = "MET
   return `${Math.round(meters)} ม.`;
 }
 
+// --- Signed deltas, for comparing one activity against another ---
+
+export function formatSignedDistance(diffMeters: number, unit: UnitSystem = "METRIC"): string {
+  const sign = diffMeters > 0 ? "+" : diffMeters < 0 ? "-" : "";
+  const value = unit === "IMPERIAL" ? Math.abs(diffMeters) / METERS_PER_MILE : Math.abs(diffMeters) / 1000;
+  return `${sign}${value.toFixed(2)} ${unit === "IMPERIAL" ? "ไมล์" : "กม."}`;
+}
+
+export function formatSignedDuration(diffSec: number): string {
+  const sign = diffSec > 0 ? "+" : diffSec < 0 ? "-" : "";
+  const abs = Math.round(Math.abs(diffSec));
+  const m = Math.floor(abs / 60);
+  const s = abs % 60;
+  return `${sign}${m > 0 ? `${m} นาที ${s} วิ` : `${s} วิ`}`;
+}
+
+export function formatSignedHeartRate(diffBpm: number): string {
+  const sign = diffBpm > 0 ? "+" : diffBpm < 0 ? "-" : "";
+  return `${sign}${Math.round(Math.abs(diffBpm))} bpm`;
+}
+
+// Pace expressed as seconds per unit distance — lower is faster. Used to
+// diff two average speeds on a comparable (lower-is-better) time scale.
+export function paceSecondsPerUnit(metersPerSec: number, unit: UnitSystem = "METRIC"): number {
+  const perUnitMeters = unit === "IMPERIAL" ? METERS_PER_MILE : 1000;
+  return perUnitMeters / metersPerSec;
+}
+
+export function formatSignedPace(diffSecPerUnit: number, unit: UnitSystem = "METRIC"): string {
+  const sign = diffSecPerUnit > 0 ? "+" : diffSecPerUnit < 0 ? "-" : "";
+  const abs = Math.round(Math.abs(diffSecPerUnit));
+  const m = Math.floor(abs / 60);
+  const s = abs % 60;
+  return `${sign}${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? "ไมล์" : "กม."}`;
+}
+
 export function formatActivityDate(date: Date): string {
   return new Date(date).toLocaleDateString("th-TH", {
     day: "numeric",

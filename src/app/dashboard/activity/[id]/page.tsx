@@ -13,6 +13,7 @@ import {
 } from "@/lib/format";
 import { extractStravaPolyline } from "@/lib/polyline";
 import { ActivityIcon } from "../../activity-icon";
+import { ComparisonCard, PersonalRecordBadges } from "./comparison";
 import { RouteSketch } from "./route-sketch";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -39,6 +40,25 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
   const isRun = activity.type === "Run";
   const polyline = extractStravaPolyline(activity.raw);
 
+  const [previous, bests] = await Promise.all([
+    db.activity.findFirst({
+      where: { userId, type: activity.type, startedAt: { lt: activity.startedAt } },
+      orderBy: { startedAt: "desc" },
+    }),
+    db.activity.aggregate({
+      where: { userId, type: activity.type },
+      _max: { distanceMeters: true, avgSpeedMs: true },
+    }),
+  ]);
+
+  const badges: string[] = [];
+  if (activity.distanceMeters && activity.distanceMeters === bests._max.distanceMeters) {
+    badges.push(`ระยะทางไกลที่สุด (${activityTypeLabel(activity.type)})`);
+  }
+  if (activity.avgSpeedMs && activity.avgSpeedMs === bests._max.avgSpeedMs) {
+    badges.push(`เพซเร็วที่สุด (${activityTypeLabel(activity.type)})`);
+  }
+
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
       <Link
@@ -63,9 +83,26 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
         </div>
       </div>
 
+      {badges.length > 0 && (
+        <div className="mb-6">
+          <PersonalRecordBadges badges={badges} />
+        </div>
+      )}
+
       {polyline && (
         <div className="mb-6">
           <RouteSketch polyline={polyline} />
+        </div>
+      )}
+
+      {previous && (
+        <div className="mb-6">
+          <ComparisonCard
+            title={`เทียบกับครั้งก่อน (${activityTypeLabel(activity.type)} · ${formatActivityDate(previous.startedAt)})`}
+            current={activity}
+            compare={previous}
+            unit={unit}
+          />
         </div>
       )}
 
