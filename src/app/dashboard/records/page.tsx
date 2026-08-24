@@ -11,6 +11,7 @@ const MEDALS = ["🥇", "🥈", "🥉"];
 interface TypeRecord {
   type: string;
   count: number;
+  sumDistanceMeters: number;
   maxDistanceMeters: number | null;
   maxAvgSpeedMs: number | null;
   maxDurationSec: number | null;
@@ -24,7 +25,14 @@ function RecordRow({ label, value, href }: { label: string; value: string; href?
   const content = (
     <div className="flex items-center justify-between py-2 text-sm">
       <span className="text-neutral-500">{label}</span>
-      <span className="font-medium text-neutral-200">{value}</span>
+      <span className="flex items-center gap-1.5">
+        <span className="font-medium tabular-nums text-neutral-200">{value}</span>
+        {href && (
+          <svg viewBox="0 0 20 20" fill="none" className="h-3 w-3 text-neutral-600">
+            <path d="M7 4l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </span>
     </div>
   );
   return href ? (
@@ -47,6 +55,7 @@ export default async function RecordsPage() {
     by: ["type"],
     where: { userId },
     _count: { _all: true },
+    _sum: { distanceMeters: true },
     _max: { distanceMeters: true, avgSpeedMs: true, durationSec: true, elevationGainM: true },
   });
 
@@ -70,6 +79,7 @@ export default async function RecordsPage() {
       return {
         type: g.type,
         count: g._count._all,
+        sumDistanceMeters: g._sum.distanceMeters ?? 0,
         maxDistanceMeters: g._max.distanceMeters,
         maxAvgSpeedMs: g._max.avgSpeedMs,
         maxDurationSec: g._max.durationSec,
@@ -85,6 +95,9 @@ export default async function RecordsPage() {
   // every type tied (small sample, or exactly balanced training) a 🥇🥈🥉
   // ordering would just reflect arbitrary DB order, not a real ranking.
   const hasRealRanking = records.some((r) => r.count !== records[0].count);
+
+  const totalCount = records.reduce((sum, r) => sum + r.count, 0);
+  const totalDistanceM = records.reduce((sum, r) => sum + r.sumDistanceMeters, 0);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
@@ -103,7 +116,35 @@ export default async function RecordsPage() {
       {records.length === 0 ? (
         <p className="text-neutral-500">ยังไม่มีข้อมูลกิจกรรม</p>
       ) : (
-        <div className="space-y-4">
+        <>
+          <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+            <div className="flex items-center gap-8">
+              <div>
+                <p className="text-2xl font-bold tabular-nums text-neutral-100">{totalCount.toLocaleString("th-TH")}</p>
+                <p className="text-xs text-neutral-500">กิจกรรมทั้งหมด</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold tabular-nums text-neutral-100">{formatDistanceKm(totalDistanceM, unit)}</p>
+                <p className="text-xs text-neutral-500">ระยะทางรวม</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold tabular-nums text-neutral-100">{records.length}</p>
+                <p className="text-xs text-neutral-500">ประเภทกีฬา</p>
+              </div>
+            </div>
+            {totalDistanceM > 0 && (
+              <div className="mt-4 flex h-1.5 w-full overflow-hidden rounded-full">
+                {records.map((r) => {
+                  const color = activityColor(r.type);
+                  const pct = (r.sumDistanceMeters / totalDistanceM) * 100;
+                  if (pct <= 0) return null;
+                  return <div key={r.type} className={color.solid} style={{ width: `${pct}%` }} title={activityTypeLabel(r.type)} />;
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
           {records.map((r, i) => {
             const color = activityColor(r.type);
             return (
@@ -146,7 +187,8 @@ export default async function RecordsPage() {
             </div>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
     </main>
   );
