@@ -202,7 +202,19 @@ export default async function DashboardPage({
           >
             Export CSV
           </a>
-          <Link href="/dashboard/records" className="text-sm text-neutral-500 transition hover:text-neutral-300">
+          <Link
+            href="/dashboard/records"
+            className="flex items-center gap-1.5 rounded-xl border border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:bg-neutral-900 hover:text-white"
+          >
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-amber-400">
+              <path
+                d="M5 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5V4Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+              <path d="M5 5H3a2 2 0 0 0 2 4M15 5h2a2 2 0 0 1-2 4M10 12v3m-2.5 0h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
             สถิติสูงสุด
           </Link>
           <Link href="/dashboard/settings" className="text-neutral-500 transition hover:text-neutral-300" title="ตั้งค่า">
