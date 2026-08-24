@@ -1,4 +1,4 @@
-const CACHE_NAME = "moopata-v1";
+const CACHE_NAME = "moopata-v2";
 const SHELL_URLS = ["/", "/logo.png"];
 
 self.addEventListener("install", (event) => {
@@ -19,5 +19,15 @@ self.addEventListener("activate", (event) => {
 // per-user dashboards), only falling back to the cached shell when offline.
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  // /api/* must never be intercepted: none of it is meaningfully
+  // cacheable (every route is per-user/auth-gated or a one-shot action),
+  // and a Service Worker sitting in front of the share routes' download
+  // responses is exactly what made every "share" button fail silently —
+  // Chrome's download manager doesn't handle a SW-intercepted download
+  // request reliably, regardless of what the response itself looks like.
+  const url = new URL(event.request.url);
+  if (url.pathname.startsWith("/api/")) return;
+
   event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });
