@@ -17,8 +17,22 @@ export class StravaRateLimitError extends Error {
   }
 }
 
+// Strava calls had no timeout at all — a stalled connection (flaky network,
+// Strava-side hang) meant the request just sat there forever, and with it
+// the whole sync ("Sync now" spinning with no error, no explanation). Every
+// call goes through here, so one timeout covers all of them.
+const STRAVA_FETCH_TIMEOUT_MS = 20_000;
+
 async function stravaFetch(url: string, init: RequestInit): Promise<Response> {
-  const res = await fetch(url, init);
+  let res: Response;
+  try {
+    res = await fetch(url, { ...init, signal: AbortSignal.timeout(STRAVA_FETCH_TIMEOUT_MS) });
+  } catch (err) {
+    if (err instanceof Error && err.name === "TimeoutError") {
+      throw new Error(`Strava request timed out after ${STRAVA_FETCH_TIMEOUT_MS / 1000}s: ${url}`);
+    }
+    throw err;
+  }
   if (res.status === 429) {
     const retryAfter = res.headers.get("Retry-After");
     throw new StravaRateLimitError(retryAfter ? Number(retryAfter) : undefined);
