@@ -42,13 +42,23 @@ export async function POST() {
     console.error("Strava sync failed", err);
     const message = err instanceof Error ? err.message : String(err);
     const isAuthFailure = /401|refresh failed|invalid_grant/i.test(message);
-    const isSchemaMismatch = /does ?n[o']?t exist|Unknown column|Unknown argument|no such table/i.test(message);
+    // "Unknown argument"/"Unknown field" are thrown by the generated Prisma
+    // Client itself when it's stale relative to schema.prisma (e.g. schema
+    // was pulled but `prisma generate` — wired to `npm install`'s
+    // postinstall — never reran). "does not exist"/"Unknown column"/"no such
+    // table" instead come from the DB engine and mean the migration itself
+    // was never applied. Both need a different fix, so name both remedies
+    // rather than guessing which one applies.
+    const isSchemaMismatch = /does ?n[o']?t exist|Unknown column|Unknown argument|Unknown field|no such table/i.test(
+      message
+    );
 
     if (isSchemaMismatch) {
       return NextResponse.json(
         {
           error: "database_out_of_date",
-          detail: "ฐานข้อมูลยังไม่ได้อัปเดตตามโค้ดล่าสุด — รัน: npx prisma migrate deploy",
+          detail:
+            "ฐานข้อมูลหรือ Prisma Client ยังไม่ตรงกับโค้ดล่าสุด — รัน: npx prisma generate && npx prisma migrate deploy แล้วรีสตาร์ท dev server",
         },
         { status: 500 }
       );
