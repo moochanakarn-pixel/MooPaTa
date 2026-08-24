@@ -6,6 +6,7 @@ export interface StreamPoint {
   velocity?: number; // m/s
   heartrate?: number;
   cadence?: number;
+  time?: number; // elapsed seconds from activity start
 }
 
 // Strava streams are recorded ~once/second, so a long activity can be
@@ -26,6 +27,7 @@ export function downsampleStreams(streams: StravaStreams, targetPoints = 120): S
       velocity: streams.velocity[i],
       heartrate: streams.heartrate[i],
       cadence: streams.cadence[i],
+      time: streams.time[i],
     });
   }
 
@@ -37,6 +39,7 @@ export function downsampleStreams(streams: StravaStreams, targetPoints = 120): S
       velocity: streams.velocity[last],
       heartrate: streams.heartrate[last],
       cadence: streams.cadence[last],
+      time: streams.time[last],
     });
   }
 

@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { activityColor } from "@/lib/activity-colors";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
-import { activityTypeLabel, formatActivityDate, formatDistanceKm, formatDuration } from "@/lib/format";
+import { formatDistanceKm, formatDuration } from "@/lib/format";
 import { ActivityFilters } from "./activity-filters";
 import { ActivityHeatmap, buildHeatmapDays, computeStreaks } from "./activity-heatmap";
 import { ActivityIcon } from "./activity-icon";
+import { ActivityListView, type ActivityRow } from "./activity-list-view";
 import { GoalProgress } from "./goal-progress";
 import { MonthHighlights } from "./month-highlights";
 import { PeriodComparison } from "./period-comparison";
@@ -157,6 +157,18 @@ export default async function DashboardPage({
   const streaks = computeStreaks(heatmapDays);
 
   const weeklyBuckets = buildWeeklyBuckets(chartRows);
+
+  const activityRows: ActivityRow[] = activities.map((a) => ({
+    id: a.id,
+    type: a.type,
+    name: a.name,
+    startedAtMs: a.startedAt.getTime(),
+    distanceMeters: a.distanceMeters,
+    durationSec: a.durationSec,
+    avgSpeedMs: a.avgSpeedMs,
+    elevationGainM: a.elevationGainM,
+    avgHeartRate: a.avgHeartRate,
+  }));
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
@@ -312,33 +324,7 @@ export default async function DashboardPage({
           </p>
         </div>
       ) : (
-        <ul className="space-y-2">
-          {activities.map((a) => {
-            const color = activityColor(a.type);
-            return (
-            <li key={a.id}>
-              <Link
-                href={`/dashboard/activity/${a.id}`}
-                className="flex items-center gap-4 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-4 transition hover:border-neutral-700 hover:bg-neutral-900/70 hover:shadow-lg hover:shadow-black/20"
-              >
-                <div className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl ${color.bg} ${color.text}`}>
-                  <ActivityIcon type={a.type} className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{a.name ?? a.type}</p>
-                  <p className="text-sm text-neutral-500">
-                    {activityTypeLabel(a.type)} · {formatActivityDate(a.startedAt)}
-                  </p>
-                </div>
-                <div className="flex-none text-right text-sm">
-                  <p className="font-medium text-neutral-200">{formatDistanceKm(a.distanceMeters, unit)}</p>
-                  <p className="text-neutral-500">{formatDuration(a.durationSec)}</p>
-                </div>
-              </Link>
-            </li>
-            );
-          })}
-        </ul>
+        <ActivityListView activities={activityRows} unit={unit} />
       )}
     </main>
   );

@@ -47,7 +47,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
   const polyline = extractStravaPolyline(activity.raw);
   const color = activityColor(activity.type);
 
-  const [previous, bests, detail] = await Promise.all([
+  const [previous, bests, detail, hrAgg] = await Promise.all([
     db.activity.findFirst({
       where: { userId, type: activity.type, startedAt: { lt: activity.startedAt } },
       orderBy: { startedAt: "desc" },
@@ -57,6 +57,10 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
       _max: { distanceMeters: true, avgSpeedMs: true },
     }),
     db.activityDetail.findUnique({ where: { activityId: activity.id } }),
+    db.activity.aggregate({
+      where: { userId },
+      _max: { maxHeartRate: true },
+    }),
   ]);
 
   const badges: string[] = [];
@@ -190,6 +194,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
             deviceName={detail.deviceName}
             unit={unit}
             isRun={isRun}
+            hrMax={hrAgg._max.maxHeartRate}
           />
         ) : (
           <LoadDetailButton activityId={activity.id} />

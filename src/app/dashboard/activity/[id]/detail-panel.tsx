@@ -3,6 +3,7 @@ import type { StravaBestEffort, StravaLap, StravaSplit } from "@/lib/providers/s
 import type { StreamPoint } from "@/lib/streams";
 import type { ActivityWeather } from "@/lib/weather";
 import { weatherIcon, weatherLabel } from "@/lib/weather";
+import { HrZones } from "./hr-zones";
 import { ProfileChart } from "./profile-chart";
 
 export function DetailPanel({
@@ -14,6 +15,7 @@ export function DetailPanel({
   deviceName,
   unit,
   isRun,
+  hrMax,
 }: {
   streams: StreamPoint[];
   splits: StravaSplit[];
@@ -23,6 +25,7 @@ export function DetailPanel({
   deviceName?: string | null;
   unit: UnitSystem;
   isRun: boolean;
+  hrMax: number | null;
 }) {
   const distDivisor = unit === "IMPERIAL" ? 1609.344 : 1000;
   const distUnitLabel = unit === "IMPERIAL" ? "ไมล์" : "กม.";
@@ -98,6 +101,8 @@ export function DetailPanel({
           valueKind="cadence"
         />
       )}
+
+      <HrZones streams={streams} hrMax={hrMax} />
 
       {splits.length > 0 && (
         <div className="rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">

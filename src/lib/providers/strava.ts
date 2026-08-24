@@ -291,6 +291,7 @@ export interface StravaStreams {
   velocity: number[];
   heartrate: number[];
   cadence: number[];
+  time: number[]; // elapsed seconds from activity start, one per point
 }
 
 interface StravaStreamSet {
@@ -299,13 +300,14 @@ interface StravaStreamSet {
   velocity_smooth?: { data: number[] };
   heartrate?: { data: number[] };
   cadence?: { data: number[] };
+  time?: { data: number[] };
 }
 
 // Time-series data behind Strava's elevation/pace/heart-rate/cadence charts
 // — one value per recording point (often 1/sec, so a long activity can be
 // thousands of points). Another extra API call; fetch lazily and cache.
 export async function fetchStravaActivityStreams(accessToken: string, activityId: string): Promise<StravaStreams> {
-  const keys = "distance,altitude,velocity_smooth,heartrate,cadence";
+  const keys = "distance,altitude,velocity_smooth,heartrate,cadence,time";
   const res = await stravaFetch(
     `${STRAVA_API_BASE}/activities/${activityId}/streams?keys=${keys}&key_by_type=true`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -320,6 +322,7 @@ export async function fetchStravaActivityStreams(accessToken: string, activityId
     velocity: data.velocity_smooth?.data ?? [],
     heartrate: data.heartrate?.data ?? [],
     cadence: data.cadence?.data ?? [],
+    time: data.time?.data ?? [],
   };
 }
 
