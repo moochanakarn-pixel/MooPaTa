@@ -1,4 +1,6 @@
-import { ImageResponse } from "next/og";
+// See src/app/api/share/[id]/route.tsx for why this comes from the
+// standalone @vercel/og package instead of next/og.
+import { ImageResponse } from "@vercel/og";
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { activityTypeLabel, formatDistanceParts, formatDuration } from "@/lib/format";
