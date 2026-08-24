@@ -9,7 +9,28 @@ Add an A record for `yourdomain.com` (or a subdomain like `moopata.yourdomain.co
 pointing at the VPS's public IP. Strava's OAuth callback needs a real HTTPS
 domain — it will not work against a bare IP or `localhost`.
 
-## 2. Install Node.js and MySQL
+**If the domain is on Cloudflare**, two things matter or step 6 (Certbot) breaks:
+
+- **SSL/TLS mode**: Cloudflare dashboard → SSL/TLS → set it to **Full** (or
+  **Full (strict)** once Certbot has issued a cert). Leaving it on the default
+  **Flexible** makes Cloudflare talk plain HTTP to the VPS while Nginx/Certbot
+  force-redirects HTTP→HTTPS — the two fight and browsers see an infinite
+  redirect loop.
+- **Proxy status**: while running `certbot --nginx` in step 6, set the DNS
+  record to **DNS only** (grey cloud, not orange) so Certbot's domain
+  validation reaches the VPS directly. Switch it back to **Proxied** (orange
+  cloud) afterward if you want Cloudflare's CDN/DDoS protection in front —
+  Certbot's auto-renewal still works either way since it renews against the
+  VPS, not through Cloudflare.
+
+## 2. Mobile access
+
+No extra setup — MooPaTa is already a PWA. Once the domain above serves over
+real HTTPS, open it in a phone browser and use "Add to Home Screen" (Safari:
+Share → Add to Home Screen; Chrome: menu → Install app). It installs as a
+normal-looking home screen icon, no App Store involved.
+
+## 3. Install Node.js and MySQL
 
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
@@ -22,7 +43,7 @@ sudo mysql -e "GRANT ALL PRIVILEGES ON moopata.* TO 'moopata'@'localhost';"
 
 (Already have MySQL running from local dev? Just create the `moopata` database/user on that instance instead.)
 
-## 3. Clone and configure the app
+## 4. Clone and configure the app
 
 ```bash
 sudo adduser --disabled-password moopata
@@ -48,7 +69,7 @@ Fill in `.env` for production:
 Then in the Strava API app settings (strava.com/settings/api), set
 **Authorization Callback Domain** to `yourdomain.com` (no `https://`, no path).
 
-## 4. Build and run with PM2
+## 5. Build and run with PM2
 
 ```bash
 npm install
@@ -61,7 +82,7 @@ pm2 save
 pm2 startup   # follow the printed command (run it as root) so PM2 survives reboots
 ```
 
-## 5. Nginx reverse proxy + HTTPS
+## 6. Nginx reverse proxy + HTTPS
 
 ```bash
 sudo tee /etc/nginx/sites-available/moopata > /dev/null <<'EOF'
@@ -88,7 +109,7 @@ sudo certbot --nginx -d yourdomain.com
 
 Certbot rewrites the Nginx config for HTTPS and sets up auto-renewal.
 
-## 6. Auto-sync via crontab
+## 7. Auto-sync via crontab
 
 `/api/cron/sync` re-syncs every connected user's Strava activities. Trigger
 it periodically with a crontab entry (as the `moopata` user):
@@ -106,7 +127,7 @@ if you end up with many users):
 
 Use the same value you put in `.env` as `CRON_SECRET`.
 
-## 7. Deploying updates later
+## 8. Deploying updates later
 
 ```bash
 sudo su - moopata
@@ -125,3 +146,5 @@ pm2 restart moopata
 - **502 from Nginx**: check `pm2 logs moopata` — usually a missing/wrong env var.
 - **Cron sync doing nothing**: check `cat /home/moopata/cron-sync.log`; a 401 means
   `CRON_SECRET` doesn't match between the crontab command and `.env`.
+- **Cloudflare shows "too many redirects"**: SSL/TLS mode is on **Flexible** —
+  switch it to **Full** (see step 1).
