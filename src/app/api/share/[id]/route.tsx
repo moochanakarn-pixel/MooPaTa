@@ -58,7 +58,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     );
   }
 
-  return new ImageResponse(
+  const image = new ImageResponse(
     (
       <div
         style={{
@@ -163,9 +163,22 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       width: 1080,
       height: 1920,
       fonts,
-      headers: {
-        "Content-Disposition": 'attachment; filename="moopata-activity.png"',
-      },
     }
   );
+
+  // ImageResponse streams chunked with no Content-Length, which some
+  // browsers' download managers (triggered by the <a download> links on the
+  // dashboard) fail outright on with a generic "check your internet
+  // connection" — even though the stream itself completed fine (curl gets a
+  // valid file). Buffering it and setting Content-Length explicitly gives
+  // the download a known size upfront, which is what those managers expect.
+  const buffer = await image.arrayBuffer();
+  return new Response(buffer, {
+    headers: {
+      "Content-Type": "image/png",
+      "Content-Length": String(buffer.byteLength),
+      "Content-Disposition": 'attachment; filename="moopata-activity.png"',
+      "Cache-Control": "no-cache, no-store",
+    },
+  });
 }
