@@ -10,11 +10,41 @@ export default async function HomePage({
   const userId = await getSessionUserId();
   if (userId) redirect("/dashboard");
 
+  const features = [
+    {
+      icon: ["M4 4v10a5 5 0 0 0 5 5h7M14 4l5 5-5 5"],
+      color: "#fc4c02",
+      title: "ซิงค์อัตโนมัติ",
+      desc: "เชื่อม Strava ครั้งเดียว ซิงค์ให้เองทุก 30 นาที",
+    },
+    {
+      icon: [
+        "M5 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5V4Z",
+        "M5 5H3a2 2 0 0 0 2 4M15 5h2a2 2 0 0 1-2 4M10 12v3m-2.5 0h5",
+      ],
+      color: "#f59e0b",
+      title: "สถิติและสถิติสูงสุด",
+      desc: "PR ทุกประเภทกีฬา พร้อม streak รายวัน",
+    },
+    {
+      icon: ["M3 18 8 8l4 6 3-4 6 8H3Z"],
+      color: "#0ea5e9",
+      title: "กราฟและ Heatmap",
+      desc: "ดูความสม่ำเสมอย้อนหลังได้เป็นปี",
+    },
+    {
+      icon: ["M10 3v10m0 0 3.5-3.5M10 13l-3.5-3.5M4 15v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1"],
+      color: "#8b5cf6",
+      title: "แชร์การ์ดสวยๆ",
+      desc: "สรุปกิจกรรม/สัปดาห์/เดือน พร้อมโพสต์โซเชียล",
+    },
+  ];
+
   return (
     <main className="relative flex min-h-screen flex-col items-center overflow-hidden px-6">
       <div className="pointer-events-none absolute inset-x-0 top-[-10%] h-[500px] bg-glow-orange" />
 
-      <div className="relative z-10 flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 py-24 text-center">
+      <div className="relative z-10 flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 py-20 text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="MooPaTa" className="h-20 w-20 rounded-2xl shadow-lg shadow-black/40" />
 
@@ -23,6 +53,30 @@ export default async function HomePage({
           <p className="text-balance text-neutral-400">
             รวมข้อมูลการออกกำลังกายจาก Strava และ Huawei Health ไว้ที่เดียว
           </p>
+        </div>
+
+        <div className="grid w-full grid-cols-2 gap-3">
+          {features.map((f) => (
+            <div
+              key={f.title}
+              className="flex flex-col items-start gap-2 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-4 text-left"
+            >
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-lg"
+                style={{ backgroundColor: `${f.color}1a`, color: f.color }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+                  {f.icon.map((d) => (
+                    <path key={d} d={d} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  ))}
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-neutral-200">{f.title}</p>
+                <p className="mt-0.5 text-xs leading-snug text-neutral-500">{f.desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
 
         {searchParams.error && (
