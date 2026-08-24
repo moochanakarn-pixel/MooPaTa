@@ -65,11 +65,20 @@ export function ProfileChart({
   const maxY = Math.max(...ys);
   const xRange = maxX - minX || 1;
   const yRange = maxY - minY || 1;
+  const avgY = ys.reduce((sum, y) => sum + y, 0) / ys.length;
 
   const toXY = (p: Point): [number, number] => [
     PADDING + ((p.x - minX) / xRange) * (WIDTH - PADDING * 2),
     PADDING + (1 - (p.y - minY) / yRange) * (HEIGHT - PADDING * 2),
   ];
+
+  // y is always plotted "higher = top" (see the JSDoc above) — for pace,
+  // the underlying value is still velocity (m/s), so the max y point is the
+  // fastest point on the chart even though it displays via formatPace.
+  const peakPoint = points.reduce((best, p) => (p.y > best.y ? p : best));
+  const peakXY = toXY(peakPoint);
+  const peakLabel = valueKind === "pace" || valueKind === "speed" ? "เร็วที่สุด" : "สูงสุด";
+  const avgLineY = toXY({ x: minX, y: avgY })[1];
 
   const linePath = points
     .map((p, i) => {
@@ -127,7 +136,42 @@ export function ProfileChart({
           </linearGradient>
         </defs>
         <path d={areaPath} fill={`url(#${gradientId})`} stroke="none" />
+
+        <line
+          x1={PADDING}
+          y1={avgLineY}
+          x2={WIDTH - PADDING}
+          y2={avgLineY}
+          stroke="rgba(255,255,255,0.25)"
+          strokeWidth="1"
+          strokeDasharray="4 3"
+        />
+        <text x={WIDTH - PADDING - 2} y={avgLineY - 4} fontSize="9" fill="rgba(255,255,255,0.45)" textAnchor="end">
+          เฉลี่ย {formatY(avgY)}
+        </text>
+
+        {/* Only the min label goes on the axis — the max is always the peak
+            point's value (see peakPoint below), so a max axis label here
+            would just duplicate the peak marker's own text, sometimes
+            colliding with it when the peak falls near this corner. */}
+        <text x={PADDING + 2} y={HEIGHT - PADDING - 3} fontSize="9" fill="rgba(255,255,255,0.3)">
+          {formatY(minY)}
+        </text>
+
         <path d={linePath} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+
+        <circle cx={peakXY[0]} cy={peakXY[1]} r="3" fill={color} stroke="#0a0a0a" strokeWidth="1" opacity="0.9" />
+        <text
+          x={Math.min(Math.max(peakXY[0], PADDING + 34), WIDTH - PADDING - 34)}
+          y={peakXY[1] < HEIGHT / 2 ? peakXY[1] + 15 : peakXY[1] - 8}
+          fontSize="9"
+          fontWeight="700"
+          fill={color}
+          textAnchor="middle"
+        >
+          {peakLabel} {formatY(peakPoint.y)}
+        </text>
+
         {hoverXY && (
           <>
             <line

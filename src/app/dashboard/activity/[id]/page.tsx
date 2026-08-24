@@ -117,7 +117,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
 
       {polyline && (
         <div className="mb-6">
-          <RouteSketch polyline={polyline} />
+          <RouteSketch polyline={polyline} unit={unit} />
         </div>
       )}
 

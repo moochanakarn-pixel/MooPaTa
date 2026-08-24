@@ -14,13 +14,17 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
   const [hover, setHover] = useState<number | null>(null);
   const gradientId = useId();
   const max = Math.max(...weeks.map((w) => w.km), 1);
+  const avg = weeks.length > 0 ? weeks.reduce((sum, w) => sum + w.km, 0) / weeks.length : 0;
+  const avgY = CHART_HEIGHT - Math.max((avg / max) * (CHART_HEIGHT - 8), 0);
 
   return (
     <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
       <div className="mb-4 flex items-baseline justify-between">
         <h2 className="font-medium">ระยะทางรายสัปดาห์</h2>
         <div className="flex items-center gap-3">
-          <p className="text-xs text-neutral-500">12 สัปดาห์ล่าสุด</p>
+          <p className="text-xs text-neutral-500">
+            12 สัปดาห์ล่าสุด · เฉลี่ย <span className="text-neutral-400">{avg.toFixed(1)} กม.</span>
+          </p>
           <a
             href="/api/share/period?range=week"
             download
@@ -42,6 +46,18 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
             <stop offset="100%" stopColor="#fc4c02" stopOpacity="0.55" />
           </linearGradient>
         </defs>
+        {avg > 0 && (
+          <line
+            x1="0"
+            y1={avgY}
+            x2="100"
+            y2={avgY}
+            stroke="rgba(255,255,255,0.3)"
+            strokeWidth="0.6"
+            strokeDasharray="2 1.5"
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
         {weeks.map((w, i) => {
           const barWidth = 100 / weeks.length - BAR_GAP / weeks.length;
           const x = i * (100 / weeks.length) + BAR_GAP / weeks.length / 2;

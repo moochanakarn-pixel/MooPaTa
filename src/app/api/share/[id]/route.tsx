@@ -86,7 +86,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   let routeImg: string | null = null;
   try {
     const polyline = extractStravaPolyline(activity.raw);
-    const routeGeo = polyline ? buildRoutePath(polyline, 300, 20) : null;
+    const routeGeo = polyline ? buildRoutePath(polyline, 300, 20, unit) : null;
     routeImg = routeGeo ? routeGeometryToSvgDataUri(routeGeo, "#ffffff") : null;
   } catch (err) {
     console.error("Share card: could not draw route", err);
