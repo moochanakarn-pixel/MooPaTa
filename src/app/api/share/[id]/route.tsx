@@ -1,6 +1,13 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
-import { activityTypeLabel, formatDistanceParts, formatDuration, formatPace, formatSpeedKmh } from "@/lib/format";
+import {
+  activityTypeLabel,
+  formatDistanceParts,
+  formatDuration,
+  formatElevationM,
+  formatPace,
+  formatSpeedKmh,
+} from "@/lib/format";
 import { buildRoutePath, extractStravaPolyline, routeGeometryToSvgDataUri } from "@/lib/polyline";
 import { getSessionUserId } from "@/lib/session";
 import { loadShareFonts } from "@/lib/share-fonts";
@@ -24,9 +31,55 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return new Response("Not found", { status: 404 });
   }
 
+  const bests = await db.activity.aggregate({
+    where: { userId, type: activity.type },
+    _max: { distanceMeters: true, avgSpeedMs: true },
+  });
+  const badges: string[] = [];
+  if (activity.distanceMeters && activity.distanceMeters === bests._max.distanceMeters) {
+    badges.push("ระยะทางไกลที่สุด");
+  }
+  if (activity.avgSpeedMs && activity.avgSpeedMs === bests._max.avgSpeedMs) {
+    badges.push("เพซเร็วที่สุด");
+  }
+
   const unit = user?.unitSystem ?? "METRIC";
   const isRun = activity.type === "Run";
   const distance = formatDistanceParts(activity.distanceMeters, unit);
+
+  // Everything below the hero distance number, built as a plain list so a
+  // missing field (no HR sensor, no cadence data, etc.) just drops that one
+  // stat instead of leaving a blank grid cell.
+  const statItems: { value: string; label: string }[] = [
+    { value: formatDuration(activity.durationSec), label: "เวลา" },
+    {
+      value: isRun ? formatPace(activity.avgSpeedMs, unit) : formatSpeedKmh(activity.avgSpeedMs, unit),
+      label: isRun ? "เพซเฉลี่ย" : "ความเร็วเฉลี่ย",
+    },
+  ];
+  if (activity.maxSpeedMs) {
+    statItems.push({
+      value: isRun ? formatPace(activity.maxSpeedMs, unit) : formatSpeedKmh(activity.maxSpeedMs, unit),
+      label: isRun ? "เพซสูงสุด" : "ความเร็วสูงสุด",
+    });
+  }
+  if (activity.elevationGainM) {
+    statItems.push({ value: formatElevationM(activity.elevationGainM, unit), label: "ไต่ระดับ" });
+  }
+  if (activity.avgHeartRate) {
+    statItems.push({ value: `${Math.round(activity.avgHeartRate)} bpm`, label: "หัวใจเฉลี่ย" });
+  }
+  if (activity.maxHeartRate) {
+    statItems.push({ value: `${Math.round(activity.maxHeartRate)} bpm`, label: "หัวใจสูงสุด" });
+  }
+  if (activity.avgCadence) {
+    statItems.push({ value: `${Math.round(activity.avgCadence)} rpm`, label: "เคเดนซ์เฉลี่ย" });
+  }
+  if (activity.calories) {
+    statItems.push({ value: `${Math.round(activity.calories)} kcal`, label: "แคลอรี่" });
+  }
+  const statRows: { value: string; label: string }[][] = [];
+  for (let i = 0; i < statItems.length; i += 3) statRows.push(statItems.slice(i, i + 3));
 
   // A malformed/unsupported polyline shouldn't cost the user the whole
   // card — fall back to a routeless layout instead of a 500.
@@ -98,19 +151,38 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
             remaining space, so the composition stays balanced whether or
             not there's a route to draw. */}
         <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "center", gap: 28 }}>
-          <div
-            style={{
-              display: "flex",
-              alignSelf: "flex-start",
-              padding: "10px 24px",
-              borderRadius: 999,
-              background: "rgba(252,76,2,0.15)",
-              color: "#fc4c02",
-              fontSize: 26,
-              fontWeight: 700,
-            }}
-          >
-            {activityTypeLabel(activity.type)}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            <div
+              style={{
+                display: "flex",
+                padding: "10px 24px",
+                borderRadius: 999,
+                background: "rgba(252,76,2,0.15)",
+                color: "#fc4c02",
+                fontSize: 26,
+                fontWeight: 700,
+              }}
+            >
+              {activityTypeLabel(activity.type)}
+            </div>
+            {badges.map((b) => (
+              <div
+                key={b}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 20px",
+                  borderRadius: 999,
+                  background: "rgba(245,158,11,0.15)",
+                  color: "#f59e0b",
+                  fontSize: 22,
+                  fontWeight: 700,
+                }}
+              >
+                🏆 {b}
+              </div>
+            ))}
           </div>
 
           {activity.name && (
@@ -133,29 +205,22 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
+            flexDirection: "column",
+            gap: 22,
             borderTop: "2px solid rgba(255,255,255,0.12)",
-            paddingTop: 36,
+            paddingTop: 32,
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 44, fontWeight: 700, color: "white" }}>{formatDuration(activity.durationSec)}</span>
-            <span style={{ fontSize: 22, color: "#a3a3a3" }}>เวลา</span>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 44, fontWeight: 700, color: "white" }}>
-              {isRun ? formatPace(activity.avgSpeedMs, unit) : formatSpeedKmh(activity.avgSpeedMs, unit)}
-            </span>
-            <span style={{ fontSize: 22, color: "#a3a3a3" }}>{isRun ? "เพซเฉลี่ย" : "ความเร็วเฉลี่ย"}</span>
-          </div>
-          {activity.avgHeartRate && (
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontSize: 44, fontWeight: 700, color: "white" }}>
-                {Math.round(activity.avgHeartRate)}
-              </span>
-              <span style={{ fontSize: 22, color: "#a3a3a3" }}>bpm เฉลี่ย</span>
+          {statRows.map((row, i) => (
+            <div key={i} style={{ display: "flex", gap: 32 }}>
+              {row.map((s) => (
+                <div key={s.label} style={{ display: "flex", flexDirection: "column", width: 288 }}>
+                  <span style={{ fontSize: 36, fontWeight: 700, color: "white" }}>{s.value}</span>
+                  <span style={{ fontSize: 20, color: "#a3a3a3" }}>{s.label}</span>
+                </div>
+              ))}
             </div>
-          )}
+          ))}
         </div>
       </div>
     ),
