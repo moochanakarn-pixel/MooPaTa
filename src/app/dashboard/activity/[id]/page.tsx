@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { activityColor } from "@/lib/activity-colors";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import {
@@ -44,6 +45,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
   const unit = user?.unitSystem ?? "METRIC";
   const isRun = activity.type === "Run";
   const polyline = extractStravaPolyline(activity.raw);
+  const color = activityColor(activity.type);
 
   const [previous, bests, detail] = await Promise.all([
     db.activity.findFirst({
@@ -96,7 +98,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
       </div>
 
       <div className="mb-6 flex items-center gap-4">
-        <div className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-[#fc4c02]/10 text-[#fc4c02]">
+        <div className={`flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-gradient-to-br ${color.from} ${color.to} text-white shadow-lg shadow-black/20`}>
           <ActivityIcon type={activity.type} className="h-6 w-6" />
         </div>
         <div>

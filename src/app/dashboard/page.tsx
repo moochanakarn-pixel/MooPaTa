@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { activityColor } from "@/lib/activity-colors";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { activityTypeLabel, formatActivityDate, formatDistanceKm, formatDuration } from "@/lib/format";
@@ -108,9 +109,24 @@ export default async function DashboardPage({
   const unit = user?.unitSystem ?? "METRIC";
 
   const statCards = [
-    { label: "กิจกรรมทั้งหมด", value: stats._count._all.toLocaleString("th-TH") },
-    { label: "ระยะทางรวม", value: formatDistanceKm(stats._sum.distanceMeters, unit) },
-    { label: "เวลารวม", value: formatDuration(stats._sum.durationSec ?? 0) },
+    {
+      label: "กิจกรรมทั้งหมด",
+      value: stats._count._all.toLocaleString("th-TH"),
+      icon: "M4 19h3l2-9 4 14 2-9h5",
+      accent: "text-[#fc4c02]",
+    },
+    {
+      label: "ระยะทางรวม",
+      value: formatDistanceKm(stats._sum.distanceMeters, unit),
+      icon: "M4 18c2-3 4-3 6 0s4 3 6 0 4-3 6 0M4 12c2-3 4-3 6 0s4 3 6 0 4-3 6 0",
+      accent: "text-sky-400",
+    },
+    {
+      label: "เวลารวม",
+      value: formatDuration(stats._sum.durationSec ?? 0),
+      icon: "M12 7v5l3.5 2M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z",
+      accent: "text-emerald-400",
+    },
   ];
 
   const heatmapDays = buildHeatmapDays(heatmapRows);
@@ -120,27 +136,36 @@ export default async function DashboardPage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <header className="relative mb-8 overflow-hidden rounded-3xl border border-neutral-800/60 bg-neutral-900/30 p-5">
+        <div className="pointer-events-none absolute inset-0 bg-glow-orange" style={{ "--x": "15%", "--y": "0%" } as React.CSSProperties} />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {user?.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={user.avatarUrl}
               alt=""
-              className="h-11 w-11 rounded-full ring-2 ring-neutral-800"
+              className="h-11 w-11 rounded-full ring-2 ring-[#fc4c02]/40"
             />
           ) : (
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-neutral-800 text-sm font-semibold text-neutral-400">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#fc4c02] to-[#ff8a3d] text-sm font-semibold text-white">
               {(user?.name ?? "?").charAt(0)}
             </div>
           )}
           <div>
             <h1 className="text-lg font-bold leading-tight">สวัสดี, {user?.name ?? "นักวิ่ง"}</h1>
-            <p className="flex items-center gap-1.5 text-sm text-neutral-500">
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${connection ? "bg-emerald-500" : "bg-neutral-600"}`}
-              />
-              {connection ? "เชื่อมต่อ Strava แล้ว" : "ยังไม่ได้เชื่อมต่อ Strava"}
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-neutral-500">
+              <span className="flex items-center gap-1.5">
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${connection ? "bg-emerald-500" : "bg-neutral-600"}`}
+                />
+                {connection ? "เชื่อมต่อ Strava แล้ว" : "ยังไม่ได้เชื่อมต่อ Strava"}
+              </span>
+              {streaks.current > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-medium text-orange-300">
+                  🔥 ติดต่อกัน {streaks.current} วัน
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -173,14 +198,18 @@ export default async function DashboardPage({
             </button>
           </form>
         </div>
+        </div>
       </header>
 
       <div className="mb-6 grid grid-cols-3 gap-3">
         {statCards.map((s) => (
           <div
             key={s.label}
-            className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-4"
+            className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-4 transition hover:border-neutral-700"
           >
+            <svg viewBox="0 0 24 24" fill="none" className={`mb-2 h-4 w-4 ${s.accent}`}>
+              <path d={s.icon} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
             <p className="text-xl font-bold tracking-tight sm:text-2xl">{s.value}</p>
             <p className="mt-0.5 text-xs text-neutral-500">{s.label}</p>
           </div>
@@ -236,13 +265,15 @@ export default async function DashboardPage({
         </div>
       ) : (
         <ul className="space-y-2">
-          {activities.map((a) => (
+          {activities.map((a) => {
+            const color = activityColor(a.type);
+            return (
             <li key={a.id}>
               <Link
                 href={`/dashboard/activity/${a.id}`}
-                className="flex items-center gap-4 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-4 transition hover:border-neutral-700 hover:bg-neutral-900/70"
+                className="flex items-center gap-4 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-4 transition hover:border-neutral-700 hover:bg-neutral-900/70 hover:shadow-lg hover:shadow-black/20"
               >
-                <div className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-[#fc4c02]/10 text-[#fc4c02]">
+                <div className={`flex h-10 w-10 flex-none items-center justify-center rounded-xl ${color.bg} ${color.text}`}>
                   <ActivityIcon type={a.type} className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -257,7 +288,8 @@ export default async function DashboardPage({
                 </div>
               </Link>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </main>

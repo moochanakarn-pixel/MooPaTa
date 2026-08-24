@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { activityColor } from "@/lib/activity-colors";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { activityTypeLabel, formatDistanceKm, formatDuration, formatPace, type UnitSystem } from "@/lib/format";
 import { ActivityIcon } from "../activity-icon";
+
+const MEDALS = ["🥇", "🥈", "🥉"];
 
 interface TypeRecord {
   type: string;
@@ -78,6 +81,10 @@ export default async function RecordsPage() {
   );
 
   records.sort((a, b) => b.count - a.count);
+  // A podium only means something if the counts actually differ — with
+  // every type tied (small sample, or exactly balanced training) a 🥇🥈🥉
+  // ordering would just reflect arbitrary DB order, not a real ranking.
+  const hasRealRanking = records.some((r) => r.count !== records[0].count);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
@@ -97,14 +104,25 @@ export default async function RecordsPage() {
         <p className="text-neutral-500">ยังไม่มีข้อมูลกิจกรรม</p>
       ) : (
         <div className="space-y-4">
-          {records.map((r) => (
-            <div key={r.type} className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+          {records.map((r, i) => {
+            const color = activityColor(r.type);
+            return (
+            <div
+              key={r.type}
+              className={`relative overflow-hidden rounded-2xl border bg-neutral-900/40 p-5 ${i === 0 && hasRealRanking ? `border-neutral-700 ring-1 ${color.ring}` : "border-neutral-800/80"}`}
+            >
+              {i === 0 && hasRealRanking && (
+                <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${color.from} ${color.to}`} />
+              )}
               <div className="mb-2 flex items-center gap-3">
-                <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-[#fc4c02]/10 text-[#fc4c02]">
+                <div className={`flex h-9 w-9 flex-none items-center justify-center rounded-lg ${color.bg} ${color.text}`}>
                   <ActivityIcon type={r.type} className="h-4 w-4" />
                 </div>
-                <div>
-                  <h2 className="font-medium">{activityTypeLabel(r.type)}</h2>
+                <div className="flex-1">
+                  <h2 className="flex items-center gap-1.5 font-medium">
+                    {activityTypeLabel(r.type)}
+                    {hasRealRanking && MEDALS[i] && <span title="กิจกรรมที่ทำบ่อยที่สุด">{MEDALS[i]}</span>}
+                  </h2>
                   <p className="text-xs text-neutral-500">{r.count.toLocaleString("th-TH")} กิจกรรม</p>
                 </div>
               </div>
@@ -126,7 +144,8 @@ export default async function RecordsPage() {
                 />
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </main>
