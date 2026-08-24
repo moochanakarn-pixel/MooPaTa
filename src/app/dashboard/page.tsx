@@ -8,9 +8,11 @@ import { ActivityFilters } from "./activity-filters";
 import { ActivityHeatmap, buildHeatmapDays, computeStreaks } from "./activity-heatmap";
 import { ActivityIcon } from "./activity-icon";
 import { GoalProgress } from "./goal-progress";
+import { MonthHighlights } from "./month-highlights";
 import { PeriodComparison } from "./period-comparison";
 import { SyncButton } from "./sync-button";
 import { TrendChart, type WeekBucket } from "./trend-chart";
+import { TypeBreakdown } from "./type-breakdown";
 
 const WEEKS_OF_HISTORY = 12;
 const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -71,8 +73,18 @@ export default async function DashboardPage({
     }
   }
 
-  const [user, connection, activityTypes, activities, stats, chartRows, heatmapRows, thisMonthAgg, lastMonthAgg] =
-    await Promise.all([
+  const [
+    user,
+    connection,
+    activityTypes,
+    activities,
+    stats,
+    chartRows,
+    heatmapRows,
+    thisMonthAgg,
+    lastMonthAgg,
+    thisMonthActivities,
+  ] = await Promise.all([
       db.user.findUnique({ where: { id: userId } }),
       db.providerConnection.findFirst({ where: { userId, provider: "STRAVA" } }),
       db.activity.findMany({ where: { userId }, select: { type: true }, distinct: ["type"] }),
@@ -104,9 +116,21 @@ export default async function DashboardPage({
         _count: { _all: true },
         _sum: { distanceMeters: true, durationSec: true },
       }),
+      db.activity.findMany({
+        where: { userId, startedAt: { gte: thisMonthStart } },
+        select: { id: true, type: true, distanceMeters: true, avgSpeedMs: true, elevationGainM: true },
+      }),
     ]);
 
   const unit = user?.unitSystem ?? "METRIC";
+
+  const typeShares = Object.values(
+    thisMonthActivities.reduce<Record<string, { type: string; km: number }>>((acc, a) => {
+      acc[a.type] ??= { type: a.type, km: 0 };
+      acc[a.type].km += (a.distanceMeters ?? 0) / 1000;
+      return acc;
+    }, {})
+  ).sort((a, b) => b.km - a.km);
 
   const statCards = [
     {
@@ -215,6 +239,18 @@ export default async function DashboardPage({
           </div>
         ))}
       </div>
+
+      {thisMonthActivities.length > 0 && (
+        <div className="mb-6">
+          <MonthHighlights activities={thisMonthActivities} unit={unit} />
+        </div>
+      )}
+
+      {typeShares.length > 1 && (
+        <div className="mb-6">
+          <TypeBreakdown items={typeShares} />
+        </div>
+      )}
 
       {user?.monthlyGoalKm && (
         <div className="mb-6">
