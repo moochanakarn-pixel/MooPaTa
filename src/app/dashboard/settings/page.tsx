@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getBuildInfo } from "@/lib/build-info";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { DeleteAccountButton, DisconnectStravaButton, GoalInput, UnitToggle } from "./settings-client";
@@ -12,6 +13,8 @@ export default async function SettingsPage() {
     db.user.findUnique({ where: { id: userId } }),
     db.providerConnection.findFirst({ where: { userId, provider: "STRAVA" } }),
   ]);
+
+  const build = getBuildInfo();
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
@@ -56,6 +59,13 @@ export default async function SettingsPage() {
         </p>
         <DeleteAccountButton />
       </section>
+
+      {build && (
+        <p className="mt-8 text-center text-xs text-neutral-700" title={build.subject}>
+          เวอร์ชันที่รันอยู่: {build.commit} ·{" "}
+          {new Date(build.commitDate).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}
+        </p>
+      )}
     </main>
   );
 }
