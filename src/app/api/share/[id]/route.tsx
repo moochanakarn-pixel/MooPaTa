@@ -1,12 +1,4 @@
-// Imported from the standalone @vercel/og package, not next/og: the copy
-// vendored inside Next.js 14.2.x (still true as of 14.2.35) resolves its
-// bundled fallback font via `path.join(import.meta.url, ...)`, which is
-// wrong cross-platform — path.join uses backslashes on Windows, producing
-// an unparseable "file:\..." string and crashing every request with
-// ERR_INVALID_URL. The standalone package fixed this by switching to
-// `new URL(..., import.meta.url)`, which handles file:// URLs correctly on
-// every OS.
-import { ImageResponse } from "@vercel/og";
+import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 import { activityTypeLabel, formatDistanceParts, formatDuration, formatPace, formatSpeedKmh } from "@/lib/format";
 import { buildRoutePath, extractStravaPolyline, routeGeometryToSvgDataUri } from "@/lib/polyline";
