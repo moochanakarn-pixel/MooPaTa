@@ -229,6 +229,29 @@ export default async function DashboardPage({
             </svg>
             สถิติสูงสุด
           </Link>
+          <Link
+            href="/dashboard/compare"
+            className="flex items-center gap-1.5 rounded-xl border border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:bg-neutral-900 hover:text-white"
+          >
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-sky-400">
+              <path d="M6 4v12M6 4 3 7m3-3 3 3M14 16V4m0 12 3-3m-3 3-3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            เทียบกิจกรรม
+          </Link>
+          <Link
+            href="/dashboard/achievements"
+            className="flex items-center gap-1.5 rounded-xl border border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:bg-neutral-900 hover:text-white"
+          >
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-orange-400">
+              <path
+                d="M10 3 8 8H4l3.2 3-1.2 5 4-2.7 4 2.7-1.2-5L16 8h-4L10 3Z"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
+            </svg>
+            ความสำเร็จ
+          </Link>
           <Link href="/dashboard/settings" className="text-neutral-500 transition hover:text-neutral-300" title="ตั้งค่า">
             <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
               <path

@@ -3,10 +3,38 @@ import { redirect } from "next/navigation";
 import { activityColor } from "@/lib/activity-colors";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
-import { activityTypeLabel, formatDistanceKm, formatDuration, formatPace, type UnitSystem } from "@/lib/format";
+import {
+  activityTypeLabel,
+  formatDistanceKm,
+  formatDuration,
+  formatPace,
+  formatSpeedKmh,
+  type UnitSystem,
+} from "@/lib/format";
+import { computePrProgression } from "@/lib/pr-progression";
 import { ActivityIcon } from "../activity-icon";
+import { PrProgressionChart } from "./pr-progression-chart";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
+
+// Matches src/lib/activity-colors.ts's per-type accent, but as raw hex —
+// the sparkline is plain SVG, which can't consume Tailwind's arbitrary-value
+// classes at render time.
+const TYPE_STROKE: Record<string, string> = {
+  Run: "#fc4c02",
+  TrailRun: "#fc4c02",
+  Ride: "#0ea5e9",
+  VirtualRide: "#0ea5e9",
+  EBikeRide: "#0ea5e9",
+  Walk: "#10b981",
+  Hike: "#10b981",
+  Swim: "#06b6d4",
+  WeightTraining: "#8b5cf6",
+  Workout: "#8b5cf6",
+};
+function typeStroke(type: string): string {
+  return TYPE_STROKE[type] ?? "#f43f5e";
+}
 
 interface TypeRecord {
   type: string;
@@ -18,6 +46,8 @@ interface TypeRecord {
   maxElevationGainM: number | null;
   longestActivityId?: string;
   fastestActivityId?: string;
+  distanceProgression: { ms: number; value: number }[];
+  speedProgression: { ms: number; value: number }[];
 }
 
 function RecordRow({ label, value, href }: { label: string; value: string; href?: string }) {
@@ -51,13 +81,20 @@ export default async function RecordsPage() {
   const user = await db.user.findUnique({ where: { id: userId } });
   const unit: UnitSystem = user?.unitSystem ?? "METRIC";
 
-  const grouped = await db.activity.groupBy({
-    by: ["type"],
-    where: { userId },
-    _count: { _all: true },
-    _sum: { distanceMeters: true },
-    _max: { distanceMeters: true, avgSpeedMs: true, durationSec: true, elevationGainM: true },
-  });
+  const [grouped, history] = await Promise.all([
+    db.activity.groupBy({
+      by: ["type"],
+      where: { userId },
+      _count: { _all: true },
+      _sum: { distanceMeters: true },
+      _max: { distanceMeters: true, avgSpeedMs: true, durationSec: true, elevationGainM: true },
+    }),
+    db.activity.findMany({
+      where: { userId },
+      orderBy: { startedAt: "asc" },
+      select: { type: true, startedAt: true, distanceMeters: true, avgSpeedMs: true },
+    }),
+  ]);
 
   const records: TypeRecord[] = await Promise.all(
     grouped.map(async (g) => {
@@ -76,6 +113,14 @@ export default async function RecordsPage() {
           : null,
       ]);
 
+      const typeHistory = history.filter((h) => h.type === g.type);
+      const distanceProgression = computePrProgression(
+        typeHistory.map((h) => ({ startedAtMs: h.startedAt.getTime(), value: h.distanceMeters }))
+      );
+      const speedProgression = computePrProgression(
+        typeHistory.map((h) => ({ startedAtMs: h.startedAt.getTime(), value: h.avgSpeedMs }))
+      );
+
       return {
         type: g.type,
         count: g._count._all,
@@ -86,6 +131,8 @@ export default async function RecordsPage() {
         maxElevationGainM: g._max.elevationGainM,
         longestActivityId: longest?.id,
         fastestActivityId: fastest?.id,
+        distanceProgression,
+        speedProgression,
       };
     })
   );
@@ -147,6 +194,8 @@ export default async function RecordsPage() {
           <div className="space-y-4">
           {records.map((r, i) => {
             const color = activityColor(r.type);
+            const isRun = r.type === "Run";
+            const stroke = typeStroke(r.type);
             return (
             <div
               key={r.type}
@@ -174,8 +223,8 @@ export default async function RecordsPage() {
                   href={r.longestActivityId ? `/dashboard/activity/${r.longestActivityId}` : undefined}
                 />
                 <RecordRow
-                  label="เพซเร็วที่สุด"
-                  value={formatPace(r.maxAvgSpeedMs, unit)}
+                  label={isRun ? "เพซเร็วที่สุด" : "ความเร็วสูงสุด"}
+                  value={isRun ? formatPace(r.maxAvgSpeedMs, unit) : formatSpeedKmh(r.maxAvgSpeedMs, unit)}
                   href={r.fastestActivityId ? `/dashboard/activity/${r.fastestActivityId}` : undefined}
                 />
                 <RecordRow label="เวลานานที่สุด" value={r.maxDurationSec ? formatDuration(r.maxDurationSec) : "-"} />
@@ -184,6 +233,23 @@ export default async function RecordsPage() {
                   value={r.maxElevationGainM ? `${Math.round(r.maxElevationGainM)} ม.` : "-"}
                 />
               </div>
+
+              {(r.distanceProgression.length >= 3 || r.speedProgression.length >= 3) && (
+                <div className="mt-3 space-y-3 border-t border-neutral-800/60 pt-3">
+                  <PrProgressionChart
+                    points={r.distanceProgression}
+                    label="แนวโน้ม PR ระยะทาง"
+                    color={stroke}
+                    formatValue={(v) => formatDistanceKm(v, unit)}
+                  />
+                  <PrProgressionChart
+                    points={r.speedProgression}
+                    label={isRun ? "แนวโน้ม PR เพซ" : "แนวโน้ม PR ความเร็ว"}
+                    color={stroke}
+                    formatValue={(v) => (isRun ? formatPace(v, unit) : formatSpeedKmh(v, unit))}
+                  />
+                </div>
+              )}
             </div>
             );
           })}
