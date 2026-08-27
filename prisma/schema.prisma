@@ -86,7 +86,7 @@ model Food {
   logs   FoodLog[]
 
   @@index([userId])
-  @@index([userId, barcode])
+  @@unique([userId, barcode])
 }
 
 enum FoodSource {

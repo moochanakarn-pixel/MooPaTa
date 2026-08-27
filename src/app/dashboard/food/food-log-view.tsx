@@ -80,6 +80,8 @@ export function FoodLogView({
   const [customFat, setCustomFat] = useState("");
   const [saving, setSaving] = useState(false);
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const totals = useMemo(
     () =>
@@ -94,6 +96,13 @@ export function FoodLogView({
       ),
     [todayLogs]
   );
+
+  // Once the user has started typing custom macros, the portion they typed
+  // them for must stay fixed — editing grams afterward would silently
+  // rescale the per-100g values stored for reuse without changing what was
+  // actually typed, corrupting the food's nutrition density permanently.
+  const customMacrosStarted =
+    pending?.kind === "custom" && (customCalories !== "" || customProtein !== "" || customCarb !== "" || customFat !== "");
 
   const personalMatches = query.trim()
     ? personalFoods.filter((f) => f.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 8)
@@ -142,6 +151,11 @@ export function FoodLogView({
 
   async function submitPending() {
     if (!pending) return;
+    if (!Number.isFinite(pending.grams) || pending.grams <= 0) {
+      setSubmitError("กรอกปริมาณ (กรัม) ให้ถูกต้องก่อนบันทึก");
+      return;
+    }
+    setSubmitError(null);
     setSaving(true);
     let body: Record<string, unknown>;
 
@@ -189,12 +203,19 @@ export function FoodLogView({
       setShowAdd(false);
       setQuery("");
       router.refresh();
+    } else {
+      setSubmitError("บันทึกไม่สำเร็จ ตรวจสอบข้อมูลแล้วลองใหม่อีกครั้ง");
     }
   }
 
   async function deleteLog(id: string) {
-    await fetch(`/api/food/log/${id}`, { method: "DELETE" });
-    router.refresh();
+    setDeleteError(null);
+    const res = await fetch(`/api/food/log/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      router.refresh();
+    } else {
+      setDeleteError("ลบไม่สำเร็จ ลองใหม่อีกครั้ง");
+    }
   }
 
   return (
@@ -245,6 +266,23 @@ export function FoodLogView({
                 {pending.kind === "custom" && "เพิ่มเมนูเอง"}
               </h3>
 
+              <div className="mb-3 flex items-center gap-2">
+                <label className="text-xs text-neutral-500">ปริมาณ (กรัม)</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={pending.grams}
+                  disabled={customMacrosStarted}
+                  onChange={(e) => setPending({ ...pending, grams: Number(e.target.value) } as PendingFood)}
+                  className={`${INPUT_CLASS} w-24 disabled:opacity-50`}
+                />
+                {customMacrosStarted && (
+                  <span className="text-xs text-neutral-600">
+                    (ล็อกไว้ — แคลอรี่/แมโครที่กรอกด้านล่างคำนวณจากปริมาณนี้)
+                  </span>
+                )}
+              </div>
+
               {pending.kind === "custom" && (
                 <div className="mb-3 space-y-2">
                   <input
@@ -287,20 +325,9 @@ export function FoodLogView({
                       className={INPUT_CLASS}
                     />
                   </div>
-                  <p className="text-xs text-neutral-500">กรอกแคลอรี่/แมโครสำหรับปริมาณที่กิน (ตามน้ำหนักด้านล่าง)</p>
+                  <p className="text-xs text-neutral-500">กรอกแคลอรี่/แมโครสำหรับปริมาณ {pending.grams || 0} กรัมด้านบน</p>
                 </div>
               )}
-
-              <div className="mb-3 flex items-center gap-2">
-                <label className="text-xs text-neutral-500">ปริมาณ (กรัม)</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={pending.grams}
-                  onChange={(e) => setPending({ ...pending, grams: Number(e.target.value) } as PendingFood)}
-                  className={`${INPUT_CLASS} w-24`}
-                />
-              </div>
 
               {pending.kind !== "custom" && (
                 <p className="mb-3 text-xs text-neutral-500">
@@ -313,6 +340,8 @@ export function FoodLogView({
                 </p>
               )}
 
+              {submitError && <p className="mb-3 text-xs text-red-400">{submitError}</p>}
+
               <div className="flex gap-2">
                 <button
                   onClick={submitPending}
@@ -322,7 +351,10 @@ export function FoodLogView({
                   {saving ? "กำลังบันทึก..." : "บันทึก"}
                 </button>
                 <button
-                  onClick={() => setPending(null)}
+                  onClick={() => {
+                    setPending(null);
+                    setSubmitError(null);
+                  }}
                   className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:border-neutral-600"
                 >
                   ย้อนกลับ
@@ -414,6 +446,8 @@ export function FoodLogView({
           )}
         </div>
       )}
+
+      {deleteError && <p className="mb-2 text-xs text-red-400">{deleteError}</p>}
 
       {todayLogs.length === 0 ? (
         <p className="py-8 text-center text-sm text-neutral-600">ยังไม่ได้บันทึกอาหารวันนี้</p>

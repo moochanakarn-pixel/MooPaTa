@@ -57,12 +57,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "invalid_macros" }, { status: 400 });
     }
 
-    let food = barcode ? await db.food.findFirst({ where: { userId, barcode } }) : null;
-    if (!food) {
-      food = await db.food.create({
-        data: { userId, name, caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g, source, barcode },
-      });
-    }
+    // Barcode foods are deduped via the (userId, barcode) unique constraint —
+    // upsert makes this atomic, so two racing requests for the same barcode
+    // (a double-tapped save, a retried request) can't create two Food rows
+    // for one product. CUSTOM/CATALOG entries have no barcode to dedupe on
+    // (MySQL treats each NULL in a unique index as distinct), so they always
+    // create a fresh row.
+    const food = barcode
+      ? await db.food.upsert({
+          where: { userId_barcode: { userId, barcode } },
+          update: {},
+          create: { userId, name, caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g, source, barcode },
+        })
+      : await db.food.create({
+          data: { userId, name, caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g, source, barcode },
+        });
     foodId = food.id;
   }
 
