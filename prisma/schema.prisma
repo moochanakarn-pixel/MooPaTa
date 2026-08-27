@@ -36,6 +36,7 @@ model User {
   waterLogs      WaterLog[]
   supplements    Supplement[]
   supplementLogs SupplementLog[]
+  weightLogs     WeightLog[]
 }
 
 enum Provider {
@@ -208,6 +209,21 @@ model ActivityDetail {
 model WaterLog {
   id       String   @id @default(cuid())
   ml       Int
+  loggedAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loggedAt])
+}
+
+// One logged bodyweight reading, for the trend chart on the nutrition page.
+// Logging a new entry also updates User.weightKg (see /api/weight/log) so
+// BMR/TDEE always uses the most recently logged weight without a separate
+// settings-page edit.
+model WeightLog {
+  id       String   @id @default(cuid())
+  weightKg Float
   loggedAt DateTime @default(now())
 
   userId String

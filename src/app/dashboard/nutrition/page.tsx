@@ -3,7 +3,18 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { formatDuration } from "@/lib/format";
+import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete, GOAL_LABEL, ACTIVITY_LEVEL_LABEL } from "@/lib/nutrition";
+import { WeightLogCard, type WeightLogEntry } from "./weight-log-card";
+import { CalorieTrendChart, type CalorieDayBucket } from "./calorie-trend-chart";
+
+const TREND_DAYS = 14;
+
+// Local calendar date (not UTC) so a late-night entry buckets into the day
+// the user actually experienced it as, not whatever day it is in UTC.
+function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
 
 function MacroBar({ proteinG, carbG, fatG }: { proteinG: number; carbG: number; fatG: number }) {
   const proteinKcal = proteinG * 4;
@@ -101,12 +112,58 @@ export default async function NutritionPage() {
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
-  const todayAgg = await db.activity.aggregate({
-    where: { userId, startedAt: { gte: todayStart } },
-    _sum: { durationSec: true },
-  });
+  const sixtyDaysAgo = new Date(todayStart);
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+  const trendStart = new Date(todayStart);
+  trendStart.setDate(trendStart.getDate() - (TREND_DAYS - 1));
+
+  const [todayAgg, weightRows, trendFoodLogs, trendActivities] = await Promise.all([
+    db.activity.aggregate({
+      where: { userId, startedAt: { gte: todayStart } },
+      _sum: { durationSec: true },
+    }),
+    db.weightLog.findMany({
+      where: { userId, loggedAt: { gte: sixtyDaysAgo } },
+      orderBy: { loggedAt: "asc" },
+    }),
+    db.foodLog.findMany({
+      where: { userId, loggedAt: { gte: trendStart } },
+      include: { food: true },
+    }),
+    db.activity.findMany({
+      where: { userId, startedAt: { gte: trendStart } },
+      select: { startedAt: true, durationSec: true },
+    }),
+  ]);
   const activityDurationTodaySec = todayAgg._sum.durationSec ?? 0;
   const targets = applyActivityBonus(baseTargets, activityDurationTodaySec);
+  const weightLogs: WeightLogEntry[] = weightRows.map((w) => ({
+    id: w.id,
+    weightKg: w.weightKg,
+    loggedAtMs: w.loggedAt.getTime(),
+  }));
+
+  const caloriesByDay = new Map<string, number>();
+  for (const log of trendFoodLogs) {
+    const key = dayKey(log.loggedAt);
+    caloriesByDay.set(key, (caloriesByDay.get(key) ?? 0) + macrosForGrams(log.food, log.grams).calories);
+  }
+  const durationByDay = new Map<string, number>();
+  for (const act of trendActivities) {
+    const key = dayKey(act.startedAt);
+    durationByDay.set(key, (durationByDay.get(key) ?? 0) + act.durationSec);
+  }
+  const trendDays: CalorieDayBucket[] = Array.from({ length: TREND_DAYS }, (_, i) => {
+    const d = new Date(trendStart);
+    d.setDate(d.getDate() + i);
+    const key = dayKey(d);
+    const dayTarget = applyActivityBonus(baseTargets, durationByDay.get(key) ?? 0);
+    return {
+      label: d.toLocaleDateString("th-TH", { day: "numeric", month: "short" }),
+      calories: caloriesByDay.get(key) ?? 0,
+      targetCalories: dayTarget.targetCalories,
+    };
+  });
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
@@ -116,8 +173,14 @@ export default async function NutritionPage() {
         {GOAL_LABEL[user.nutritionGoal]} · {ACTIVITY_LEVEL_LABEL[profile.activityLevel]} ·{" "}
         <Link href="/dashboard/settings" className="text-neutral-400 hover:text-neutral-200 hover:underline">
           แก้โปรไฟล์
+        </Link>{" "}
+        ·{" "}
+        <Link href="/dashboard/knowledge" className="text-neutral-400 hover:text-neutral-200 hover:underline">
+          ตัวเลขนี้มาจากไหน
         </Link>
       </p>
+
+      <WeightLogCard logs={weightLogs} />
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <p className="text-xs text-neutral-500">เป้าหมายแคลอรี่ต่อวัน</p>
@@ -143,6 +206,10 @@ export default async function NutritionPage() {
             โปรตีน +{targets.proteinBonusG} ก.
           </p>
         )}
+      </div>
+
+      <div className="mb-6">
+        <CalorieTrendChart days={trendDays} />
       </div>
 
       <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
