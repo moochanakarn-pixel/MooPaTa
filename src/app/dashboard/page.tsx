@@ -214,44 +214,6 @@ export default async function DashboardPage({
           >
             Export CSV
           </a>
-          <Link
-            href="/dashboard/records"
-            className="flex items-center gap-1.5 rounded-xl border border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:bg-neutral-900 hover:text-white"
-          >
-            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-amber-400">
-              <path
-                d="M5 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5V4Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-              />
-              <path d="M5 5H3a2 2 0 0 0 2 4M15 5h2a2 2 0 0 1-2 4M10 12v3m-2.5 0h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            สถิติสูงสุด
-          </Link>
-          <Link
-            href="/dashboard/compare"
-            className="flex items-center gap-1.5 rounded-xl border border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:bg-neutral-900 hover:text-white"
-          >
-            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-sky-400">
-              <path d="M6 4v12M6 4 3 7m3-3 3 3M14 16V4m0 12 3-3m-3 3-3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            เทียบกิจกรรม
-          </Link>
-          <Link
-            href="/dashboard/achievements"
-            className="flex items-center gap-1.5 rounded-xl border border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:bg-neutral-900 hover:text-white"
-          >
-            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 text-orange-400">
-              <path
-                d="M10 3 8 8H4l3.2 3-1.2 5 4-2.7 4 2.7-1.2-5L16 8h-4L10 3Z"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinejoin="round"
-              />
-            </svg>
-            ความสำเร็จ
-          </Link>
           <Link href="/dashboard/settings" className="text-neutral-500 transition hover:text-neutral-300" title="ตั้งค่า">
             <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
               <path
@@ -271,6 +233,66 @@ export default async function DashboardPage({
         </div>
         </div>
       </header>
+
+      <div className="mb-6 -mx-6 flex gap-2 overflow-x-auto px-6 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+        {[
+          {
+            href: "/dashboard/records",
+            label: "สถิติสูงสุด",
+            color: "text-amber-400",
+            icon: (
+              <>
+                <path d="M5 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5V4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                <path d="M5 5H3a2 2 0 0 0 2 4M15 5h2a2 2 0 0 1-2 4M10 12v3m-2.5 0h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </>
+            ),
+          },
+          {
+            href: "/dashboard/compare",
+            label: "เทียบกิจกรรม",
+            color: "text-sky-400",
+            icon: <path d="M6 4v12M6 4 3 7m3-3 3 3M14 16V4m0 12 3-3m-3 3-3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
+          },
+          {
+            href: "/dashboard/achievements",
+            label: "ความสำเร็จ",
+            color: "text-orange-400",
+            icon: (
+              <path
+                d="M10 3 8 8H4l3.2 3-1.2 5 4-2.7 4 2.7-1.2-5L16 8h-4L10 3Z"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
+            ),
+          },
+          {
+            href: "/dashboard/nutrition",
+            label: "โภชนาการ",
+            color: "text-lime-400",
+            icon: (
+              <path
+                d="M10 4c3 3 6 6.5 6 10a6 6 0 0 1-12 0c0-3.5 3-7 6-10Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ),
+          },
+        ].map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="flex flex-none items-center gap-1.5 rounded-xl border border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:bg-neutral-900 hover:text-white"
+          >
+            <svg viewBox="0 0 20 20" fill="none" className={`h-4 w-4 ${item.color}`}>
+              {item.icon}
+            </svg>
+            {item.label}
+          </Link>
+        ))}
+      </div>
 
       <div className="mb-6 grid grid-cols-3 gap-3">
         {statCards.map((s) => (

@@ -4,6 +4,7 @@ import { getBuildInfo } from "@/lib/build-info";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { DeleteAccountButton, DisconnectStravaButton, GoalInput, UnitToggle } from "./settings-client";
+import { NutritionProfileForm } from "./nutrition-profile-form";
 
 export default async function SettingsPage() {
   const userId = await getSessionUserId();
@@ -63,6 +64,40 @@ export default async function SettingsPage() {
         </div>
         <p className="mb-4 text-sm text-neutral-500">ตั้งเป้าระยะทางต่อเดือน จะเห็น progress bar ที่หน้ารวม เว้นว่างไว้เพื่อไม่ตั้งเป้าหมาย</p>
         <GoalInput initialGoalKm={user?.monthlyGoalKm ?? null} unit={user?.unitSystem ?? "METRIC"} />
+      </section>
+
+      <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+        <div className="mb-3 flex items-center gap-3">
+          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-lime-500/10 text-lime-400">
+            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+              <path
+                d="M12 4c3 3 6 6.5 6 10a6 6 0 0 1-12 0c0-3.5 3-7 6-10Z"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <h2 className="font-medium">โปรไฟล์โภชนาการ</h2>
+        </div>
+        <p className="mb-4 text-sm text-neutral-500">
+          กรอกไว้เพื่อคำนวณแคลอรี่ แมโคร และเป้าหมายน้ำต่อวันให้อัตโนมัติ ดูผลลัพธ์ได้ที่หน้า{" "}
+          <Link href="/dashboard/nutrition" className="text-lime-400 hover:underline">
+            โภชนาการ
+          </Link>
+        </p>
+        <NutritionProfileForm
+          initial={{
+            weightKg: user?.weightKg ?? null,
+            heightCm: user?.heightCm ?? null,
+            age: user?.age ?? null,
+            sex: user?.sex ?? null,
+            activityLevel: user?.activityLevel ?? null,
+            nutritionGoal: user?.nutritionGoal ?? "MAINTAIN",
+            goalRateKgPerWeek: user?.goalRateKgPerWeek ?? null,
+          }}
+        />
       </section>
 
       <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
