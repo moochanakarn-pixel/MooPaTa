@@ -3,11 +3,14 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { formatDistanceKm, formatDuration } from "@/lib/format";
+import { macrosForGrams } from "@/lib/food";
+import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
 import { ActivityFilters } from "./activity-filters";
 import { ActivityHeatmap, buildHeatmapDays, computeStreaks } from "./activity-heatmap";
 import { ActivityIcon } from "./activity-icon";
 import { ActivityListView, type ActivityRow } from "./activity-list-view";
 import { GoalProgress } from "./goal-progress";
+import { HealthSummary } from "./health-summary";
 import { MonthHighlights } from "./month-highlights";
 import { PeriodComparison } from "./period-comparison";
 import { SyncButton } from "./sync-button";
@@ -63,6 +66,8 @@ export default async function DashboardPage({
   const now = new Date();
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
 
   const activityFilter: { type?: string; startedAt?: { gte: Date } } = {};
   if (searchParams.type) activityFilter.type = searchParams.type;
@@ -84,6 +89,11 @@ export default async function DashboardPage({
     thisMonthAgg,
     lastMonthAgg,
     thisMonthActivities,
+    todayActivityAgg,
+    todayFoodLogs,
+    todayWaterAgg,
+    recentWeightLogs,
+    activeSupplements,
   ] = await Promise.all([
       db.user.findUnique({ where: { id: userId } }),
       db.providerConnection.findFirst({ where: { userId, provider: "STRAVA" } }),
@@ -120,9 +130,58 @@ export default async function DashboardPage({
         where: { userId, startedAt: { gte: thisMonthStart } },
         select: { id: true, type: true, distanceMeters: true, avgSpeedMs: true, elevationGainM: true },
       }),
+      db.activity.aggregate({
+        where: { userId, startedAt: { gte: todayStart } },
+        _sum: { durationSec: true },
+      }),
+      db.foodLog.findMany({
+        where: { userId, loggedAt: { gte: todayStart } },
+        include: { food: true },
+      }),
+      db.waterLog.aggregate({
+        where: { userId, loggedAt: { gte: todayStart } },
+        _sum: { ml: true },
+      }),
+      db.weightLog.findMany({
+        where: { userId },
+        orderBy: { loggedAt: "desc" },
+        take: 2,
+      }),
+      db.supplement.findMany({
+        where: { userId, active: true },
+        include: { logs: { where: { takenAt: { gte: todayStart } }, take: 1 } },
+      }),
     ]);
 
   const unit = user?.unitSystem ?? "METRIC";
+
+  const nutritionProfile = {
+    weightKg: user?.weightKg ?? null,
+    heightCm: user?.heightCm ?? null,
+    age: user?.age ?? null,
+    sex: user?.sex ?? null,
+    activityLevel: user?.activityLevel ?? null,
+    goal: user?.nutritionGoal ?? "MAINTAIN",
+    goalRateKgPerWeek: user?.goalRateKgPerWeek ?? null,
+  };
+  const healthTargets = isProfileComplete(nutritionProfile)
+    ? applyActivityBonus(computeTargets(nutritionProfile), todayActivityAgg._sum.durationSec ?? 0)
+    : null;
+  const todayFoodTotals = todayFoodLogs.reduce(
+    (acc, l) => {
+      const m = macrosForGrams(l.food, l.grams);
+      acc.calories += m.calories;
+      acc.proteinG += m.proteinG;
+      acc.carbG += m.carbG;
+      acc.fatG += m.fatG;
+      return acc;
+    },
+    { calories: 0, proteinG: 0, carbG: 0, fatG: 0 }
+  );
+  const [latestWeightLog, previousWeightLog] = recentWeightLogs;
+  const supplementsTakenToday = activeSupplements.filter((s) => s.logs.length > 0).length;
+  const hasAnyHealthData =
+    healthTargets !== null || todayFoodLogs.length > 0 || (todayWaterAgg._sum.ml ?? 0) > 0 || recentWeightLogs.length > 0 || activeSupplements.length > 0;
 
   const typeShares = Object.values(
     thisMonthActivities.reduce<Record<string, { type: string; km: number }>>((acc, a) => {
@@ -349,6 +408,21 @@ export default async function DashboardPage({
           </div>
         ))}
       </div>
+
+      <HealthSummary
+        hasAnyData={hasAnyHealthData}
+        targets={healthTargets}
+        todayCalories={todayFoodTotals.calories}
+        todayProteinG={todayFoodTotals.proteinG}
+        todayCarbG={todayFoodTotals.carbG}
+        todayFatG={todayFoodTotals.fatG}
+        waterMl={todayWaterAgg._sum.ml ?? 0}
+        waterTargetMl={healthTargets?.waterMl ?? null}
+        latestWeightKg={latestWeightLog?.weightKg ?? null}
+        weightDeltaKg={latestWeightLog && previousWeightLog ? latestWeightLog.weightKg - previousWeightLog.weightKg : null}
+        supplementsTakenToday={supplementsTakenToday}
+        supplementsTotal={activeSupplements.length}
+      />
 
       {thisMonthActivities.length > 0 && (
         <div className="mb-6">
