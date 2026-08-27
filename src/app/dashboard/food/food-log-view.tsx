@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { macrosForGrams, per100gFromTotal, MEAL_TYPE_LABEL, type Per100g } from "@/lib/food";
+import { macrosForGrams, per100gFromTotal, type Per100g } from "@/lib/food";
 import { THAI_FOOD_CATALOG, type CatalogFood } from "@/lib/thai-food-catalog";
 import { BarcodeScanner } from "./barcode-scanner";
 
@@ -37,6 +37,32 @@ type PendingFood =
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
+
+const MEAL_TYPE_OPTIONS = [
+  { value: "", label: "ไม่ระบุมื้อ" },
+  { value: "BREAKFAST", label: "มื้อเช้า" },
+  { value: "LUNCH", label: "มื้อกลางวัน" },
+  { value: "DINNER", label: "มื้อเย็น" },
+  { value: "SNACK", label: "ของว่าง" },
+];
+const MEAL_GROUP_ORDER = ["BREAKFAST", "LUNCH", "DINNER", "SNACK", ""] as const;
+const MEAL_GROUP_LABEL: Record<string, string> = {
+  BREAKFAST: "มื้อเช้า",
+  LUNCH: "มื้อกลางวัน",
+  DINNER: "มื้อเย็น",
+  SNACK: "ของว่าง",
+  "": "ไม่ระบุมื้อ",
+};
+
+// A reasonable starting guess so most people don't have to touch the meal
+// selector at all — still just a default, freely overridable.
+function guessMealType(): string {
+  const h = new Date().getHours();
+  if (h < 11) return "BREAKFAST";
+  if (h < 15) return "LUNCH";
+  if (h < 21) return "DINNER";
+  return "SNACK";
+}
 
 function MacroChip({ label, value, color }: { label: string; value: string; color: string }) {
   return (
@@ -82,6 +108,7 @@ export function FoodLogView({
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [mealType, setMealType] = useState(() => guessMealType());
 
   const totals = useMemo(
     () =>
@@ -97,6 +124,19 @@ export function FoodLogView({
     [todayLogs]
   );
 
+  const mealGroups = useMemo(() => {
+    const byKey = new Map<string, TodayLogEntry[]>();
+    for (const l of todayLogs) {
+      const key = l.mealType ?? "";
+      if (!byKey.has(key)) byKey.set(key, []);
+      byKey.get(key)!.push(l);
+    }
+    return MEAL_GROUP_ORDER.filter((key) => byKey.has(key)).map((key) => {
+      const entries = byKey.get(key)!;
+      return { key, entries, calories: entries.reduce((sum, l) => sum + l.calories, 0) };
+    });
+  }, [todayLogs]);
+
   // Once the user has started typing custom macros, the portion they typed
   // them for must stay fixed — editing grams afterward would silently
   // rescale the per-100g values stored for reuse without changing what was
@@ -111,10 +151,26 @@ export function FoodLogView({
     ? THAI_FOOD_CATALOG.filter((f) => f.name.includes(query.trim())).slice(0, 8)
     : [];
 
+  // How much room is left today, at typical serving sizes — the basis for
+  // the "แนะนำมื้อถัดไป" suggestions below. Ranked by protein density since
+  // that's usually the harder macro to hit, once there's still calorie
+  // headroom to spend.
+  const remainingCalories = targets ? targets.targetCalories - totals.calories : null;
+  const suggestions =
+    remainingCalories !== null && remainingCalories > 0
+      ? THAI_FOOD_CATALOG.map((f) => macrosForGrams(f, f.typicalGrams))
+          .map((m, i) => ({ food: THAI_FOOD_CATALOG[i], ...m }))
+          .filter((s) => s.calories <= remainingCalories)
+          .sort((a, b) => b.proteinG - a.proteinG)
+          .slice(0, 6)
+      : [];
+
   function pickPersonal(food: PersonalFood) {
+    setShowAdd(true);
     setPending({ kind: "personal", food, grams: 100 });
   }
   function pickCatalog(food: CatalogFood) {
+    setShowAdd(true);
     setPending({ kind: "catalog", food, grams: food.typicalGrams });
   }
   function startCustom() {
@@ -191,6 +247,7 @@ export function FoodLogView({
       );
       body = { food: { name: customName.trim(), ...per100g, source: "CUSTOM" }, grams };
     }
+    body.mealType = mealType || null;
 
     const res = await fetch("/api/food/log", {
       method: "POST",
@@ -245,6 +302,29 @@ export function FoodLogView({
         </div>
       </div>
 
+      {suggestions.length > 0 && !showAdd && (
+        <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-medium">แนะนำมื้อถัดไป</h2>
+            <span className="text-xs text-neutral-500">เหลือ {Math.round(remainingCalories ?? 0)} kcal วันนี้</span>
+          </div>
+          <div className="space-y-1.5">
+            {suggestions.map((s) => (
+              <button
+                key={s.food.name}
+                onClick={() => pickCatalog(s.food)}
+                className="flex w-full items-center justify-between rounded-lg border border-neutral-800/60 px-3 py-2 text-left text-sm transition hover:border-neutral-700 hover:bg-neutral-800/40"
+              >
+                <span className="text-neutral-200">{s.food.name}</span>
+                <span className="text-xs text-neutral-500">
+                  {Math.round(s.calories)} kcal · โปรตีน {Math.round(s.proteinG)} ก.
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {!showAdd ? (
         <button
           onClick={() => setShowAdd(true)}
@@ -281,6 +361,17 @@ export function FoodLogView({
                     (ล็อกไว้ — แคลอรี่/แมโครที่กรอกด้านล่างคำนวณจากปริมาณนี้)
                   </span>
                 )}
+              </div>
+
+              <div className="mb-3 flex items-center gap-2">
+                <label className="text-xs text-neutral-500">มื้อ</label>
+                <select value={mealType} onChange={(e) => setMealType(e.target.value)} className={`${INPUT_CLASS} w-36`}>
+                  {MEAL_TYPE_OPTIONS.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {pending.kind === "custom" && (
@@ -452,27 +543,36 @@ export function FoodLogView({
       {todayLogs.length === 0 ? (
         <p className="py-8 text-center text-sm text-neutral-600">ยังไม่ได้บันทึกอาหารวันนี้</p>
       ) : (
-        <ul className="space-y-2">
-          {todayLogs.map((l) => (
-            <li
-              key={l.id}
-              className="flex items-center justify-between rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-4 py-3"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-neutral-200">{l.foodName}</p>
-                <p className="text-xs text-neutral-500">
-                  {Math.round(l.grams)} ก. · {Math.round(l.calories)} kcal
-                  {l.mealType && ` · ${MEAL_TYPE_LABEL[l.mealType]}`}
-                </p>
+        <div className="space-y-5">
+          {mealGroups.map((group) => (
+            <div key={group.key}>
+              <div className="mb-2 flex items-baseline justify-between px-1">
+                <h3 className="text-sm font-medium text-neutral-400">{MEAL_GROUP_LABEL[group.key]}</h3>
+                <span className="text-xs text-neutral-600">{Math.round(group.calories)} kcal</span>
               </div>
-              <button onClick={() => deleteLog(l.id)} className="flex-none text-neutral-600 hover:text-red-400" title="ลบ">
-                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-                  <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                </svg>
-              </button>
-            </li>
+              <ul className="space-y-2">
+                {group.entries.map((l) => (
+                  <li
+                    key={l.id}
+                    className="flex items-center justify-between rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-neutral-200">{l.foodName}</p>
+                      <p className="text-xs text-neutral-500">
+                        {Math.round(l.grams)} ก. · {Math.round(l.calories)} kcal
+                      </p>
+                    </div>
+                    <button onClick={() => deleteLog(l.id)} className="flex-none text-neutral-600 hover:text-red-400" title="ลบ">
+                      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                        <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
