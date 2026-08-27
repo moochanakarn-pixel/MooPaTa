@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { formatDuration } from "@/lib/format";
-import { activityWaterBonusMl, computeTargets, isProfileComplete, GOAL_LABEL, ACTIVITY_LEVEL_LABEL } from "@/lib/nutrition";
+import { applyActivityBonus, computeTargets, isProfileComplete, GOAL_LABEL, ACTIVITY_LEVEL_LABEL } from "@/lib/nutrition";
 
 function MacroBar({ proteinG, carbG, fatG }: { proteinG: number; carbG: number; fatG: number }) {
   const proteinKcal = proteinG * 4;
@@ -97,7 +97,7 @@ export default async function NutritionPage() {
     );
   }
 
-  const targets = computeTargets(profile);
+  const baseTargets = computeTargets(profile);
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -106,8 +106,7 @@ export default async function NutritionPage() {
     _sum: { durationSec: true },
   });
   const activityDurationTodaySec = todayAgg._sum.durationSec ?? 0;
-  const waterBonusMl = activityWaterBonusMl(activityDurationTodaySec);
-  const waterGoalMl = targets.baseWaterMl + waterBonusMl;
+  const targets = applyActivityBonus(baseTargets, activityDurationTodaySec);
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
@@ -138,6 +137,12 @@ export default async function NutritionPage() {
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <h2 className="mb-4 font-medium">แมโครที่ควรได้ต่อวัน</h2>
         <MacroBar proteinG={targets.proteinG} carbG={targets.carbG} fatG={targets.fatG} />
+        {(targets.carbBonusG > 0 || targets.proteinBonusG > 0) && (
+          <p className="mt-4 text-xs text-neutral-500">
+            ปรับเพิ่มจากกิจกรรมวันนี้ ({formatDuration(activityDurationTodaySec)}): คาร์บ +{targets.carbBonusG} ก. ·
+            โปรตีน +{targets.proteinBonusG} ก.
+          </p>
+        )}
       </div>
 
       <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
@@ -155,13 +160,13 @@ export default async function NutritionPage() {
           </div>
           <h2 className="font-medium">เป้าหมายน้ำวันนี้</h2>
         </div>
-        <p className="mb-3 text-3xl font-bold tabular-nums">{(waterGoalMl / 1000).toFixed(1)} ลิตร</p>
+        <p className="mb-3 text-3xl font-bold tabular-nums">{(targets.waterMl / 1000).toFixed(1)} ลิตร</p>
         <p className="text-xs text-neutral-500">
           พื้นฐาน {(targets.baseWaterMl / 1000).toFixed(1)} ลิตร
-          {waterBonusMl > 0 && (
+          {targets.waterBonusMl > 0 && (
             <>
               {" "}
-              + เพิ่ม {(waterBonusMl / 1000).toFixed(1)} ลิตร จากกิจกรรมวันนี้ ({formatDuration(activityDurationTodaySec)})
+              + เพิ่ม {(targets.waterBonusMl / 1000).toFixed(1)} ลิตร จากกิจกรรมวันนี้ ({formatDuration(activityDurationTodaySec)})
             </>
           )}
         </p>

@@ -11,12 +11,12 @@ datasource db {
 // they connect first (currently Strava); more providers can link to the
 // same user later.
 model User {
-  id             String       @id @default(cuid())
-  name           String?
-  avatarUrl      String?      @db.VarChar(512)
-  unitSystem     UnitSystem   @default(METRIC)
-  monthlyGoalKm  Float?       // distance goal for the current calendar month, always stored in km
-  createdAt      DateTime     @default(now())
+  id            String     @id @default(cuid())
+  name          String?
+  avatarUrl     String?    @db.VarChar(512)
+  unitSystem    UnitSystem @default(METRIC)
+  monthlyGoalKm Float? // distance goal for the current calendar month, always stored in km
+  createdAt     DateTime   @default(now())
 
   // Nutrition profile — all optional since most users won't fill this in
   // right away; src/lib/nutrition.ts treats an incomplete profile as "can't
@@ -27,17 +27,21 @@ model User {
   sex               Sex?
   activityLevel     ActivityLevel?
   nutritionGoal     NutritionGoal  @default(MAINTAIN)
-  goalRateKgPerWeek Float?         // only meaningful when nutritionGoal is LOSE/GAIN
+  goalRateKgPerWeek Float? // only meaningful when nutritionGoal is LOSE/GAIN
 
-  connections     ProviderConnection[]
-  activities      Activity[]
-  foods           Food[]
-  foodLogs        FoodLog[]
+  connections    ProviderConnection[]
+  activities     Activity[]
+  foods          Food[]
+  foodLogs       FoodLog[]
+  waterLogs      WaterLog[]
+  supplements    Supplement[]
+  supplementLogs SupplementLog[]
 }
 
 enum Provider {
   STRAVA
   HUAWEI_HEALTH
+  MANUAL // hand-logged activity, e.g. football/badminton — Strava doesn't track these
 }
 
 enum UnitSystem {
@@ -85,8 +89,8 @@ model Food {
   user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   logs   FoodLog[]
 
-  @@index([userId])
   @@unique([userId, barcode])
+  @@index([userId])
 }
 
 enum FoodSource {
@@ -120,16 +124,16 @@ enum MealType {
 // One OAuth link between a User and an external fitness provider.
 // Tokens are stored encrypted (see src/lib/crypto.ts) - never store them in plaintext.
 model ProviderConnection {
-  id                 String   @id @default(cuid())
-  provider           Provider
-  providerAccountId  String   // athlete id / huawei union id, etc.
-  accessTokenEnc     String   @db.Text
-  refreshTokenEnc    String   @db.Text
-  expiresAt          DateTime
-  scope              String?
-  lastReconciledAt   DateTime? // last time we scanned full history for deletions (throttled, see sync-strava.ts)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                String    @id @default(cuid())
+  provider          Provider
+  providerAccountId String // athlete id / huawei union id, etc.
+  accessTokenEnc    String    @db.Text
+  refreshTokenEnc   String    @db.Text
+  expiresAt         DateTime
+  scope             String?
+  lastReconciledAt  DateTime? // last time we scanned full history for deletions (throttled, see sync-strava.ts)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -140,36 +144,36 @@ model ProviderConnection {
 // Normalized activity shape shared across all providers so the rest of the
 // app (dashboard, stats, future features) never has to branch on provider.
 model Activity {
-  id              String   @id @default(cuid())
-  provider        Provider
-  providerActId   String   // original activity id from the source provider
-  type            String   // e.g. Run, Ride, Walk, Hike, Swim
-  name            String?
-  startedAt       DateTime
-  durationSec     Int
-  distanceMeters  Float?
-  elevationGainM  Float?
-  elevHighM       Float?
-  elevLowM        Float?
-  avgHeartRate    Float?
-  maxHeartRate    Float?
-  avgSpeedMs      Float?   // meters/second
-  maxSpeedMs      Float?   // meters/second
-  avgCadence      Float?
-  avgWatts        Float?
-  kilojoules      Float?
-  sufferScore     Int?
-  calories        Float?
-  kudosCount      Int?
+  id               String   @id @default(cuid())
+  provider         Provider
+  providerActId    String // original activity id from the source provider
+  type             String // e.g. Run, Ride, Walk, Hike, Swim
+  name             String?
+  startedAt        DateTime
+  durationSec      Int
+  distanceMeters   Float?
+  elevationGainM   Float?
+  elevHighM        Float?
+  elevLowM         Float?
+  avgHeartRate     Float?
+  maxHeartRate     Float?
+  avgSpeedMs       Float? // meters/second
+  maxSpeedMs       Float? // meters/second
+  avgCadence       Float?
+  avgWatts         Float?
+  kilojoules       Float?
+  sufferScore      Int?
+  calories         Float?
+  kudosCount       Int?
   achievementCount Int?
-  prCount         Int?
-  commentCount    Int?
-  gearId          String?
-  timezone        String?
-  startLat        Float?
-  startLng        Float?
-  raw             Json     // original provider payload, kept for anything not normalized above
-  createdAt       DateTime @default(now())
+  prCount          Int?
+  commentCount     Int?
+  gearId           String?
+  timezone         String?
+  startLat         Float?
+  startLng         Float?
+  raw              Json // original provider payload, kept for anything not normalized above
+  createdAt        DateTime @default(now())
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -188,13 +192,58 @@ model Activity {
 model ActivityDetail {
   id          String   @id @default(cuid())
   deviceName  String?
-  splits      Json?    // Strava's splits_metric: per-km pace/elevation
-  bestEfforts Json?    // named PR efforts, e.g. 5K, 1 mile
-  laps        Json?    // manual/auto laps: distance, time, pace, elevation per lap
-  streams     Json?    // { distance, altitude, velocity, heartrate, cadence }[] downsampled
-  weather     Json?    // { temperatureC, windKmh, weatherCode } from Open-Meteo, if GPS start coords exist
+  splits      Json? // Strava's splits_metric: per-km pace/elevation
+  bestEfforts Json? // named PR efforts, e.g. 5K, 1 mile
+  laps        Json? // manual/auto laps: distance, time, pace, elevation per lap
+  streams     Json? // { distance, altitude, velocity, heartrate, cadence }[] downsampled
+  weather     Json? // { temperatureC, windKmh, weatherCode } from Open-Meteo, if GPS start coords exist
   fetchedAt   DateTime @default(now())
 
   activityId String   @unique
   activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+}
+
+// One logged serving of water — just a timestamp and a volume, summed per
+// day against the water target computed in src/lib/nutrition.ts.
+model WaterLog {
+  id       String   @id @default(cuid())
+  ml       Int
+  loggedAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loggedAt])
+}
+
+// A recurring supplement/vitamin the user wants a daily reminder for — no
+// push notifications yet, just an in-app checklist (see SupplementLog).
+model Supplement {
+  id        String   @id @default(cuid())
+  name      String
+  timeLabel String? // free text, e.g. "เช้า", "ก่อนนอน", "20:00"
+  note      String?  @db.VarChar(500) // e.g. "กินพร้อมมื้ออาหาร ไม่กินพร้อมแคลเซียม"
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs   SupplementLog[]
+
+  @@index([userId])
+}
+
+// Marks one supplement as taken at a point in time — existence of a row for
+// today is what the checklist checkbox reflects.
+model SupplementLog {
+  id      String   @id @default(cuid())
+  takenAt DateTime @default(now())
+
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplementId String
+  supplement   Supplement @relation(fields: [supplementId], references: [id], onDelete: Cascade)
+
+  @@index([userId, takenAt])
+  @@index([supplementId, takenAt])
 }

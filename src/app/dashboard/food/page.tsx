@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { macrosForGrams } from "@/lib/food";
-import { computeTargets, isProfileComplete } from "@/lib/nutrition";
+import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
 import { FoodLogView, type DailyTargets, type PersonalFood, type TodayLogEntry } from "./food-log-view";
+import { WaterLogCard, type WaterLogEntry } from "./water-log-card";
 
 export default async function FoodPage() {
   const userId = await getSessionUserId();
@@ -13,7 +14,7 @@ export default async function FoodPage() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const [user, todayLogRows, personalFoodRows] = await Promise.all([
+  const [user, todayLogRows, personalFoodRows, todayWaterRows, todayActivityAgg] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.foodLog.findMany({
       where: { userId, loggedAt: { gte: todayStart } },
@@ -21,7 +22,12 @@ export default async function FoodPage() {
       include: { food: true },
     }),
     db.food.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 200 }),
+    db.waterLog.findMany({ where: { userId, loggedAt: { gte: todayStart } }, orderBy: { loggedAt: "asc" } }),
+    db.activity.aggregate({ where: { userId, startedAt: { gte: todayStart } }, _sum: { durationSec: true } }),
   ]);
+
+  const activityDurationTodaySec = todayActivityAgg._sum.durationSec ?? 0;
+  const waterLogs: WaterLogEntry[] = todayWaterRows.map((w) => ({ id: w.id, ml: w.ml, loggedAtMs: w.loggedAt.getTime() }));
 
   const todayLogs: TodayLogEntry[] = todayLogRows.map((l) => {
     const m = macrosForGrams(l.food, l.grams);
@@ -47,6 +53,7 @@ export default async function FoodPage() {
   }));
 
   let targets: DailyTargets | null = null;
+  let waterTargetMl: number | null = null;
   if (user) {
     const profile = {
       weightKg: user.weightKg,
@@ -58,8 +65,9 @@ export default async function FoodPage() {
       goalRateKgPerWeek: user.goalRateKgPerWeek,
     };
     if (isProfileComplete(profile)) {
-      const t = computeTargets(profile);
+      const t = applyActivityBonus(computeTargets(profile), activityDurationTodaySec);
       targets = { targetCalories: t.targetCalories, proteinG: t.proteinG, carbG: t.carbG, fatG: t.fatG };
+      waterTargetMl = t.waterMl;
     }
   }
 
@@ -94,6 +102,8 @@ export default async function FoodPage() {
           </>
         )}
       </p>
+
+      <WaterLogCard todayLogs={waterLogs} targetMl={waterTargetMl} />
 
       <FoodLogView todayLogs={todayLogs} personalFoods={personalFoods} targets={targets} />
     </main>

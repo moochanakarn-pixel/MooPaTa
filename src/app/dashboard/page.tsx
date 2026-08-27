@@ -294,6 +294,33 @@ export default async function DashboardPage({
               />
             ),
           },
+          {
+            href: "/dashboard/log-activity",
+            label: "บันทึกกิจกรรมเอง",
+            color: "text-emerald-400",
+            icon: (
+              <path
+                d="M10 3v14M3 10h14"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            ),
+          },
+          {
+            href: "/dashboard/supplements",
+            label: "อาหารเสริม",
+            color: "text-violet-400",
+            icon: (
+              <path
+                d="M6.5 3.5h7L15 6v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6l1.5-2.5ZM5 9.5h10"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ),
+          },
         ].map((item) => (
           <Link
             key={item.href}

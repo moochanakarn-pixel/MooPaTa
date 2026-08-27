@@ -100,6 +100,8 @@ const ACTIVITY_LABELS: Record<string, string> = {
   Swim: "ว่ายน้ำ",
   WeightTraining: "เวทเทรนนิ่ง",
   Workout: "ออกกำลังกาย",
+  Football: "ฟุตบอล",
+  Badminton: "แบดมินตัน",
 };
 
 export function activityTypeLabel(type: string): string {

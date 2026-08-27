@@ -126,3 +126,56 @@ export function activityWaterBonusMl(totalActivityDurationSecToday: number): num
   const blocks = Math.floor(totalActivityDurationSecToday / WATER_BLOCK_SECONDS);
   return Math.min(blocks * WATER_BONUS_ML_PER_BLOCK, MAX_WATER_BONUS_ML);
 }
+
+// Bumps carb/protein targets on days with logged exercise — roughly 15g
+// carbs (glycogen replenishment) and 5g protein per 30 minutes, same
+// block-based shape as the water bonus and capped for the same reason.
+// Deliberately duration-only (not intensity-weighted): Strava-synced
+// activities don't carry a comparable intensity signal, and this way one
+// formula covers synced and manually-logged activity alike.
+const CARB_BONUS_G_PER_BLOCK = 15;
+const PROTEIN_BONUS_G_PER_BLOCK = 5;
+const MAX_CARB_BONUS_G = 90;
+const MAX_PROTEIN_BONUS_G = 30;
+const ACTIVITY_BLOCK_SECONDS = 30 * 60;
+
+export interface ActivityMacroBonus {
+  carbG: number;
+  proteinG: number;
+}
+
+export function activityMacroBonus(totalActivityDurationSecToday: number): ActivityMacroBonus {
+  const blocks = Math.floor(totalActivityDurationSecToday / ACTIVITY_BLOCK_SECONDS);
+  return {
+    carbG: Math.min(blocks * CARB_BONUS_G_PER_BLOCK, MAX_CARB_BONUS_G),
+    proteinG: Math.min(blocks * PROTEIN_BONUS_G_PER_BLOCK, MAX_PROTEIN_BONUS_G),
+  };
+}
+
+export interface TodayTargets extends NutritionTargets {
+  waterMl: number;
+  waterBonusMl: number;
+  carbBonusG: number;
+  proteinBonusG: number;
+}
+
+// Applies today's activity bonus on top of the profile's base targets —
+// shared by the nutrition page (which shows the bonus breakdown) and the
+// food log page (which compares "eaten so far" against it), so both always
+// agree on what today's actual target is. Calories move with the macro
+// bonus so the two stay internally consistent.
+export function applyActivityBonus(targets: NutritionTargets, activityDurationSecToday: number): TodayTargets {
+  const macroBonus = activityMacroBonus(activityDurationSecToday);
+  const waterBonusMl = activityWaterBonusMl(activityDurationSecToday);
+  const bonusKcal = macroBonus.carbG * 4 + macroBonus.proteinG * 4;
+  return {
+    ...targets,
+    targetCalories: targets.targetCalories + bonusKcal,
+    carbG: targets.carbG + macroBonus.carbG,
+    proteinG: targets.proteinG + macroBonus.proteinG,
+    waterMl: targets.baseWaterMl + waterBonusMl,
+    waterBonusMl,
+    carbBonusG: macroBonus.carbG,
+    proteinBonusG: macroBonus.proteinG,
+  };
+}
