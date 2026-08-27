@@ -101,6 +101,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
   WeightTraining: "เวทเทรนนิ่ง",
   Workout: "ออกกำลังกาย",
   Football: "ฟุตบอล",
+  Soccer: "ฟุตบอล", // Strava's real sport_type value for football — "Football" above is only used by the manual-log form
   Badminton: "แบดมินตัน",
 };
 

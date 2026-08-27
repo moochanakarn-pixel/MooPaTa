@@ -68,6 +68,24 @@ const OTHER: ActivityColor = {
   solid: "bg-rose-500",
 };
 
+const FOOTBALL: ActivityColor = {
+  bg: "bg-lime-500/10",
+  text: "text-lime-400",
+  ring: "ring-lime-500/25",
+  from: "from-lime-500",
+  to: "to-lime-300",
+  solid: "bg-lime-500",
+};
+
+const BADMINTON: ActivityColor = {
+  bg: "bg-amber-500/10",
+  text: "text-amber-400",
+  ring: "ring-amber-500/25",
+  from: "from-amber-500",
+  to: "to-amber-300",
+  solid: "bg-amber-500",
+};
+
 const BY_TYPE: Record<string, ActivityColor> = {
   Run: RUN,
   TrailRun: RUN,
@@ -79,6 +97,9 @@ const BY_TYPE: Record<string, ActivityColor> = {
   Swim: SWIM,
   WeightTraining: LIFT,
   Workout: LIFT,
+  Football: FOOTBALL,
+  Soccer: FOOTBALL,
+  Badminton: BADMINTON,
 };
 
 export function activityColor(type: string): ActivityColor {

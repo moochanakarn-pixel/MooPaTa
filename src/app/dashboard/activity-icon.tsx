@@ -11,6 +11,11 @@ const ICON_PATHS: Record<string, string> = {
   Swim: "M3 17c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0M8 10l4-6 4 6M12 4v6",
   // dumbbell
   WeightTraining: "M4 9v6M20 9v6M7 12h10M2 10.5v3M22 10.5v3",
+  // soccer ball (circle + pentagon panel)
+  Football: "M4 12a8 8 0 1 0 16 0 8 8 0 1 0-16 0Z M12 8.8 10.1 10.2l.7 2.3h2.4l.7-2.3L12 8.8Z",
+  Soccer: "M4 12a8 8 0 1 0 16 0 8 8 0 1 0-16 0Z M12 8.8 10.1 10.2l.7 2.3h2.4l.7-2.3L12 8.8Z",
+  // racket head + handle, with a small shuttlecock
+  Badminton: "M9 3a5 5 0 1 0 .1 0Z M9 8 4 20M13 10l3 2M16 10l-3 2",
 };
 
 const DEFAULT_ICON = "M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5";

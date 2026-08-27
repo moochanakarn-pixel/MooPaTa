@@ -20,6 +20,9 @@ const TYPE_COLORS: Record<string, string> = {
   Swim: "#06b6d4",
   WeightTraining: "#8b5cf6",
   Workout: "#8b5cf6",
+  Football: "#a3e635",
+  Soccer: "#a3e635",
+  Badminton: "#f59e0b",
 };
 const OTHER_TYPE_COLOR = "#f43f5e";
 function typeColor(type: string): string {
