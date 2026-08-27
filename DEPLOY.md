@@ -65,6 +65,9 @@ Fill in `.env` for production:
 - `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` — same as local dev, or a separate Strava API app if you want dev/prod isolated
 - `STRAVA_REDIRECT_URI="https://yourdomain.com/api/auth/strava/callback"`
 - `CRON_SECRET` — new value, `openssl rand -hex 32`
+- `VAPID_PUBLIC_KEY` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (same value, both vars) / `VAPID_PRIVATE_KEY` — for the water-reminder
+  push notifications. Generate once with `npx web-push generate-vapid-keys`.
+  `VAPID_SUBJECT` is a `mailto:` address push services may use to contact you about the key.
 
 Then in the Strava API app settings (strava.com/settings/api), set
 **Authorization Callback Domain** to `yourdomain.com` (no `https://`, no path).
@@ -126,6 +129,19 @@ if you end up with many users):
 ```
 
 Use the same value you put in `.env` as `CRON_SECRET`.
+
+## 7b. Water-reminder push notifications
+
+Two more crontab entries, hitting `/api/cron/water-reminder` with a
+`checkpoint` telling it how far along the daily water target a user should
+be by then (`afternoon` = 40%, `evening` = 75% — see that route's comment).
+Only users who've turned reminders on (the toggle on the food page) get a
+push. Adjust the hours to your server's local time:
+
+```
+0 14 * * * curl -s -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" "https://yourdomain.com/api/cron/water-reminder?checkpoint=afternoon" >> /home/moopata/cron-water.log 2>&1
+0 18 * * * curl -s -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" "https://yourdomain.com/api/cron/water-reminder?checkpoint=evening" >> /home/moopata/cron-water.log 2>&1
+```
 
 ## 8. Deploying updates later
 

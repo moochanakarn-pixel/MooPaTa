@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { WaterReminderToggle } from "./water-reminder-toggle";
 
 export interface WaterLogEntry {
   id: string;
@@ -127,6 +128,8 @@ export function WaterLogCard({ todayLogs, targetMl }: { todayLogs: WaterLogEntry
           ))}
         </div>
       )}
+
+      <WaterReminderToggle />
     </div>
   );
 }

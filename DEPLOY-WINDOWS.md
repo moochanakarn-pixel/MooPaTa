@@ -69,6 +69,12 @@ Fill in `.env` (same values as the Linux guide):
   ```
 - `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` — from strava.com/settings/api
 - `STRAVA_REDIRECT_URI="https://moopata.mcnkth.com/api/auth/strava/callback"`
+- `VAPID_PUBLIC_KEY` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (same value, both vars) / `VAPID_PRIVATE_KEY` — needed for the
+  water-reminder push notifications. Generate once with:
+  ```powershell
+  npx web-push generate-vapid-keys
+  ```
+  `VAPID_SUBJECT` can stay `mailto:` + whatever email you want push services to be able to reach you at.
 
 Then in the Strava API app settings, set **Authorization Callback Domain**
 to `moopata.mcnkth.com`.
@@ -147,6 +153,28 @@ Register-ScheduledTask -TaskName "MooPaTaSync" -Action $action -Trigger $trigger
 ```
 
 Use the same value as `CRON_SECRET` in `.env`.
+
+## 9b. Water reminder — two more scheduled tasks
+
+Two check-ins a day, each hitting `/api/cron/water-reminder` with a
+`checkpoint` telling it how far along the daily water target a user should
+be by then (`afternoon` = 40%, `evening` = 75% — see that route's comment).
+Only users who've turned reminders on (the toggle on the food page) get a
+push; anyone already on pace at that checkpoint is skipped. Adjust the
+`-At` times below to whatever your server's local time considers early/late
+afternoon and evening.
+
+```powershell
+$secret = "YOUR_CRON_SECRET"
+
+$afternoonAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-Command `"Invoke-RestMethod -Method Post -Uri 'https://moopata.mcnkth.com/api/cron/water-reminder?checkpoint=afternoon' -Headers @{Authorization='Bearer $secret'}`""
+$afternoonTrigger = New-ScheduledTaskTrigger -Daily -At "2:00 PM"
+Register-ScheduledTask -TaskName "MooPaTaWaterReminderAfternoon" -Action $afternoonAction -Trigger $afternoonTrigger -RunLevel Highest
+
+$eveningAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-Command `"Invoke-RestMethod -Method Post -Uri 'https://moopata.mcnkth.com/api/cron/water-reminder?checkpoint=evening' -Headers @{Authorization='Bearer $secret'}`""
+$eveningTrigger = New-ScheduledTaskTrigger -Daily -At "6:00 PM"
+Register-ScheduledTask -TaskName "MooPaTaWaterReminderEvening" -Action $eveningAction -Trigger $eveningTrigger -RunLevel Highest
+```
 
 ## 10. Deploying updates later
 

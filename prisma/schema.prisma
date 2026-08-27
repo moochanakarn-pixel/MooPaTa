@@ -29,14 +29,15 @@ model User {
   nutritionGoal     NutritionGoal  @default(MAINTAIN)
   goalRateKgPerWeek Float? // only meaningful when nutritionGoal is LOSE/GAIN
 
-  connections    ProviderConnection[]
-  activities     Activity[]
-  foods          Food[]
-  foodLogs       FoodLog[]
-  waterLogs      WaterLog[]
-  supplements    Supplement[]
-  supplementLogs SupplementLog[]
-  weightLogs     WeightLog[]
+  connections       ProviderConnection[]
+  activities        Activity[]
+  foods             Food[]
+  foodLogs          FoodLog[]
+  waterLogs         WaterLog[]
+  supplements       Supplement[]
+  supplementLogs    SupplementLog[]
+  weightLogs        WeightLog[]
+  pushSubscriptions PushSubscription[]
 }
 
 enum Provider {
@@ -230,6 +231,24 @@ model WeightLog {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, loggedAt])
+}
+
+// One browser/device's Web Push subscription — a user can have several
+// (phone + desktop, or after reinstalling the PWA). Presence of a row is
+// itself the "reminders on" state for that device; deleting it (via
+// unsubscribe, or when a push to it starts failing — see src/lib/push.ts)
+// is what turns reminders off.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @db.VarChar(1000)
+  p256dh    String   @db.VarChar(255)
+  auth      String   @db.VarChar(255)
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint(length: 500)])
 }
 
 // A recurring supplement/vitamin the user wants a daily reminder for — no

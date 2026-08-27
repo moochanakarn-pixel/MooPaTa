@@ -31,3 +31,36 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });
+
+// Water-intake reminders (see /api/cron/water-reminder) arrive as a push
+// message with a JSON body — { title, body, url } — and are shown as a
+// plain notification; tapping it focuses/opens the food page.
+self.addEventListener("push", (event) => {
+  let payload = { title: "MooPaTa", body: "" };
+  try {
+    if (event.data) payload = { ...payload, ...event.data.json() };
+  } catch {
+    // non-JSON payload — fall back to the defaults above
+  }
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: "/logo.png",
+      badge: "/logo.png",
+      data: { url: payload.url || "/dashboard/food" },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/dashboard/food";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(url) && "focus" in client) return client.focus();
+      }
+      return self.clients.openWindow(url);
+    })
+  );
+});
