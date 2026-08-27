@@ -33,11 +33,19 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
   const [error, setError] = useState<string | null>(null);
 
   async function save() {
+    // Number("") is 0, not NaN — an emptied field must fail this check
+    // rather than silently save as a zero macro, so check the raw string
+    // first.
+    const rawFields = [calories, protein, carb, fat];
     const caloriesPer100g = Number(calories);
     const proteinPer100g = Number(protein);
     const carbPer100g = Number(carb);
     const fatPer100g = Number(fat);
-    if (!name.trim() || [caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g].some((n) => !Number.isFinite(n) || n < 0)) {
+    if (
+      !name.trim() ||
+      rawFields.some((s) => s.trim() === "") ||
+      [caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g].some((n) => !Number.isFinite(n) || n < 0)
+    ) {
       setError("กรอกข้อมูลให้ถูกต้องก่อน");
       return;
     }
@@ -159,10 +167,24 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
                   </p>
                 </div>
                 <div className="flex flex-none items-center gap-3">
-                  <button onClick={() => setEditingId(f.id)} className="text-xs text-neutral-500 transition hover:text-neutral-200">
+                  <button
+                    onClick={() => {
+                      setConfirmDeleteId(null);
+                      setDeleteError(null);
+                      setEditingId(f.id);
+                    }}
+                    className="text-xs text-neutral-500 transition hover:text-neutral-200"
+                  >
                     แก้ไข
                   </button>
-                  <button onClick={() => setConfirmDeleteId(f.id)} className="text-xs text-neutral-500 transition hover:text-red-400">
+                  <button
+                    onClick={() => {
+                      setEditingId(null);
+                      setDeleteError(null);
+                      setConfirmDeleteId(f.id);
+                    }}
+                    className="text-xs text-neutral-500 transition hover:text-red-400"
+                  >
                     ลบ
                   </button>
                 </div>
@@ -186,7 +208,10 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
                     {deleting ? "กำลังลบ..." : "ยืนยันลบ"}
                   </button>
                   <button
-                    onClick={() => setConfirmDeleteId(null)}
+                    onClick={() => {
+                      setConfirmDeleteId(null);
+                      setDeleteError(null);
+                    }}
                     className="rounded-lg border border-neutral-700 px-3 py-1 text-xs text-neutral-300 hover:bg-neutral-800"
                   >
                     ยกเลิก

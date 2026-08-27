@@ -10,8 +10,10 @@ import { CalorieTrendChart, type CalorieDayBucket } from "./calorie-trend-chart"
 
 const TREND_DAYS = 14;
 
-// Local calendar date (not UTC) so a late-night entry buckets into the day
-// the user actually experienced it as, not whatever day it is in UTC.
+// Local calendar date, matching todayStart's own use of local getters below
+// (and how "today" is computed elsewhere in the app, e.g. the streak/heatmap
+// code) — so a log stays grouped with whatever calendar day the server's
+// clock considers "today" for it, consistent with the rest of the app.
 function dayKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
@@ -117,11 +119,7 @@ export default async function NutritionPage() {
   const trendStart = new Date(todayStart);
   trendStart.setDate(trendStart.getDate() - (TREND_DAYS - 1));
 
-  const [todayAgg, weightRows, trendFoodLogs, trendActivities] = await Promise.all([
-    db.activity.aggregate({
-      where: { userId, startedAt: { gte: todayStart } },
-      _sum: { durationSec: true },
-    }),
+  const [weightRows, trendFoodLogs, trendActivities] = await Promise.all([
     db.weightLog.findMany({
       where: { userId, loggedAt: { gte: sixtyDaysAgo } },
       orderBy: { loggedAt: "asc" },
@@ -130,13 +128,14 @@ export default async function NutritionPage() {
       where: { userId, loggedAt: { gte: trendStart } },
       include: { food: true },
     }),
+    // trendStart is always <= todayStart, so this also covers today —
+    // activityDurationTodaySec below reads today's total back out of the
+    // per-day map instead of a separate aggregate query.
     db.activity.findMany({
       where: { userId, startedAt: { gte: trendStart } },
       select: { startedAt: true, durationSec: true },
     }),
   ]);
-  const activityDurationTodaySec = todayAgg._sum.durationSec ?? 0;
-  const targets = applyActivityBonus(baseTargets, activityDurationTodaySec);
   const weightLogs: WeightLogEntry[] = weightRows.map((w) => ({
     id: w.id,
     weightKg: w.weightKg,
@@ -153,6 +152,10 @@ export default async function NutritionPage() {
     const key = dayKey(act.startedAt);
     durationByDay.set(key, (durationByDay.get(key) ?? 0) + act.durationSec);
   }
+
+  const activityDurationTodaySec = durationByDay.get(dayKey(todayStart)) ?? 0;
+  const targets = applyActivityBonus(baseTargets, activityDurationTodaySec);
+
   const trendDays: CalorieDayBucket[] = Array.from({ length: TREND_DAYS }, (_, i) => {
     const d = new Date(trendStart);
     d.setDate(d.getDate() + i);
