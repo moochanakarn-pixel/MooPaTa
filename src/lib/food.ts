@@ -41,4 +41,5 @@ export const MEAL_TYPE_LABEL: Record<string, string> = {
   LUNCH: "มื้อกลางวัน",
   DINNER: "มื้อเย็น",
   SNACK: "ของว่าง",
+  "": "ไม่ระบุมื้อ",
 };

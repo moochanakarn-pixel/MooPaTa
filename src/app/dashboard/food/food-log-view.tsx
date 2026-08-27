@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { macrosForGrams, per100gFromTotal, type Per100g } from "@/lib/food";
+import { macrosForGrams, MEAL_TYPE_LABEL, per100gFromTotal, type Per100g } from "@/lib/food";
 import { THAI_FOOD_CATALOG, type CatalogFood } from "@/lib/thai-food-catalog";
 import { BarcodeScanner } from "./barcode-scanner";
 
@@ -38,21 +38,11 @@ type PendingFood =
 const INPUT_CLASS =
   "w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
 
-const MEAL_TYPE_OPTIONS = [
-  { value: "", label: "ไม่ระบุมื้อ" },
-  { value: "BREAKFAST", label: "มื้อเช้า" },
-  { value: "LUNCH", label: "มื้อกลางวัน" },
-  { value: "DINNER", label: "มื้อเย็น" },
-  { value: "SNACK", label: "ของว่าง" },
-];
+const MEAL_TYPE_OPTIONS = ["", "BREAKFAST", "LUNCH", "DINNER", "SNACK"].map((value) => ({
+  value,
+  label: MEAL_TYPE_LABEL[value],
+}));
 const MEAL_GROUP_ORDER = ["BREAKFAST", "LUNCH", "DINNER", "SNACK", ""] as const;
-const MEAL_GROUP_LABEL: Record<string, string> = {
-  BREAKFAST: "มื้อเช้า",
-  LUNCH: "มื้อกลางวัน",
-  DINNER: "มื้อเย็น",
-  SNACK: "ของว่าง",
-  "": "ไม่ระบุมื้อ",
-};
 
 // A reasonable starting guess so most people don't have to touch the meal
 // selector at all — still just a default, freely overridable.
@@ -108,7 +98,15 @@ export function FoodLogView({
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [mealType, setMealType] = useState(() => guessMealType());
+  // Starts unset (matches what the server renders) and is filled in by the
+  // effect below right after mount — computing the time-of-day guess in the
+  // initializer would run it once during SSR and again on the client, and
+  // if those two clocks disagree (e.g. a UTC server, a Thailand visitor)
+  // the <select>'s initial value mismatches between server and client HTML.
+  const [mealType, setMealType] = useState("");
+  useEffect(() => {
+    setMealType(guessMealType());
+  }, []);
 
   const totals = useMemo(
     () =>
@@ -154,16 +152,17 @@ export function FoodLogView({
   // How much room is left today, at typical serving sizes — the basis for
   // the "แนะนำมื้อถัดไป" suggestions below. Ranked by protein density since
   // that's usually the harder macro to hit, once there's still calorie
-  // headroom to spend.
+  // headroom to spend. Memoized like totals/mealGroups above so typing in
+  // the search box or editing custom-macro fields doesn't re-sort the
+  // catalog on every keystroke.
   const remainingCalories = targets ? targets.targetCalories - totals.calories : null;
-  const suggestions =
-    remainingCalories !== null && remainingCalories > 0
-      ? THAI_FOOD_CATALOG.map((f) => macrosForGrams(f, f.typicalGrams))
-          .map((m, i) => ({ food: THAI_FOOD_CATALOG[i], ...m }))
-          .filter((s) => s.calories <= remainingCalories)
-          .sort((a, b) => b.proteinG - a.proteinG)
-          .slice(0, 6)
-      : [];
+  const suggestions = useMemo(() => {
+    if (remainingCalories === null || remainingCalories <= 0) return [];
+    return THAI_FOOD_CATALOG.map((f) => ({ food: f, ...macrosForGrams(f, f.typicalGrams) }))
+      .filter((s) => s.calories <= remainingCalories)
+      .sort((a, b) => b.proteinG - a.proteinG)
+      .slice(0, 6);
+  }, [remainingCalories]);
 
   function pickPersonal(food: PersonalFood) {
     setShowAdd(true);
@@ -547,7 +546,7 @@ export function FoodLogView({
           {mealGroups.map((group) => (
             <div key={group.key}>
               <div className="mb-2 flex items-baseline justify-between px-1">
-                <h3 className="text-sm font-medium text-neutral-400">{MEAL_GROUP_LABEL[group.key]}</h3>
+                <h3 className="text-sm font-medium text-neutral-400">{MEAL_TYPE_LABEL[group.key]}</h3>
                 <span className="text-xs text-neutral-600">{Math.round(group.calories)} kcal</span>
               </div>
               <ul className="space-y-2">
