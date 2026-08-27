@@ -549,15 +549,15 @@ export function FoodLogView({
                 <h3 className="text-sm font-medium text-neutral-400">{MEAL_TYPE_LABEL[group.key]}</h3>
                 <span className="text-xs text-neutral-600">{Math.round(group.calories)} kcal</span>
               </div>
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {group.entries.map((l) => (
                   <li
                     key={l.id}
-                    className="flex items-center justify-between rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-4 py-3"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-5 py-4"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-neutral-200">{l.foodName}</p>
-                      <p className="text-xs text-neutral-500">
+                      <p className="mt-1 text-xs text-neutral-500">
                         {Math.round(l.grams)} ก. · {Math.round(l.calories)} kcal
                       </p>
                     </div>
