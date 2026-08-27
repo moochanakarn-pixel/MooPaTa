@@ -180,7 +180,11 @@ export default async function NutritionPage() {
         ·{" "}
         <Link href="/dashboard/knowledge" className="text-neutral-400 hover:text-neutral-200 hover:underline">
           ตัวเลขนี้มาจากไหน
-        </Link>
+        </Link>{" "}
+        ·{" "}
+        <a href="/api/share/nutrition" download className="text-neutral-400 hover:text-neutral-200 hover:underline">
+          แชร์สรุปเดือนนี้
+        </a>
       </p>
 
       <WeightLogCard logs={weightLogs} />
