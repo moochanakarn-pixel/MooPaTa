@@ -31,6 +31,8 @@ model User {
 
   connections     ProviderConnection[]
   activities      Activity[]
+  foods           Food[]
+  foodLogs        FoodLog[]
 }
 
 enum Provider {
@@ -60,6 +62,59 @@ enum NutritionGoal {
   LOSE
   MAINTAIN
   GAIN
+}
+
+// A reusable food "template", scoped to the user who created it — either by
+// picking a suggestion from the built-in Thai food catalog (src/lib/thai-food-catalog.ts,
+// not stored in the DB), scanning a barcode (via Open Food Facts, no API
+// key/cost), or typing one in from scratch. Storing per-100g values (rather
+// than per-serving) is what lets the same food be logged again later at a
+// different portion size without re-entering its nutrition facts.
+model Food {
+  id              String     @id @default(cuid())
+  name            String
+  caloriesPer100g Float
+  proteinPer100g  Float
+  carbPer100g     Float
+  fatPer100g      Float
+  barcode         String?
+  source          FoodSource @default(CUSTOM)
+  createdAt       DateTime   @default(now())
+
+  userId String
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs   FoodLog[]
+
+  @@index([userId])
+  @@index([userId, barcode])
+}
+
+enum FoodSource {
+  CATALOG // picked from the built-in Thai food catalog
+  BARCODE // looked up from a scanned barcode via Open Food Facts
+  CUSTOM // typed in from scratch
+}
+
+// One logged instance of eating a Food, at a specific portion size and time.
+model FoodLog {
+  id       String    @id @default(cuid())
+  grams    Float
+  loggedAt DateTime  @default(now())
+  mealType MealType?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodId String
+  food   Food   @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loggedAt])
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
 }
 
 // One OAuth link between a User and an external fitness provider.

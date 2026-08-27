@@ -280,6 +280,20 @@ export default async function DashboardPage({
               />
             ),
           },
+          {
+            href: "/dashboard/food",
+            label: "บันทึกอาหาร",
+            color: "text-rose-400",
+            icon: (
+              <path
+                d="M5 3v6a2 2 0 0 0 2 2v6M5 3v4M7 3v4M9 3v6M15 3c-2 1-2 4-2 6s.5 3 .5 3V17M15 3v14"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ),
+          },
         ].map((item) => (
           <Link
             key={item.href}
