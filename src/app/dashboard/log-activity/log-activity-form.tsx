@@ -36,6 +36,10 @@ export function LogActivityForm() {
   const [durationMin, setDurationMin] = useState("60");
   const [intensity, setIntensity] = useState("MODERATE");
   const [startedAt, setStartedAt] = useState(() => toDatetimeLocal(new Date()));
+  const [distanceKm, setDistanceKm] = useState("");
+  const [avgHeartRate, setAvgHeartRate] = useState("");
+  const [maxHeartRate, setMaxHeartRate] = useState("");
+  const [calories, setCalories] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,6 +59,10 @@ export function LogActivityForm() {
         durationMin: Number(durationMin),
         intensity,
         startedAt: new Date(startedAt).toISOString(),
+        distanceKm: distanceKm.trim() || undefined,
+        avgHeartRate: avgHeartRate.trim() || undefined,
+        maxHeartRate: maxHeartRate.trim() || undefined,
+        calories: calories.trim() || undefined,
       }),
     });
     setSaving(false);
@@ -115,6 +123,49 @@ export function LogActivityForm() {
           onChange={(e) => setStartedAt(e.target.value)}
           className={INPUT_CLASS}
         />
+      </div>
+
+      <div className="border-t border-neutral-800 pt-4">
+        <p className="mb-3 text-xs text-neutral-500">
+          ข้อมูลเพิ่มเติม (ไม่บังคับ) — คัดลอกจากแอพนาฬิกา/สายรัดที่บันทึกไว้ได้ เช่น Huawei Health
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={LABEL_CLASS}>ระยะทาง (กม.)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={distanceKm}
+              onChange={(e) => setDistanceKm(e.target.value)}
+              className={INPUT_CLASS}
+            />
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>แคลอรี่ (kcal)</label>
+            <input type="number" min="0" value={calories} onChange={(e) => setCalories(e.target.value)} className={INPUT_CLASS} />
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>หัวใจเฉลี่ย (bpm)</label>
+            <input
+              type="number"
+              min="0"
+              value={avgHeartRate}
+              onChange={(e) => setAvgHeartRate(e.target.value)}
+              className={INPUT_CLASS}
+            />
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>หัวใจสูงสุด (bpm)</label>
+            <input
+              type="number"
+              min="0"
+              value={maxHeartRate}
+              onChange={(e) => setMaxHeartRate(e.target.value)}
+              className={INPUT_CLASS}
+            />
+          </div>
+        </div>
       </div>
 
       {error && <p className="text-xs text-red-400">{error}</p>}
