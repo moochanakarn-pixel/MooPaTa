@@ -1,3 +1,5 @@
+import { THAI_FOOD_CATALOG } from "./thai-food-catalog";
+
 // Parses a pasted nutrition-breakdown table (the shape Claude/ChatGPT tends
 // to produce when asked "how many calories is this meal") into food rows
 // ready to log. Never trusted blindly — the caller always shows these back
@@ -10,6 +12,11 @@ export interface ParsedFoodRow {
   proteinG: number;
   carbG: number;
   fatG: number;
+  // true when these numbers came from our own curated catalog (matched by
+  // name) instead of the AI's estimated range — a dish like "ลาบหมู" has a
+  // known, consistent per-100g profile, which is a firmer number than an
+  // LLM's guess at both the calorie count AND the likely portion weight.
+  fromCatalog: boolean;
 }
 
 export interface ParsedMeal {
@@ -53,6 +60,39 @@ function cellNumber(cell: string): number | null {
   return (lo + hi) / 2;
 }
 
+// Strips spaces/parentheses so "ซุปเนื้อตุ๋น (ถ้วยเล็ก)" and "ผัดกะเพราเนื้อสับ"
+// compare against "ซุปเนื้อตุ๋น" / "กะเพราเนื้อสับ" on their meaningful
+// characters only, and canonicalizes "กระเพรา" (an extremely common
+// alternate spelling — arguably more common in casual typing than the
+// dictionary form) to "กะเพรา" so it matches the catalog's spelling.
+function normalizeName(name: string): string {
+  return name
+    .replace(/[()（）]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/กระเพรา/g, "กะเพรา")
+    .trim();
+}
+
+// Finds the catalog entry for the same dish, if any — exact match first,
+// then substring containment either direction (catches "กระเพราเนื้อสับ"
+// against the catalog's "ผัดกะเพราเนื้อสับ", which differs only by the
+// "ผัด" prefix a person often drops when typing quickly). Deliberately not
+// a fuzzy/typo-tolerant match: a wrong match here would silently replace a
+// correct AI estimate with the wrong dish's numbers, which is worse than
+// just falling back to the AI's own figure.
+function findCatalogMatch(name: string) {
+  const normalized = normalizeName(name);
+  if (!normalized) return null;
+  const exact = THAI_FOOD_CATALOG.find((f) => normalizeName(f.name) === normalized);
+  if (exact) return exact;
+  return (
+    THAI_FOOD_CATALOG.find((f) => {
+      const catNorm = normalizeName(f.name);
+      return catNorm.includes(normalized) || normalized.includes(catNorm);
+    }) ?? null
+  );
+}
+
 // \b doesn't work after "มล" — \b needs a transition between a \w and
 // non-\w character, and Thai script characters aren't \w at all, so a
 // trailing \b silently fails to match right after Thai text every time. A
@@ -94,14 +134,30 @@ export function parseMealText(text: string): ParsedMeal {
       continue;
     }
 
-    items.push({
-      name,
-      grams: qty && qty > 0 ? qty : 100,
-      calories: kcal,
-      proteinG: protein,
-      carbG: carb,
-      fatG: fat ?? 0,
-    });
+    const grams = qty && qty > 0 ? qty : 100;
+    const catalogMatch = findCatalogMatch(name);
+    if (catalogMatch) {
+      const ratio = grams / 100;
+      items.push({
+        name,
+        grams,
+        calories: catalogMatch.caloriesPer100g * ratio,
+        proteinG: catalogMatch.proteinPer100g * ratio,
+        carbG: catalogMatch.carbPer100g * ratio,
+        fatG: catalogMatch.fatPer100g * ratio,
+        fromCatalog: true,
+      });
+    } else {
+      items.push({
+        name,
+        grams,
+        calories: kcal,
+        proteinG: protein,
+        carbG: carb,
+        fatG: fat ?? 0,
+        fromCatalog: false,
+      });
+    }
   }
 
   // Water is only searched for among lines that weren't already consumed as

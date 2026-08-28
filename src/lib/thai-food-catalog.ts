@@ -14,7 +14,7 @@ export interface CatalogFood {
 }
 
 export const THAI_FOOD_CATALOG: CatalogFood[] = [
-  { name: "ข้าวขาวสวย", caloriesPer100g: 130, proteinPer100g: 2.7, carbPer100g: 28, fatPer100g: 0.3, typicalGrams: 250 },
+  { name: "ข้าวสวย", caloriesPer100g: 130, proteinPer100g: 2.7, carbPer100g: 28, fatPer100g: 0.3, typicalGrams: 250 },
   { name: "ข้าวเหนียว", caloriesPer100g: 160, proteinPer100g: 3.5, carbPer100g: 35, fatPer100g: 0.3, typicalGrams: 180 },
   { name: "ข้าวผัดหมู", caloriesPer100g: 190, proteinPer100g: 6, carbPer100g: 24, fatPer100g: 8, typicalGrams: 350 },
   { name: "ข้าวผัดไก่", caloriesPer100g: 185, proteinPer100g: 7, carbPer100g: 24, fatPer100g: 7, typicalGrams: 350 },

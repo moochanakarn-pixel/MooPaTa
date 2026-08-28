@@ -43,6 +43,7 @@ function toEditable(rows: ParsedFoodRow[]): EditableRow[] {
     proteinG: String(Math.round(r.proteinG)),
     carbG: String(Math.round(r.carbG)),
     fatG: String(Math.round(r.fatG)),
+    fromCatalog: r.fromCatalog,
     keep: true,
   }));
 }
@@ -187,6 +188,13 @@ export function ImportMealPanel({ onClose }: { onClose: () => void }) {
                       className={`${INPUT_CLASS} flex-1 disabled:opacity-50`}
                     />
                   </div>
+                  <p className="mb-1.5 pl-6 text-[11px]" title={r.fromCatalog ? "แทนที่ตัวเลขที่ AI ประมาณด้วยข้อมูลจากคลังอาหารไทยที่แม่นยำกว่า — แก้ไขได้ตามปกติ" : undefined}>
+                    {r.fromCatalog ? (
+                      <span className="text-lime-400">✓ ใช้ค่าจากคลังอาหารไทย (แม่นยำกว่าค่าที่ AI ประมาณ)</span>
+                    ) : (
+                      <span className="text-neutral-600">ประมาณจากช่วงที่ AI ให้มา</span>
+                    )}
+                  </p>
                   <div className="grid grid-cols-5 gap-1.5 pl-6">
                     {(
                       [
