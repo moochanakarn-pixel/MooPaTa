@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { macrosForGrams, MEAL_TYPE_LABEL, per100gFromTotal, type Per100g } from "@/lib/food";
 import { THAI_FOOD_CATALOG, type CatalogFood } from "@/lib/thai-food-catalog";
 import { BarcodeScanner } from "./barcode-scanner";
+import { ImportMealPanel } from "./import-meal-panel";
 
 export interface PersonalFood extends Per100g {
   id: string;
@@ -88,6 +89,7 @@ export function FoodLogView({
   const [query, setQuery] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [pending, setPending] = useState<PendingFood | null>(null);
   const [customName, setCustomName] = useState("");
   const [customCalories, setCustomCalories] = useState("");
@@ -324,17 +326,37 @@ export function FoodLogView({
         </div>
       )}
 
-      {!showAdd ? (
-        <button
-          onClick={() => setShowAdd(true)}
-          className="mb-6 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#fc4c02] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e04402]"
-        >
-          <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-            <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-          เพิ่มอาหาร
-        </button>
-      ) : (
+      {showImport && <ImportMealPanel onClose={() => setShowImport(false)} />}
+
+      {!showAdd && !showImport ? (
+        <div className="mb-6 flex gap-2">
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#fc4c02] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e04402]"
+          >
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+              <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+            เพิ่มอาหาร
+          </button>
+          <button
+            onClick={() => setShowImport(true)}
+            title="วางตารางแคลอรี่ที่ได้จาก AI แล้วนำเข้าทั้งมื้อ"
+            className="flex flex-none items-center justify-center gap-1.5 rounded-xl border border-neutral-700 px-4 py-3 text-sm font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800/50"
+          >
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+              <path
+                d="M10 3v8m0 0 3-3m-3 3-3-3M4 14v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            นำเข้าจาก AI
+          </button>
+        </div>
+      ) : showAdd ? (
         <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-4">
           {pending ? (
             <div>
@@ -535,7 +557,7 @@ export function FoodLogView({
             </div>
           )}
         </div>
-      )}
+      ) : null}
 
       {deleteError && <p className="mb-2 text-xs text-red-400">{deleteError}</p>}
 
