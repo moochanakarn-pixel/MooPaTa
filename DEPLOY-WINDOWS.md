@@ -200,12 +200,32 @@ Register-ScheduledTask -TaskName "MooPaTaWheyReminder" -Action $action -Trigger 
 
 ```powershell
 cd C:\MooPaTa
+nssm stop MooPaTa
+git checkout -- package-lock.json
 git pull origin claude/moopta-strava-huawei-integration-nlcpb5
 npm install
 npx prisma migrate deploy
 npm run build
-nssm restart MooPaTa
+nssm start MooPaTa
 ```
+
+Two Windows-specific gotchas this sequence works around:
+
+- **`nssm stop` before `npm install`**: the running service keeps Prisma's
+  query engine DLL open, so `npm install`'s `prisma generate` postinstall
+  step fails with `EPERM: operation not permitted, rename ... query_engine-windows.dll.node`
+  if the service is still running. Stop it first, start it again only
+  after the build finishes.
+- **`git checkout -- package-lock.json` before every pull**: `npm install`
+  on Windows re-resolves Windows-only optional dependencies (Next.js's
+  `@next/swc-win32-x64-msvc`, Prisma's Windows query engine, etc.) into
+  `package-lock.json`, which differs from the Linux-generated lockfile
+  committed to the repo — so it re-diverges after every single
+  `npm install` on this machine, and the next `git pull` fails with
+  `Your local changes to the following files would be overwritten by
+  merge: package-lock.json` unless it's discarded first. This is expected
+  and harmless to discard — `npm install` immediately regenerates it to
+  match this machine either way.
 
 ## Troubleshooting
 
