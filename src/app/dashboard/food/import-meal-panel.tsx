@@ -44,6 +44,7 @@ function toEditable(rows: ParsedFoodRow[]): EditableRow[] {
     carbG: String(Math.round(r.carbG)),
     fatG: String(Math.round(r.fatG)),
     fromCatalog: r.fromCatalog,
+    hasRealGrams: r.hasRealGrams,
     keep: true,
   }));
 }
@@ -198,7 +199,7 @@ export function ImportMealPanel({ onClose }: { onClose: () => void }) {
                   <div className="grid grid-cols-5 gap-1.5 pl-6">
                     {(
                       [
-                        ["grams", "กรัม"],
+                        ["grams", r.hasRealGrams ? "กรัม" : "หน่วย*"],
                         ["calories", "kcal"],
                         ["proteinG", "โปรตีน"],
                         ["carbG", "คาร์บ"],
@@ -218,6 +219,11 @@ export function ImportMealPanel({ onClose }: { onClose: () => void }) {
                       </div>
                     ))}
                   </div>
+                  {!r.hasRealGrams && (
+                    <p className="mt-1 pl-6 text-[10px] text-neutral-600">
+                      *ไม่มีคอลัมน์น้ำหนักในตารางที่วางมา ตัวเลข kcal/โปรตีน/คาร์บ/ไขมันด้านบนคือยอดรวมของรายการนี้ทั้งหมดอยู่แล้ว
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

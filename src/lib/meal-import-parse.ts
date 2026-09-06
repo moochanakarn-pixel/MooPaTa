@@ -17,6 +17,14 @@ export interface ParsedFoodRow {
   // known, consistent per-100g profile, which is a firmer number than an
   // LLM's guess at both the calorie count AND the likely portion weight.
   fromCatalog: boolean;
+  // false when `grams` isn't a real weight — the source table gave this
+  // row's totals with no quantity column at all (a supplement serving like
+  // "1 scoop of whey" is almost always given this way), so `grams` is just
+  // an arbitrary accounting denominator for the calories/macros above, not
+  // an actual measured amount. The totals are correct either way; this only
+  // tells the UI whether "100 กรัม" would be a real number to show someone
+  // or a made-up one that happens to make the math work out.
+  hasRealGrams: boolean;
 }
 
 export interface ParsedMeal {
@@ -216,9 +224,13 @@ export function parseMealText(text: string): ParsedMeal {
       continue;
     }
 
-    const grams = qty && qty > 0 ? qty : 100;
+    const hasQty = qty !== null && qty > 0;
     const catalogMatch = findCatalogMatch(name);
     if (catalogMatch) {
+      // A known dish still has a real, sensible serving size even when the
+      // table itself didn't give one — its own typicalGrams — so this
+      // branch counts as "real grams" either way.
+      const grams = hasQty ? qty : catalogMatch.typicalGrams;
       const ratio = grams / 100;
       items.push({
         name,
@@ -228,8 +240,14 @@ export function parseMealText(text: string): ParsedMeal {
         carbG: catalogMatch.carbPer100g * ratio,
         fatG: catalogMatch.fatPer100g * ratio,
         fromCatalog: true,
+        hasRealGrams: true,
       });
     } else {
+      // No catalog entry and no quantity column: all we have is this row's
+      // absolute totals (typical for a supplement serving like "1 scoop of
+      // whey"), so `grams` here is just an arbitrary denominator for the
+      // per-100g storage math, not a real weight.
+      const grams = hasQty ? qty : 1;
       items.push({
         name,
         grams,
@@ -238,6 +256,7 @@ export function parseMealText(text: string): ParsedMeal {
         carbG: carb,
         fatG: fat ?? 0,
         fromCatalog: false,
+        hasRealGrams: hasQty,
       });
     }
   }
