@@ -38,7 +38,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
 
   const [user, activity] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
-    db.activity.findUnique({ where: { id: params.id } }),
+    db.activity.findUnique({ where: { id: params.id }, include: { exercises: { orderBy: { order: "asc" } } } }),
   ]);
   if (!activity || activity.userId !== userId) notFound();
 
@@ -182,33 +182,67 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
         />
       </div>
 
-      <div className="mt-8">
-        <h2 className="mb-4 font-medium">รายละเอียดเพิ่มเติม</h2>
-        {detail ? (
-          <DetailPanel
-            streams={(detail.streams as unknown as StreamPoint[]) ?? []}
-            splits={(detail.splits as unknown as StravaSplit[]) ?? []}
-            bestEfforts={(detail.bestEfforts as unknown as StravaBestEffort[]) ?? []}
-            laps={(detail.laps as unknown as StravaLap[]) ?? []}
-            weather={(detail.weather as unknown as ActivityWeather) ?? null}
-            deviceName={detail.deviceName}
-            unit={unit}
-            isRun={isRun}
-            hrMax={hrAgg._max.maxHeartRate}
-          />
-        ) : (
-          <LoadDetailButton activityId={activity.id} />
-        )}
-      </div>
+      {activity.exercises.length > 0 && (
+        <div className="mt-8">
+          <h2 className="mb-4 font-medium">ท่าออกกำลังกาย</h2>
+          <div className="overflow-hidden rounded-xl border border-neutral-800/80">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-neutral-900/60 text-left text-xs text-neutral-500">
+                  <th className="px-4 py-2 font-normal">ท่า</th>
+                  <th className="px-4 py-2 text-right font-normal">เซ็ท</th>
+                  <th className="px-4 py-2 text-right font-normal">ครั้ง</th>
+                  <th className="px-4 py-2 text-right font-normal">น้ำหนัก</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activity.exercises.map((ex) => (
+                  <tr key={ex.id} className="border-t border-neutral-800/80">
+                    <td className="px-4 py-2.5">{ex.name}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-neutral-400">{ex.sets}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-neutral-400">{ex.reps}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-neutral-400">
+                      {ex.weightKg ? `${ex.weightKg} กก.` : "-"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-      <details className="mt-8 rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
-        <summary className="cursor-pointer text-sm font-medium text-neutral-400">
-          ข้อมูลดิบทั้งหมดจาก Strava
-        </summary>
-        <pre className="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap break-all text-xs text-neutral-400">
-          {JSON.stringify(activity.raw, null, 2)}
-        </pre>
-      </details>
+      {activity.provider === "STRAVA" && (
+        <div className="mt-8">
+          <h2 className="mb-4 font-medium">รายละเอียดเพิ่มเติม</h2>
+          {detail ? (
+            <DetailPanel
+              streams={(detail.streams as unknown as StreamPoint[]) ?? []}
+              splits={(detail.splits as unknown as StravaSplit[]) ?? []}
+              bestEfforts={(detail.bestEfforts as unknown as StravaBestEffort[]) ?? []}
+              laps={(detail.laps as unknown as StravaLap[]) ?? []}
+              weather={(detail.weather as unknown as ActivityWeather) ?? null}
+              deviceName={detail.deviceName}
+              unit={unit}
+              isRun={isRun}
+              hrMax={hrAgg._max.maxHeartRate}
+            />
+          ) : (
+            <LoadDetailButton activityId={activity.id} />
+          )}
+        </div>
+      )}
+
+      {activity.provider === "STRAVA" && (
+        <details className="mt-8 rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
+          <summary className="cursor-pointer text-sm font-medium text-neutral-400">
+            ข้อมูลดิบทั้งหมดจาก Strava
+          </summary>
+          <pre className="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap break-all text-xs text-neutral-400">
+            {JSON.stringify(activity.raw, null, 2)}
+          </pre>
+        </details>
+      )}
     </main>
   );
 }

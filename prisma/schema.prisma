@@ -214,10 +214,29 @@ model Activity {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  detail ActivityDetail?
+  detail    ActivityDetail?
+  exercises Exercise[]
 
   @@unique([provider, providerActId])
   @@index([userId, startedAt])
+}
+
+// One strength-training movement logged within a manually-entered activity
+// (sets/reps/weight) — Strava-synced activities don't carry this kind of
+// detail, so in practice this only ever attaches to provider=MANUAL
+// activities, though nothing enforces that at the schema level.
+model Exercise {
+  id       String @id @default(cuid())
+  name     String
+  sets     Int
+  reps     Int
+  weightKg Float?
+  order    Int // preserves the order entered in the form
+
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([activityId])
 }
 
 // Richer per-activity data (splits, best efforts, laps, time-series streams)

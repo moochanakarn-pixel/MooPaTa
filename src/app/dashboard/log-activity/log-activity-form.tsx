@@ -29,6 +29,19 @@ function toDatetimeLocal(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+interface ExerciseRow {
+  id: number;
+  name: string;
+  sets: string;
+  reps: string;
+  weightKg: string;
+}
+
+let nextExerciseRowId = 1;
+function emptyExerciseRow(): ExerciseRow {
+  return { id: nextExerciseRowId++, name: "", sets: "3", reps: "12", weightKg: "" };
+}
+
 export function LogActivityForm() {
   const router = useRouter();
   const [type, setType] = useState("Football");
@@ -40,13 +53,33 @@ export function LogActivityForm() {
   const [avgHeartRate, setAvgHeartRate] = useState("");
   const [maxHeartRate, setMaxHeartRate] = useState("");
   const [calories, setCalories] = useState("");
+  const [exercises, setExercises] = useState<ExerciseRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function addExerciseRow() {
+    setExercises((rows) => [...rows, emptyExerciseRow()]);
+  }
+  function updateExerciseRow(id: number, patch: Partial<ExerciseRow>) {
+    setExercises((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  }
+  function removeExerciseRow(id: number) {
+    setExercises((rows) => rows.filter((r) => r.id !== id));
+  }
 
   async function save() {
     if (!Number.isFinite(Number(durationMin)) || Number(durationMin) <= 0) {
       setError("กรอกระยะเวลาให้ถูกต้องก่อน");
       return;
+    }
+    const namedExercises = exercises.filter((r) => r.name.trim());
+    for (const r of namedExercises) {
+      const sets = Number(r.sets);
+      const reps = Number(r.reps);
+      if (!Number.isInteger(sets) || sets <= 0 || !Number.isInteger(reps) || reps <= 0) {
+        setError(`ท่า "${r.name.trim()}" ต้องกรอกเซ็ทและครั้งเป็นจำนวนเต็มมากกว่า 0`);
+        return;
+      }
     }
     setError(null);
     setSaving(true);
@@ -63,6 +96,12 @@ export function LogActivityForm() {
         avgHeartRate: avgHeartRate.trim() || undefined,
         maxHeartRate: maxHeartRate.trim() || undefined,
         calories: calories.trim() || undefined,
+        exercises: namedExercises.map((r) => ({
+          name: r.name.trim(),
+          sets: Number(r.sets),
+          reps: Number(r.reps),
+          weightKg: r.weightKg.trim() || undefined,
+        })),
       }),
     });
     setSaving(false);
@@ -166,6 +205,72 @@ export function LogActivityForm() {
             />
           </div>
         </div>
+      </div>
+
+      <div className="border-t border-neutral-800 pt-4">
+        <p className="mb-3 text-xs text-neutral-500">
+          ท่าออกกำลังกาย (ไม่บังคับ) — สำหรับเวทเทรนนิ่ง/แคลิสเธนิกส์ ใส่ทีละท่าพร้อมเซ็ท/ครั้ง/น้ำหนักที่ใช้
+        </p>
+        {exercises.length > 0 && (
+          <div className="mb-2 space-y-2">
+            {exercises.map((r) => (
+              <div key={r.id} className="flex items-center gap-1.5">
+                <input
+                  value={r.name}
+                  onChange={(e) => updateExerciseRow(r.id, { name: e.target.value })}
+                  placeholder="ชื่อท่า เช่น ดันไหล่ดัมเบล"
+                  className={`${INPUT_CLASS} flex-1`}
+                />
+                <input
+                  type="number"
+                  min="1"
+                  value={r.sets}
+                  onChange={(e) => updateExerciseRow(r.id, { sets: e.target.value })}
+                  placeholder="เซ็ท"
+                  title="จำนวนเซ็ท"
+                  className={`${INPUT_CLASS} w-16`}
+                />
+                <input
+                  type="number"
+                  min="1"
+                  value={r.reps}
+                  onChange={(e) => updateExerciseRow(r.id, { reps: e.target.value })}
+                  placeholder="ครั้ง"
+                  title="จำนวนครั้งต่อเซ็ท"
+                  className={`${INPUT_CLASS} w-16`}
+                />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={r.weightKg}
+                  onChange={(e) => updateExerciseRow(r.id, { weightKg: e.target.value })}
+                  placeholder="กก."
+                  title="น้ำหนักที่ใช้ (กก.) — เว้นว่างได้ถ้าไม่มี"
+                  className={`${INPUT_CLASS} w-16`}
+                />
+                <button
+                  onClick={() => removeExerciseRow(r.id)}
+                  title="ลบท่านี้"
+                  className="flex-none text-neutral-600 hover:text-red-400"
+                >
+                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                    <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <button
+          onClick={addExerciseRow}
+          className="flex items-center gap-1.5 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 transition hover:border-neutral-600"
+        >
+          <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5">
+            <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+          เพิ่มท่า
+        </button>
       </div>
 
       {error && <p className="text-xs text-red-400">{error}</p>}
