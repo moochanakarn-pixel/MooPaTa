@@ -174,3 +174,10 @@ pm2 restart moopata
   `CRON_SECRET` doesn't match between the crontab command and `.env`.
 - **Cloudflare shows "too many redirects"**: SSL/TLS mode is on **Flexible** —
   switch it to **Full** (see step 1).
+- **"Today" starts/ends at the wrong time, or water/whey reminders fire at the
+  wrong hour**: the server's OS timezone isn't Thai time and `TZ` isn't set in
+  `.env` — every "today" boundary and reminder-schedule check runs on the
+  server process's own local time, with no per-user timezone anywhere. Set
+  `TZ="Asia/Bangkok"` in `.env` (see `.env.example`) and restart PM2. To
+  confirm it's taking effect: `TZ=Asia/Bangkok node -e "console.log(new Date().toString())"`
+  should print a `GMT+0700` offset matching Thai time right now.

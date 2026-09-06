@@ -218,3 +218,12 @@ nssm restart MooPaTa
   a PowerShell window (not via the service) to see errors live.
 - **Cloudflare "too many redirects"**: SSL/TLS mode is on Flexible — switch
   to Full, same as the Linux guide.
+- **"Today" starts/ends at the wrong time, or water/whey reminders fire at
+  the wrong hour**: every "today" boundary and reminder-schedule check runs
+  on the server process's own local time — there's no per-user timezone
+  anywhere in the app. Set `TZ="Asia/Bangkok"` in `.env` (see
+  `.env.example`) and restart the `MooPaTa` service (`nssm restart MooPaTa`)
+  — this works regardless of the Windows Server's own "Date & Time" setting
+  (Settings → Time & language). To confirm it's taking effect, run
+  `$env:TZ="Asia/Bangkok"; node -e "console.log(new Date().toString())"` in
+  PowerShell — it should print a `GMT+0700` offset matching Thai time now.
