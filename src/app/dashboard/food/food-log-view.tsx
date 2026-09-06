@@ -33,6 +33,11 @@ export interface DailyTargets {
   proteinG: number;
   carbG: number;
   fatG: number;
+  // How much of proteinG/carbG above is from today's logged activity (see
+  // applyActivityBonus in src/lib/nutrition.ts) — shown as a note so the
+  // bump isn't invisible, just a bigger number with no explanation.
+  carbBonusG: number;
+  proteinBonusG: number;
 }
 
 export interface HealthFlags {
@@ -65,13 +70,26 @@ function guessMealType(): string {
   return "SNACK";
 }
 
-function MacroChip({ label, value, color }: { label: string; value: string; color: string }) {
+// Real (uncapped) percentage — 120% when over target, not clamped to 100 —
+// so "did I already go over, and by how much" is answerable at a glance,
+// same reason the number goes red instead of just the bar.
+function pctOf(eaten: number, target: number): number | null {
+  return target > 0 ? Math.round((eaten / target) * 100) : null;
+}
+
+function MacroChip({ label, eaten, target, color }: { label: string; eaten: number; target: number | null; color: string }) {
+  const pct = target !== null ? pctOf(eaten, target) : null;
+  const over = target !== null && eaten > target;
   return (
     <div className="rounded-lg border border-neutral-800/80 bg-neutral-900/40 px-3 py-2 text-center">
-      <p className="text-sm font-bold tabular-nums" style={{ color }}>
-        {value}
+      <p className="text-sm font-bold tabular-nums" style={{ color: over ? "#ef4444" : color }}>
+        {Math.round(eaten)}
+        {target !== null && <span className="font-normal text-neutral-500">/{Math.round(target)}</span>} ก.
       </p>
-      <p className="text-[11px] text-neutral-500">{label}</p>
+      <p className="text-[11px] text-neutral-500">
+        {label}
+        {pct !== null && <span className={over ? "text-red-400" : undefined}> · {pct}%</span>}
+      </p>
     </div>
   );
 }
@@ -301,27 +319,38 @@ export function FoodLogView({
     <div>
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <p className="text-xs text-neutral-500">กินไปวันนี้</p>
-        <p className="mb-3 text-3xl font-extrabold tracking-tight">
+        <p className="mb-1 text-3xl font-extrabold tracking-tight">
           {Math.round(totals.calories).toLocaleString("th-TH")}
           {targets && <span className="text-lg font-medium text-neutral-500"> / {targets.targetCalories.toLocaleString("th-TH")} kcal</span>}
           {!targets && <span className="text-lg font-medium text-neutral-500"> kcal</span>}
         </p>
+        {targets && (
+          <p className={`mb-3 text-xs ${totals.calories > targets.targetCalories ? "text-red-400" : "text-neutral-500"}`}>
+            {pctOf(totals.calories, targets.targetCalories)}% ของเป้าหมายวันนี้
+          </p>
+        )}
         {targets && <ProgressBar eaten={totals.calories} target={targets.targetCalories} color="#fc4c02" />}
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           <div>
-            <MacroChip label="โปรตีน" value={`${Math.round(totals.proteinG)} ก.`} color="#38bdf8" />
+            <MacroChip label="โปรตีน" eaten={totals.proteinG} target={targets?.proteinG ?? null} color="#38bdf8" />
             {targets && <div className="mt-1.5"><ProgressBar eaten={totals.proteinG} target={targets.proteinG} color="#38bdf8" /></div>}
           </div>
           <div>
-            <MacroChip label="คาร์บ" value={`${Math.round(totals.carbG)} ก.`} color="#f59e0b" />
+            <MacroChip label="คาร์บ" eaten={totals.carbG} target={targets?.carbG ?? null} color="#f59e0b" />
             {targets && <div className="mt-1.5"><ProgressBar eaten={totals.carbG} target={targets.carbG} color="#f59e0b" /></div>}
           </div>
           <div>
-            <MacroChip label="ไขมัน" value={`${Math.round(totals.fatG)} ก.`} color="#f43f5e" />
+            <MacroChip label="ไขมัน" eaten={totals.fatG} target={targets?.fatG ?? null} color="#f43f5e" />
             {targets && <div className="mt-1.5"><ProgressBar eaten={totals.fatG} target={targets.fatG} color="#f43f5e" /></div>}
           </div>
         </div>
+
+        {targets && (targets.carbBonusG > 0 || targets.proteinBonusG > 0) && (
+          <p className="mt-3 text-center text-[11px] text-neutral-600">
+            ปรับเป้าเพิ่มจากกิจกรรมวันนี้แล้ว: คาร์บ +{targets.carbBonusG} ก. · โปรตีน +{targets.proteinBonusG} ก.
+          </p>
+        )}
 
         {totals.hasMicronutrients && (
           <div className="mt-3 flex justify-center gap-4 border-t border-neutral-800 pt-3 text-xs text-neutral-500">

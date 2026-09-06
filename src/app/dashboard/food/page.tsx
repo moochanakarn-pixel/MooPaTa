@@ -70,7 +70,14 @@ export default async function FoodPage() {
     };
     if (isProfileComplete(profile)) {
       const t = applyActivityBonus(computeTargets(profile), activityDurationTodaySec);
-      targets = { targetCalories: t.targetCalories, proteinG: t.proteinG, carbG: t.carbG, fatG: t.fatG };
+      targets = {
+        targetCalories: t.targetCalories,
+        proteinG: t.proteinG,
+        carbG: t.carbG,
+        fatG: t.fatG,
+        carbBonusG: t.carbBonusG,
+        proteinBonusG: t.proteinBonusG,
+      };
       waterTargetMl = t.waterMl;
     }
   }
