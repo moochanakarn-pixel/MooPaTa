@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Without this, native form-control chrome (select dropdown lists, date/time
+   pickers, checkboxes, scrollbars) follows the OS's own dark/light
+   preference instead of the app's own cream theme — on a phone set to dark
+   mode, that meant a dark popup list opening from a now-light input. */
+:root {
+  color-scheme: light;
+}
