@@ -9,6 +9,17 @@ function isFiniteNonNegative(n: unknown): n is number {
   return typeof n === "number" && Number.isFinite(n) && n >= 0;
 }
 
+// Micronutrient fields are optional — undefined/null/blank all mean "not
+// provided" (kept null in the DB, not miscoded as 0); anything else must be
+// a valid non-negative number or the request is rejected outright, same as
+// the required macro fields.
+const INVALID = Symbol("invalid");
+function optionalNonNegativeOrNull(value: unknown): number | null | typeof INVALID {
+  if (value === undefined || value === null || value === "") return null;
+  const n = Number(value);
+  return isFiniteNonNegative(n) ? n : INVALID;
+}
+
 // Logs one eaten portion. Either references an existing Food the user
 // already has (foodId) or creates one first (food) — from the built-in
 // catalog, a barcode lookup, or a fully custom entry. Barcode foods reuse
@@ -57,6 +68,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "invalid_macros" }, { status: 400 });
     }
 
+    const sugarPer100g = optionalNonNegativeOrNull(f.sugarPer100g);
+    const sodiumMgPer100g = optionalNonNegativeOrNull(f.sodiumMgPer100g);
+    const cholesterolMgPer100g = optionalNonNegativeOrNull(f.cholesterolMgPer100g);
+    const fiberPer100g = optionalNonNegativeOrNull(f.fiberPer100g);
+    if ([sugarPer100g, sodiumMgPer100g, cholesterolMgPer100g, fiberPer100g].includes(INVALID)) {
+      return NextResponse.json({ error: "invalid_micronutrients" }, { status: 400 });
+    }
+    const micronutrients = {
+      sugarPer100g: sugarPer100g as number | null,
+      sodiumMgPer100g: sodiumMgPer100g as number | null,
+      cholesterolMgPer100g: cholesterolMgPer100g as number | null,
+      fiberPer100g: fiberPer100g as number | null,
+    };
+
     // Barcode foods are deduped via the (userId, barcode) unique constraint —
     // upsert makes this atomic, so two racing requests for the same barcode
     // (a double-tapped save, a retried request) can't create two Food rows
@@ -67,10 +92,10 @@ export async function POST(req: NextRequest) {
       ? await db.food.upsert({
           where: { userId_barcode: { userId, barcode } },
           update: {},
-          create: { userId, name, caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g, source, barcode },
+          create: { userId, name, caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g, source, barcode, ...micronutrients },
         })
       : await db.food.create({
-          data: { userId, name, caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g, source, barcode },
+          data: { userId, name, caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g, source, barcode, ...micronutrients },
         });
     foodId = food.id;
   }

@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE `Food` ADD COLUMN `cholesterolMgPer100g` DOUBLE NULL,
+    ADD COLUMN `fiberPer100g` DOUBLE NULL,
+    ADD COLUMN `sodiumMgPer100g` DOUBLE NULL,
+    ADD COLUMN `sugarPer100g` DOUBLE NULL;

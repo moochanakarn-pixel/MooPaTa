@@ -3,6 +3,12 @@ export interface FoodMacros {
   proteinG: number;
   carbG: number;
   fatG: number;
+  // Optional — null when the source food has no data for it (most of the
+  // built-in Thai catalog, for instance), rather than a misleading 0.
+  sugarG: number | null;
+  sodiumMg: number | null;
+  cholesterolMg: number | null;
+  fiberG: number | null;
 }
 
 export interface Per100g {
@@ -10,23 +16,32 @@ export interface Per100g {
   proteinPer100g: number;
   carbPer100g: number;
   fatPer100g: number;
+  sugarPer100g?: number | null;
+  sodiumMgPer100g?: number | null;
+  cholesterolMgPer100g?: number | null;
+  fiberPer100g?: number | null;
 }
 
 // Scales a food's per-100g values to an actual eaten amount.
 export function macrosForGrams(food: Per100g, grams: number): FoodMacros {
   const ratio = grams / 100;
+  const scale = (v: number | null | undefined) => (v == null ? null : v * ratio);
   return {
     calories: food.caloriesPer100g * ratio,
     proteinG: food.proteinPer100g * ratio,
     carbG: food.carbPer100g * ratio,
     fatG: food.fatPer100g * ratio,
+    sugarG: scale(food.sugarPer100g),
+    sodiumMg: scale(food.sodiumMgPer100g),
+    cholesterolMg: scale(food.cholesterolMgPer100g),
+    fiberG: scale(food.fiberPer100g),
   };
 }
 
 // Back-calculates per-100g values from a total amount at a given portion
 // size — used when a user enters "I ate 215g and it was about 450 kcal,
 // 30g protein..." directly, rather than looking up a per-100g nutrition label.
-export function per100gFromTotal(total: FoodMacros, grams: number): Per100g {
+export function per100gFromTotal(total: Pick<FoodMacros, "calories" | "proteinG" | "carbG" | "fatG">, grams: number): Per100g {
   const ratio = grams > 0 ? 100 / grams : 0;
   return {
     caloriesPer100g: total.calories * ratio,

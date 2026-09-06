@@ -9,6 +9,10 @@ interface OpenFoodFactsProduct {
     proteins_100g?: number;
     carbohydrates_100g?: number;
     fat_100g?: number;
+    sugars_100g?: number;
+    sodium_100g?: number; // grams per 100g, per OFF's convention — converted to mg below
+    cholesterol_100g?: number; // grams per 100g — converted to mg below
+    fiber_100g?: number;
   };
   serving_quantity?: number;
 }
@@ -63,6 +67,10 @@ export async function GET(_req: Request, { params }: { params: { code: string } 
     proteinPer100g: n.proteins_100g ?? 0,
     carbPer100g: n.carbohydrates_100g ?? 0,
     fatPer100g: n.fat_100g ?? 0,
+    sugarPer100g: n.sugars_100g ?? null,
+    sodiumMgPer100g: n.sodium_100g != null ? n.sodium_100g * 1000 : null,
+    cholesterolMgPer100g: n.cholesterol_100g != null ? n.cholesterol_100g * 1000 : null,
+    fiberPer100g: n.fiber_100g ?? null,
     suggestedGrams: p.serving_quantity && p.serving_quantity > 0 ? p.serving_quantity : null,
     barcode: code,
   });

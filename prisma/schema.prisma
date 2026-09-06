@@ -83,6 +83,12 @@ model Food {
   proteinPer100g  Float
   carbPer100g     Float
   fatPer100g      Float
+  // Optional — not every source has these (the built-in catalog doesn't),
+  // so callers treat a missing value as "unknown" rather than zero.
+  sugarPer100g       Float?
+  sodiumMgPer100g    Float?
+  cholesterolMgPer100g Float?
+  fiberPer100g       Float?
   barcode         String?
   source          FoodSource @default(CUSTOM)
   createdAt       DateTime   @default(now())

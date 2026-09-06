@@ -21,6 +21,9 @@ export interface TodayLogEntry {
   proteinG: number;
   carbG: number;
   fatG: number;
+  sugarG: number | null;
+  sodiumMg: number | null;
+  fiberG: number | null;
 }
 
 export interface DailyTargets {
@@ -118,8 +121,12 @@ export function FoodLogView({
           proteinG: acc.proteinG + l.proteinG,
           carbG: acc.carbG + l.carbG,
           fatG: acc.fatG + l.fatG,
+          sugarG: acc.sugarG + (l.sugarG ?? 0),
+          sodiumMg: acc.sodiumMg + (l.sodiumMg ?? 0),
+          fiberG: acc.fiberG + (l.fiberG ?? 0),
+          hasMicronutrients: acc.hasMicronutrients || l.sugarG != null || l.sodiumMg != null || l.fiberG != null,
         }),
-        { calories: 0, proteinG: 0, carbG: 0, fatG: 0 }
+        { calories: 0, proteinG: 0, carbG: 0, fatG: 0, sugarG: 0, sodiumMg: 0, fiberG: 0, hasMicronutrients: false }
       ),
     [todayLogs]
   );
@@ -200,6 +207,10 @@ export function FoodLogView({
         proteinPer100g: data.proteinPer100g,
         carbPer100g: data.carbPer100g,
         fatPer100g: data.fatPer100g,
+        sugarPer100g: data.sugarPer100g,
+        sodiumMgPer100g: data.sodiumMgPer100g,
+        cholesterolMgPer100g: data.cholesterolMgPer100g,
+        fiberPer100g: data.fiberPer100g,
       },
       barcode: data.barcode,
       grams: data.suggestedGrams ?? 100,
@@ -301,6 +312,20 @@ export function FoodLogView({
             {targets && <div className="mt-1.5"><ProgressBar eaten={totals.fatG} target={targets.fatG} color="#f43f5e" /></div>}
           </div>
         </div>
+
+        {totals.hasMicronutrients && (
+          <div className="mt-3 flex justify-center gap-4 border-t border-neutral-800 pt-3 text-xs text-neutral-500">
+            <span>
+              น้ำตาล <span className="font-medium text-neutral-300">{Math.round(totals.sugarG)}</span> ก.
+            </span>
+            <span>
+              โซเดียม <span className="font-medium text-neutral-300">{Math.round(totals.sodiumMg)}</span> มก.
+            </span>
+            <span>
+              ไฟเบอร์ <span className="font-medium text-neutral-300">{Math.round(totals.fiberG)}</span> ก.
+            </span>
+          </div>
+        )}
       </div>
 
       {suggestions.length > 0 && !showAdd && (
