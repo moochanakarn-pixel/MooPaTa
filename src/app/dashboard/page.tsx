@@ -325,61 +325,6 @@ export default async function DashboardPage({
               />
             ),
           },
-          {
-            href: "/dashboard/nutrition",
-            label: "โภชนาการ",
-            color: "text-lime-400",
-            icon: (
-              <path
-                d="M10 4c3 3 6 6.5 6 10a6 6 0 0 1-12 0c0-3.5 3-7 6-10Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ),
-          },
-          {
-            href: "/dashboard/food",
-            label: "บันทึกอาหาร",
-            color: "text-rose-400",
-            icon: (
-              <path
-                d="M5 3v6a2 2 0 0 0 2 2v6M5 3v4M7 3v4M9 3v6M15 3c-2 1-2 4-2 6s.5 3 .5 3V17M15 3v14"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ),
-          },
-          {
-            href: "/dashboard/log-activity",
-            label: "บันทึกกิจกรรมเอง",
-            color: "text-emerald-400",
-            icon: (
-              <path
-                d="M10 3v14M3 10h14"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-            ),
-          },
-          {
-            href: "/dashboard/supplements",
-            label: "อาหารเสริม",
-            color: "text-violet-400",
-            icon: (
-              <path
-                d="M6.5 3.5h7L15 6v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6l1.5-2.5ZM5 9.5h10"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ),
-          },
         ].map((item) => (
           <Link
             key={item.href}
