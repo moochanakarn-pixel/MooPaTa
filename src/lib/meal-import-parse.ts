@@ -27,6 +27,53 @@ export interface ParsedMeal {
 const HEADER_KEYWORDS = ["ส่วนประกอบ", "ปริมาณ", "kcal", "โปรตีน", "คาร์บ", "ไขมัน", "อาหาร", "รายการ"];
 const SKIP_LINE_PREFIXES = ["รวม", "สรุป", "คำนวณ"];
 
+// Column positions for the macro fields, either detected from a header row
+// (see detectColumnIndices) or the fixed layout this parser originally
+// shipped with — "name, grams, kcal, protein, carb, fat" — used as a
+// fallback when no header is found, so text without one (like the
+// placeholder example) still parses exactly as before.
+interface ColumnIndices {
+  grams: number | null;
+  kcal: number;
+  protein: number;
+  carb: number;
+  fat: number | null;
+}
+const DEFAULT_COLUMNS: ColumnIndices = { grams: 1, kcal: 2, protein: 3, carb: 4, fat: 5 };
+
+function matchHeaderField(cell: string): keyof ColumnIndices | null {
+  if (/kcal|แคลอรี่|แคลอรี|พลังงาน/i.test(cell)) return "kcal";
+  if (/โปรตีน|protein/i.test(cell)) return "protein";
+  if (/คาร์บ|carb/i.test(cell)) return "carb";
+  if (/ไขมัน|\bfat\b/i.test(cell)) return "fat";
+  if (/^(ปริมาณ|น้ำหนัก|กรัม|grams?|amount|qty|serving)/i.test(cell)) return "grams";
+  return null;
+}
+
+// AI-generated tables don't agree on column order or even which columns
+// exist at all (a supplement like whey is usually given as one serving's
+// totals, with no separate grams column) — reading the header row's actual
+// order instead of assuming a fixed layout is what fixes rows silently
+// misreading kcal as protein, or a serving weight as if it were 100g.
+// Requires kcal + protein + carb to all be found before trusting a line as
+// a real header, so a data row that happens to mention one of these words
+// (e.g. a dish named "โปรตีนอบ") doesn't get mistaken for one.
+function detectColumnIndices(cells: string[]): ColumnIndices | null {
+  const found: Partial<Record<keyof ColumnIndices, number>> = {};
+  cells.forEach((cell, i) => {
+    const field = matchHeaderField(cell);
+    if (field && found[field] === undefined) found[field] = i;
+  });
+  if (found.kcal === undefined || found.protein === undefined || found.carb === undefined) return null;
+  return {
+    grams: found.grams ?? null,
+    kcal: found.kcal,
+    protein: found.protein,
+    carb: found.carb,
+    fat: found.fat ?? null,
+  };
+}
+
 // Splits one line into cells, trying the delimiter most likely for how it
 // was pasted: a literal markdown pipe table, a tab-separated copy (common
 // when copying a rendered HTML table), or plain multi-space alignment.
@@ -80,6 +127,15 @@ function normalizeName(name: string): string {
 // a fuzzy/typo-tolerant match: a wrong match here would silently replace a
 // correct AI estimate with the wrong dish's numbers, which is worse than
 // just falling back to the AI's own figure.
+//
+// The containment check needs a length-ratio guard too, or it fires on
+// names it was never meant to: a multi-item meal description like "มื้อเย็น:
+// แซลมอน + ข้าว + ไก่ลอกหนัง + ไข่ต้ม 1 ฟอง" contains the catalog's "ไข่ต้ม" as
+// a plain substring, which would otherwise replace the whole meal's AI
+// estimate with just boiled egg's numbers. Requiring the shorter name to
+// cover at least half the longer one keeps the intended near-miss cases
+// (a dropped "ผัด" prefix, a few extra characters) while rejecting a short
+// dish name that only incidentally appears inside a much longer sentence.
 function findCatalogMatch(name: string) {
   const normalized = normalizeName(name);
   if (!normalized) return null;
@@ -88,7 +144,9 @@ function findCatalogMatch(name: string) {
   return (
     THAI_FOOD_CATALOG.find((f) => {
       const catNorm = normalizeName(f.name);
-      return catNorm.includes(normalized) || normalized.includes(catNorm);
+      if (!catNorm.includes(normalized) && !normalized.includes(catNorm)) return false;
+      const lengthRatio = Math.min(catNorm.length, normalized.length) / Math.max(catNorm.length, normalized.length);
+      return lengthRatio >= 0.5;
     }) ?? null
   );
 }
@@ -108,26 +166,50 @@ export function parseMealText(text: string): ParsedMeal {
     .map((l) => l.trim())
     .filter(Boolean);
 
+  // Falls back to the original fixed layout until (unless) a header row is
+  // found, so text without a parseable header still reads exactly as
+  // before — only tables that DO have a header get the dynamic columns.
+  let columns = DEFAULT_COLUMNS;
+  let sawHeader = false;
+
   for (const line of lines) {
     // markdown table separator row, e.g. "|---|---|---|"
     if (/^[-|:\s]+$/.test(line)) continue;
     if (SKIP_LINE_PREFIXES.some((p) => line.startsWith(p))) continue;
 
     const cells = splitCells(line);
-    // need at minimum: name, amount, kcal, protein, carb
-    if (cells.length < 5) {
+
+    if (!sawHeader) {
+      const detected = detectColumnIndices(cells);
+      if (detected) {
+        columns = detected;
+        sawHeader = true;
+        continue; // this line IS the header, not a data row
+      }
+    }
+
+    // need at minimum: name + whichever columns are actually mandatory
+    // (kcal/protein/carb always; grams/fat only when the header had them)
+    const minCells = Math.max(columns.kcal, columns.protein, columns.carb) + 1;
+    if (cells.length < minCells) {
       leftoverLines.push(line);
       continue;
     }
 
     const name = cells[0].replace(/^[*#\-\d.]+|[*]+$/g, "").trim();
-    if (!name || HEADER_KEYWORDS.some((k) => name === k || name.includes(k))) continue;
+    // Exact match only — a *substring* check here used to also reject any
+    // real food/supplement name that happens to mention a macro word (e.g.
+    // "เวย์ (โปรตีน 30g)"), silently dropping it as if it were a stray
+    // header row. Real headers are already consumed above by
+    // detectColumnIndices; this is only a safety net for one that slips
+    // through as its own exact label.
+    if (!name || HEADER_KEYWORDS.includes(name)) continue;
 
-    const qty = cellNumber(cells[1]);
-    const kcal = cellNumber(cells[2]);
-    const protein = cellNumber(cells[3]);
-    const carb = cellNumber(cells[4]);
-    const fat = cells[5] !== undefined ? cellNumber(cells[5]) : 0;
+    const qty = columns.grams !== null && cells[columns.grams] !== undefined ? cellNumber(cells[columns.grams]) : null;
+    const kcal = cellNumber(cells[columns.kcal]);
+    const protein = cellNumber(cells[columns.protein]);
+    const carb = cellNumber(cells[columns.carb]);
+    const fat = columns.fat !== null && cells[columns.fat] !== undefined ? cellNumber(cells[columns.fat]) : 0;
 
     if (kcal === null || protein === null || carb === null) {
       leftoverLines.push(line);
