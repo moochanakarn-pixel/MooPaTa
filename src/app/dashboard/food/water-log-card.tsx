@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { WaterReminderToggle } from "./water-reminder-toggle";
+import { WaterReminderToggle, type WaterReminderSchedule } from "./water-reminder-toggle";
 
 export interface WaterLogEntry {
   id: string;
@@ -23,7 +23,15 @@ function ProgressBar({ ml, targetMl }: { ml: number; targetMl: number }) {
 
 // Quick-add water logging for today — same "today" context as FoodLogView,
 // kept as a separate component/API since water isn't a Food/FoodLog.
-export function WaterLogCard({ todayLogs, targetMl }: { todayLogs: WaterLogEntry[]; targetMl: number | null }) {
+export function WaterLogCard({
+  todayLogs,
+  targetMl,
+  reminderSchedule,
+}: {
+  todayLogs: WaterLogEntry[];
+  targetMl: number | null;
+  reminderSchedule: WaterReminderSchedule;
+}) {
   const router = useRouter();
   const [adding, setAdding] = useState<number | null>(null);
   const [customMl, setCustomMl] = useState("");
@@ -129,7 +137,7 @@ export function WaterLogCard({ todayLogs, targetMl }: { todayLogs: WaterLogEntry
         </div>
       )}
 
-      <WaterReminderToggle />
+      <WaterReminderToggle initialSchedule={reminderSchedule} />
     </div>
   );
 }

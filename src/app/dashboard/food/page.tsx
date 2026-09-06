@@ -116,7 +116,15 @@ export default async function FoodPage() {
         )}
       </p>
 
-      <WaterLogCard todayLogs={waterLogs} targetMl={waterTargetMl} />
+      <WaterLogCard
+        todayLogs={waterLogs}
+        targetMl={waterTargetMl}
+        reminderSchedule={{
+          start: user?.waterReminderStart ?? "09:00",
+          end: user?.waterReminderEnd ?? "22:00",
+          intervalMin: user?.waterReminderIntervalMin ?? 60,
+        }}
+      />
 
       <FoodLogView todayLogs={todayLogs} personalFoods={personalFoods} targets={targets} />
     </main>

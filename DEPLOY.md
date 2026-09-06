@@ -132,15 +132,14 @@ Use the same value you put in `.env` as `CRON_SECRET`.
 
 ## 7b. Water-reminder push notifications
 
-Two more crontab entries, hitting `/api/cron/water-reminder` with a
-`checkpoint` telling it how far along the daily water target a user should
-be by then (`afternoon` = 40%, `evening` = 75% — see that route's comment).
-Only users who've turned reminders on (the toggle on the food page) get a
-push. Adjust the hours to your server's local time:
+One crontab entry, polling `/api/cron/water-reminder` every 15 minutes. Each
+user has their own configurable window and frequency (set via the toggle on
+the food page — start/end time + how often), so this endpoint just checks,
+per user, whether "now" falls in their window and enough time has passed
+since their last reminder; only users who've turned reminders on get a push:
 
 ```
-0 14 * * * curl -s -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" "https://yourdomain.com/api/cron/water-reminder?checkpoint=afternoon" >> /home/moopata/cron-water.log 2>&1
-0 18 * * * curl -s -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" "https://yourdomain.com/api/cron/water-reminder?checkpoint=evening" >> /home/moopata/cron-water.log 2>&1
+*/15 * * * * curl -s -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" "https://yourdomain.com/api/cron/water-reminder" >> /home/moopata/cron-water.log 2>&1
 ```
 
 ## 8. Deploying updates later

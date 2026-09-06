@@ -3,26 +3,25 @@ import { db } from "@/lib/db";
 import { sendPushToUser } from "@/lib/push";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
 
-// Two checkpoints during the day, each with how far along the daily water
-// target the user is expected to be by then — not "drink X by Y o'clock" in
-// the abstract, but "you should be roughly here if you're pacing evenly
-// across a waking day." A user behind either checkpoint gets nudged; anyone
-// already at/above it is left alone.
-const CHECKPOINTS = {
-  afternoon: 0.4,
-  evening: 0.75,
-} as const;
-type Checkpoint = keyof typeof CHECKPOINTS;
-
 // Water target for a user without a complete nutrition profile — same
 // ballpark as the 33ml/kg baseline in src/lib/nutrition.ts for an
 // average-weight adult, since there's no weight on file to compute from.
 const DEFAULT_TARGET_ML = 2000;
 
+function toMinutesOfDay(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
 // Cron-secret-protected, same shared-secret pattern as /api/cron/sync (see
-// that file's comment) — a scheduled task hits this twice a day with
-// ?checkpoint=afternoon or ?checkpoint=evening. Only users who've opted in
-// by subscribing to push (having any PushSubscription row) are considered.
+// that file's comment) — meant to be polled frequently (every 5-15 minutes)
+// by a single scheduled task rather than fired at fixed times of day. Each
+// user has their own configurable window (waterReminderStart/End) and
+// frequency (waterReminderIntervalMin, see prisma/schema.prisma), so this
+// endpoint just checks, per user, whether "now" falls in their window and
+// enough time has passed since their last reminder — the interval itself is
+// enforced here via lastWaterReminderSentAt, not by how often the scheduled
+// task runs.
 export async function POST(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
@@ -33,15 +32,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const checkpointParam = req.nextUrl.searchParams.get("checkpoint");
-  if (checkpointParam !== "afternoon" && checkpointParam !== "evening") {
-    return NextResponse.json({ error: "invalid_checkpoint" }, { status: 400 });
-  }
-  const checkpoint: Checkpoint = checkpointParam;
-  const expectedFraction = CHECKPOINTS[checkpoint];
-
-  const todayStart = new Date();
+  const now = new Date();
+  const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   const subscribedUserIds = await db.pushSubscription.findMany({
     where: {},
@@ -59,6 +53,21 @@ export async function POST(req: NextRequest) {
     ]);
     if (!user) continue;
 
+    const startMinutes = toMinutesOfDay(user.waterReminderStart);
+    const endMinutes = toMinutesOfDay(user.waterReminderEnd);
+    if (nowMinutes < startMinutes || nowMinutes > endMinutes) {
+      results.push({ userId, sent: false, reason: "outside_window" });
+      continue;
+    }
+
+    if (user.lastWaterReminderSentAt) {
+      const sinceLastMin = (now.getTime() - user.lastWaterReminderSentAt.getTime()) / 60_000;
+      if (sinceLastMin < user.waterReminderIntervalMin) {
+        results.push({ userId, sent: false, reason: "too_soon" });
+        continue;
+      }
+    }
+
     const profile = {
       weightKg: user.weightKg,
       heightCm: user.heightCm,
@@ -71,6 +80,10 @@ export async function POST(req: NextRequest) {
     const targetMl = isProfileComplete(profile)
       ? applyActivityBonus(computeTargets(profile), todayActivityAgg._sum.durationSec ?? 0).waterMl
       : DEFAULT_TARGET_ML;
+
+    // Linear pacing across the user's own window: at the start they're
+    // expected to have drunk ~0%, at the end ~100%.
+    const expectedFraction = Math.min(Math.max((nowMinutes - startMinutes) / (endMinutes - startMinutes), 0), 1);
 
     const drunkMl = waterAgg._sum.ml ?? 0;
     const expectedMl = targetMl * expectedFraction;
@@ -85,8 +98,11 @@ export async function POST(req: NextRequest) {
       body: `วันนี้ดื่มไปแล้ว ${(drunkMl / 1000).toFixed(1)} ลิตร ยังเหลืออีก ${remainingL} ลิตรถึงจะถึงเป้า`,
       url: "/dashboard/food",
     });
+    if (sentCount > 0) {
+      await db.user.update({ where: { id: userId }, data: { lastWaterReminderSentAt: now } });
+    }
     results.push({ userId, sent: sentCount > 0, reason: sentCount > 0 ? "reminded" : "no_active_subscription" });
   }
 
-  return NextResponse.json({ checkpoint, usersConsidered: results.length, results });
+  return NextResponse.json({ usersConsidered: results.length, results });
 }

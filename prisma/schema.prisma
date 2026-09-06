@@ -29,6 +29,16 @@ model User {
   nutritionGoal     NutritionGoal  @default(MAINTAIN)
   goalRateKgPerWeek Float? // only meaningful when nutritionGoal is LOSE/GAIN
 
+  // Water-reminder schedule (src/app/api/cron/water-reminder) — a time
+  // window plus how often within it, instead of the two fixed
+  // afternoon/evening checkpoints the feature launched with. "HH:mm",
+  // 24-hour, in the server's local time (same clock the rest of the app's
+  // "today" boundaries already use).
+  waterReminderStart        String   @default("09:00")
+  waterReminderEnd          String   @default("22:00")
+  waterReminderIntervalMin  Int      @default(60)
+  lastWaterReminderSentAt   DateTime?
+
   connections       ProviderConnection[]
   activities        Activity[]
   foods             Food[]

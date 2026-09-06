@@ -154,26 +154,31 @@ Register-ScheduledTask -TaskName "MooPaTaSync" -Action $action -Trigger $trigger
 
 Use the same value as `CRON_SECRET` in `.env`.
 
-## 9b. Water reminder — two more scheduled tasks
+## 9b. Water reminder — one scheduled task, polling frequently
 
-Two check-ins a day, each hitting `/api/cron/water-reminder` with a
-`checkpoint` telling it how far along the daily water target a user should
-be by then (`afternoon` = 40%, `evening` = 75% — see that route's comment).
-Only users who've turned reminders on (the toggle on the food page) get a
-push; anyone already on pace at that checkpoint is skipped. Adjust the
-`-At` times below to whatever your server's local time considers early/late
-afternoon and evening.
+Each user has their own configurable window and frequency (set via the
+toggle on the food page — start/end time + how often), so this endpoint
+just needs polling often enough to catch each user's interval; the endpoint
+itself checks whether "now" falls in a given user's window and whether
+enough time has passed since their last reminder (`lastWaterReminderSentAt`).
+One task, every 15 minutes, is enough for any interval users can configure
+(minimum 15 minutes):
 
 ```powershell
 $secret = "YOUR_CRON_SECRET"
 
-$afternoonAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-Command `"Invoke-RestMethod -Method Post -Uri 'https://moopata.mcnkth.com/api/cron/water-reminder?checkpoint=afternoon' -Headers @{Authorization='Bearer $secret'}`""
-$afternoonTrigger = New-ScheduledTaskTrigger -Daily -At "2:00 PM"
-Register-ScheduledTask -TaskName "MooPaTaWaterReminderAfternoon" -Action $afternoonAction -Trigger $afternoonTrigger -RunLevel Highest
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-Command `"Invoke-RestMethod -Method Post -Uri 'https://moopata.mcnkth.com/api/cron/water-reminder' -Headers @{Authorization='Bearer $secret'}`""
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration ([TimeSpan]::MaxValue)
+Register-ScheduledTask -TaskName "MooPaTaWaterReminder" -Action $action -Trigger $trigger -RunLevel Highest
+```
 
-$eveningAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-Command `"Invoke-RestMethod -Method Post -Uri 'https://moopata.mcnkth.com/api/cron/water-reminder?checkpoint=evening' -Headers @{Authorization='Bearer $secret'}`""
-$eveningTrigger = New-ScheduledTaskTrigger -Daily -At "6:00 PM"
-Register-ScheduledTask -TaskName "MooPaTaWaterReminderEvening" -Action $eveningAction -Trigger $eveningTrigger -RunLevel Highest
+If you already have the old `MooPaTaWaterReminderAfternoon` /
+`MooPaTaWaterReminderEvening` tasks from before this feature was made
+configurable, remove them first:
+
+```powershell
+Unregister-ScheduledTask -TaskName "MooPaTaWaterReminderAfternoon" -Confirm:$false
+Unregister-ScheduledTask -TaskName "MooPaTaWaterReminderEvening" -Confirm:$false
 ```
 
 ## 10. Deploying updates later
