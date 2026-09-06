@@ -88,9 +88,14 @@ export default async function FoodPage() {
 
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-xl font-bold">บันทึกอาหาร</h1>
-        <Link href="/dashboard/food/library" className="text-xs text-neutral-500 transition hover:text-neutral-300">
-          คลังอาหารส่วนตัว
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard/portion-guide" className="text-xs text-neutral-500 transition hover:text-neutral-300">
+            กะปริมาณด้วยมือ
+          </Link>
+          <Link href="/dashboard/food/library" className="text-xs text-neutral-500 transition hover:text-neutral-300">
+            คลังอาหารส่วนตัว
+          </Link>
+        </div>
       </div>
       <p className="mb-8 text-sm text-neutral-500">
         {targets ? (
