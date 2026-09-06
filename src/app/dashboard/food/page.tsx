@@ -40,6 +40,9 @@ export default async function FoodPage() {
       proteinG: m.proteinG,
       carbG: m.carbG,
       fatG: m.fatG,
+      sugarG: m.sugarG,
+      sodiumMg: m.sodiumMg,
+      fiberG: m.fiberG,
     };
   });
 
