@@ -142,6 +142,17 @@ since their last reminder; only users who've turned reminders on get a push:
 */15 * * * * curl -s -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" "https://yourdomain.com/api/cron/water-reminder" >> /home/moopata/cron-water.log 2>&1
 ```
 
+## 7c. Post-workout whey reminder
+
+Another crontab entry, polling `/api/cron/whey-reminder` every 15 minutes.
+Fires 30-60 minutes after a logged activity ends (Strava or manual) for
+users who've turned it on (toggle on the supplements page) — a separate
+opt-in from the water reminder above:
+
+```
+*/15 * * * * curl -s -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" "https://yourdomain.com/api/cron/whey-reminder" >> /home/moopata/cron-whey.log 2>&1
+```
+
 ## 8. Deploying updates later
 
 ```bash

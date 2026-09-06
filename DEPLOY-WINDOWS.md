@@ -181,6 +181,21 @@ Unregister-ScheduledTask -TaskName "MooPaTaWaterReminderAfternoon" -Confirm:$fal
 Unregister-ScheduledTask -TaskName "MooPaTaWaterReminderEvening" -Confirm:$false
 ```
 
+## 9c. Post-workout whey reminder — one more scheduled task
+
+Polls `/api/cron/whey-reminder` every 15 minutes. Fires 30-60 minutes after
+a logged activity ends (Strava or manual) for users who've turned it on
+(toggle on the supplements page) — a separate opt-in from the water
+reminder above:
+
+```powershell
+$secret = "YOUR_CRON_SECRET"
+
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-Command `"Invoke-RestMethod -Method Post -Uri 'https://moopata.mcnkth.com/api/cron/whey-reminder' -Headers @{Authorization='Bearer $secret'}`""
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration ([TimeSpan]::MaxValue)
+Register-ScheduledTask -TaskName "MooPaTaWheyReminder" -Action $action -Trigger $trigger -RunLevel Highest
+```
+
 ## 10. Deploying updates later
 
 ```powershell

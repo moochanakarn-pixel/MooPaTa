@@ -46,6 +46,12 @@ model User {
   healthFlagHighCholesterol Boolean @default(false)
   healthFlagHighUricAcid    Boolean @default(false)
 
+  // Post-workout whey reminder (src/app/api/cron/whey-reminder) — off by
+  // default since it needs an activity to trigger from; a device still
+  // needs its own push subscription (see PushSubscription) regardless of
+  // this flag, same two-part opt-in as the water reminder.
+  wheyReminderEnabled Boolean @default(false)
+
   connections       ProviderConnection[]
   activities        Activity[]
   foods             Food[]
@@ -199,6 +205,11 @@ model Activity {
   startLng         Float?
   raw              Json // original provider payload, kept for anything not normalized above
   createdAt        DateTime @default(now())
+  // Set once the post-workout whey reminder has been sent for this activity
+  // (src/app/api/cron/whey-reminder) — null means "not sent (or not
+  // eligible) yet", not "no reminder wanted"; that's controlled separately
+  // by User.wheyReminderEnabled. Prevents re-sending on every cron poll.
+  wheyReminderSentAt DateTime?
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
