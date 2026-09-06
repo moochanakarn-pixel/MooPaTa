@@ -7,6 +7,7 @@ import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete, GOAL_LABEL, ACTIVITY_LEVEL_LABEL } from "@/lib/nutrition";
 import { WeightLogCard, type WeightLogEntry } from "./weight-log-card";
 import { CalorieTrendChart, type CalorieDayBucket } from "./calorie-trend-chart";
+import { CalorieRing } from "./calorie-ring";
 
 const TREND_DAYS = 14;
 
@@ -25,30 +26,32 @@ function MacroBar({ proteinG, carbG, fatG }: { proteinG: number; carbG: number; 
   const total = proteinKcal + carbKcal + fatKcal || 1;
 
   const items = [
+    { label: "คาร์บ", grams: carbG, kcal: carbKcal, color: "#22c55e" },
     { label: "โปรตีน", grams: proteinG, kcal: proteinKcal, color: "#38bdf8" },
-    { label: "คาร์บ", grams: carbG, kcal: carbKcal, color: "#f59e0b" },
-    { label: "ไขมัน", grams: fatG, kcal: fatKcal, color: "#f43f5e" },
+    { label: "ไขมัน", grams: fatG, kcal: fatKcal, color: "#eab308" },
   ];
 
   return (
-    <div>
-      <div className="mb-4 flex h-2.5 w-full overflow-hidden rounded-full">
-        {items.map((it) => (
-          <div key={it.label} style={{ width: `${(it.kcal / total) * 100}%`, background: it.color }} />
-        ))}
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        {items.map((it) => (
+    <div className="space-y-4">
+      {items.map((it) => {
+        const pct = Math.round((it.kcal / total) * 100);
+        return (
           <div key={it.label}>
-            <div className="mb-1 flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ background: it.color }} />
-              <span className="text-xs text-neutral-500">{it.label}</span>
+            <div className="mb-1.5 flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1.5 text-neutral-400">
+                <span className="h-2 w-2 rounded-full" style={{ background: it.color }} />
+                {it.label}
+              </span>
+              <span className="tabular-nums text-neutral-500">
+                <span className="font-semibold text-neutral-200">{Math.round(it.grams)} ก.</span> · {pct}%
+              </span>
             </div>
-            <p className="text-lg font-bold tabular-nums">{Math.round(it.grams)} ก.</p>
-            <p className="text-xs text-neutral-600">{Math.round(it.kcal)} kcal</p>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-800">
+              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: it.color }} />
+            </div>
           </div>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }
@@ -155,6 +158,7 @@ export default async function NutritionPage() {
 
   const activityDurationTodaySec = durationByDay.get(dayKey(todayStart)) ?? 0;
   const targets = applyActivityBonus(baseTargets, activityDurationTodaySec);
+  const todayCaloriesEaten = caloriesByDay.get(dayKey(todayStart)) ?? 0;
 
   const trendDays: CalorieDayBucket[] = Array.from({ length: TREND_DAYS }, (_, i) => {
     const d = new Date(trendStart);
@@ -190,11 +194,9 @@ export default async function NutritionPage() {
       <WeightLogCard logs={weightLogs} />
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-        <p className="text-xs text-neutral-500">เป้าหมายแคลอรี่ต่อวัน</p>
-        <p className="mb-4 text-4xl font-extrabold tracking-tight">
-          {targets.targetCalories.toLocaleString("th-TH")} <span className="text-lg font-medium text-neutral-500">kcal</span>
-        </p>
-        <div className="flex gap-6 text-xs text-neutral-500">
+        <p className="mb-4 text-center text-xs text-neutral-500">แคลอรี่วันนี้</p>
+        <CalorieRing eaten={todayCaloriesEaten} target={targets.targetCalories} />
+        <div className="mt-5 flex justify-center gap-6 text-xs text-neutral-500">
           <span>
             BMR <span className="font-medium text-neutral-300">{targets.bmr.toLocaleString("th-TH")}</span> kcal
           </span>
