@@ -107,10 +107,10 @@ export function WeightTrendChart({ points }: { points: WeightPoint[] }) {
         </defs>
         <path d={areaPath} fill={`url(#${gradientId})`} stroke="none" />
 
-        <text x={PADDING + 2} y={PADDING + 9} fontSize="9" fill="rgba(255,255,255,0.35)">
+        <text x={PADDING + 2} y={PADDING + 9} fontSize="9" fill="rgba(42,36,32,0.45)">
           {maxY.toFixed(1)} กก.
         </text>
-        <text x={PADDING + 2} y={HEIGHT - PADDING - 3} fontSize="9" fill="rgba(255,255,255,0.35)">
+        <text x={PADDING + 2} y={HEIGHT - PADDING - 3} fontSize="9" fill="rgba(42,36,32,0.45)">
           {minY.toFixed(1)} กก.
         </text>
 
@@ -118,8 +118,8 @@ export function WeightTrendChart({ points }: { points: WeightPoint[] }) {
 
         {hoverXY && (
           <>
-            <line x1={hoverXY[0]} y1={PADDING} x2={hoverXY[0]} y2={HEIGHT - PADDING} stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-            <circle cx={hoverXY[0]} cy={hoverXY[1]} r="4" fill={color} stroke="#0a0a0a" strokeWidth="1.5" />
+            <line x1={hoverXY[0]} y1={PADDING} x2={hoverXY[0]} y2={HEIGHT - PADDING} stroke="rgba(42,36,32,0.15)" strokeWidth="1" />
+            <circle cx={hoverXY[0]} cy={hoverXY[1]} r="4" fill={color} stroke="#fffdf8" strokeWidth="1.5" />
           </>
         )}
       </svg>

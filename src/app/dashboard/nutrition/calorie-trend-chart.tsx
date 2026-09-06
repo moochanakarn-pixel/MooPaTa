@@ -47,7 +47,7 @@ export function CalorieTrendChart({ days }: { days: CalorieDayBucket[] }) {
                 width={Math.max(barWidth, 1)}
                 height={barHeight}
                 rx="2"
-                fill={d.calories > 0 ? (over ? "#f59e0b" : "#a3e635") : "#27272a"}
+                fill={d.calories > 0 ? (over ? "#f59e0b" : "#a3e635") : "#e8e0d0"}
                 opacity={hover === null || isHover ? 1 : 0.45}
                 onMouseEnter={() => setHover(i)}
                 onMouseLeave={() => setHover(null)}
@@ -57,7 +57,7 @@ export function CalorieTrendChart({ days }: { days: CalorieDayBucket[] }) {
                 y1={targetY}
                 x2={x + Math.max(barWidth, 1)}
                 y2={targetY}
-                stroke="rgba(255,255,255,0.4)"
+                stroke="rgba(42,36,32,0.4)"
                 strokeWidth="0.7"
                 strokeDasharray="1.5 1"
                 vectorEffect="non-scaling-stroke"

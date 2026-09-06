@@ -142,11 +142,11 @@ export function ProfileChart({
           y1={avgLineY}
           x2={WIDTH - PADDING}
           y2={avgLineY}
-          stroke="rgba(255,255,255,0.25)"
+          stroke="rgba(42,36,32,0.25)"
           strokeWidth="1"
           strokeDasharray="4 3"
         />
-        <text x={WIDTH - PADDING - 2} y={avgLineY - 4} fontSize="9" fill="rgba(255,255,255,0.45)" textAnchor="end">
+        <text x={WIDTH - PADDING - 2} y={avgLineY - 4} fontSize="9" fill="rgba(42,36,32,0.55)" textAnchor="end">
           เฉลี่ย {formatY(avgY)}
         </text>
 
@@ -154,13 +154,13 @@ export function ProfileChart({
             point's value (see peakPoint below), so a max axis label here
             would just duplicate the peak marker's own text, sometimes
             colliding with it when the peak falls near this corner. */}
-        <text x={PADDING + 2} y={HEIGHT - PADDING - 3} fontSize="9" fill="rgba(255,255,255,0.3)">
+        <text x={PADDING + 2} y={HEIGHT - PADDING - 3} fontSize="9" fill="rgba(42,36,32,0.4)">
           {formatY(minY)}
         </text>
 
         <path d={linePath} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
 
-        <circle cx={peakXY[0]} cy={peakXY[1]} r="3" fill={color} stroke="#0a0a0a" strokeWidth="1" opacity="0.9" />
+        <circle cx={peakXY[0]} cy={peakXY[1]} r="3" fill={color} stroke="#fffdf8" strokeWidth="1" opacity="0.9" />
         <text
           x={Math.min(Math.max(peakXY[0], PADDING + 34), WIDTH - PADDING - 34)}
           y={peakXY[1] < HEIGHT / 2 ? peakXY[1] + 15 : peakXY[1] - 8}
@@ -179,10 +179,10 @@ export function ProfileChart({
               y1={PADDING}
               x2={hoverXY[0]}
               y2={HEIGHT - PADDING}
-              stroke="rgba(255,255,255,0.15)"
+              stroke="rgba(42,36,32,0.15)"
               strokeWidth="1"
             />
-            <circle cx={hoverXY[0]} cy={hoverXY[1]} r="4" fill={color} stroke="#0a0a0a" strokeWidth="1.5" />
+            <circle cx={hoverXY[0]} cy={hoverXY[1]} r="4" fill={color} stroke="#fffdf8" strokeWidth="1.5" />
           </>
         )}
       </svg>

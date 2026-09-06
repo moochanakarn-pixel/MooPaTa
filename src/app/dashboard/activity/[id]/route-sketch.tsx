@@ -28,8 +28,8 @@ export function RouteSketch({ polyline, unit = "METRIC" }: { polyline: string; u
             </text>
           </g>
         ))}
-        <circle cx={geo.start[0]} cy={geo.start[1]} r="4.5" fill="#22c55e" stroke="#0a0a0a" strokeWidth="1.5" />
-        <circle cx={geo.end[0]} cy={geo.end[1]} r="4.5" fill="#ef4444" stroke="#0a0a0a" strokeWidth="1.5" />
+        <circle cx={geo.start[0]} cy={geo.start[1]} r="4.5" fill="#22c55e" stroke="#fffdf8" strokeWidth="1.5" />
+        <circle cx={geo.end[0]} cy={geo.end[1]} r="4.5" fill="#ef4444" stroke="#fffdf8" strokeWidth="1.5" />
       </svg>
       <div className="mt-2 flex justify-center gap-4 text-xs text-neutral-500">
         <span className="flex items-center gap-1.5">

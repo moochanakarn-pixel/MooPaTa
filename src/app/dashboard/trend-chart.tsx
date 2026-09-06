@@ -52,7 +52,7 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
             y1={avgY}
             x2="100"
             y2={avgY}
-            stroke="rgba(255,255,255,0.3)"
+            stroke="rgba(42,36,32,0.3)"
             strokeWidth="0.6"
             strokeDasharray="2 1.5"
             vectorEffect="non-scaling-stroke"
@@ -72,7 +72,7 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
               width={Math.max(barWidth, 1)}
               height={barHeight}
               rx="2"
-              fill={w.km > 0 ? `url(#${gradientId})` : "#27272a"}
+              fill={w.km > 0 ? `url(#${gradientId})` : "#e8e0d0"}
               opacity={hover === null || isHover ? 1 : 0.45}
               onMouseEnter={() => setHover(i)}
               onMouseLeave={() => setHover(null)}

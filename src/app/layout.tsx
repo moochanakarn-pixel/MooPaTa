@@ -15,7 +15,10 @@ export const metadata: Metadata = {
   icons: { icon: "/logo.png" },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    // "black-translucent" draws white status-bar icons over the page —
+    // right for a dark theme, but invisible against the cream background
+    // now. "default" gives dark icons, which read on a light page.
+    statusBarStyle: "default",
     title: "MooPaTa",
   },
 };

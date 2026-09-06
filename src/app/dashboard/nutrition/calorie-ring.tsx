@@ -16,7 +16,7 @@ export function CalorieRing({ eaten, target }: { eaten: number; target: number }
   return (
     <div className="relative mx-auto" style={{ width: SIZE, height: SIZE }}>
       <svg width={SIZE} height={SIZE} className="-rotate-90" viewBox={`0 0 ${SIZE} ${SIZE}`}>
-        <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" stroke="#27272a" strokeWidth={STROKE} />
+        <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" stroke="#e8e0d0" strokeWidth={STROKE} />
         <circle
           cx={SIZE / 2}
           cy={SIZE / 2}

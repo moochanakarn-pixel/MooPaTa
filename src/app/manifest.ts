@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "รวมข้อมูลการออกกำลังกายจาก Strava และ Huawei Health ไว้ที่เดียว",
     start_url: "/dashboard",
     display: "standalone",
-    background_color: "#0a0a0a",
+    background_color: "#f5efe1",
     theme_color: "#fc4c02",
     icons: [
       // public/logo.png is actually JPEG-encoded despite the extension —
