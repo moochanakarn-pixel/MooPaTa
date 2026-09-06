@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
@@ -58,17 +59,27 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         ? await fetchActivityWeather(activity.startLat, activity.startLng, activity.startedAt).catch(() => null)
         : null;
 
-    await db.activityDetail.create({
-      data: {
-        activityId: activity.id,
-        deviceName: detail.deviceName,
-        splits: detail.splits as unknown as Prisma.InputJsonValue,
-        bestEfforts: detail.bestEfforts as unknown as Prisma.InputJsonValue,
-        laps: laps as unknown as Prisma.InputJsonValue,
-        streams: downsampleStreams(streams) as unknown as Prisma.InputJsonValue,
-        weather: weather as unknown as Prisma.InputJsonValue,
-      },
-    });
+    try {
+      await db.activityDetail.create({
+        data: {
+          activityId: activity.id,
+          deviceName: detail.deviceName,
+          splits: detail.splits as unknown as Prisma.InputJsonValue,
+          bestEfforts: detail.bestEfforts as unknown as Prisma.InputJsonValue,
+          laps: laps as unknown as Prisma.InputJsonValue,
+          streams: downsampleStreams(streams) as unknown as Prisma.InputJsonValue,
+          weather: weather as unknown as Prisma.InputJsonValue,
+        },
+      });
+    } catch (err) {
+      // Two requests for the same never-before-cached activity (two open
+      // tabs, a double-tap) can both pass the `existing` check above and
+      // both fetch from Strava — the loser of the race hits this unique
+      // constraint on activityId. The other request already saved
+      // everything this one would have, so it's a no-op, not an error.
+      const isDuplicate = err instanceof PrismaClientKnownRequestError && err.code === "P2002";
+      if (!isDuplicate) throw err;
+    }
 
     return NextResponse.json({ cached: false });
   } catch (err) {
