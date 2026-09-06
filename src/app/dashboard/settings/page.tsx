@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { DeleteAccountButton, DisconnectStravaButton, GoalInput, UnitToggle } from "./settings-client";
 import { NutritionProfileForm } from "./nutrition-profile-form";
+import { HealthFlagsForm } from "./health-flags-form";
 
 export default async function SettingsPage() {
   const userId = await getSessionUserId();
@@ -96,6 +97,32 @@ export default async function SettingsPage() {
             activityLevel: user?.activityLevel ?? null,
             nutritionGoal: user?.nutritionGoal ?? "MAINTAIN",
             goalRateKgPerWeek: user?.goalRateKgPerWeek ?? null,
+          }}
+        />
+      </section>
+
+      <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+        <div className="mb-3 flex items-center gap-3">
+          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-amber-500/10 text-amber-400">
+            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+              <path
+                d="M12 3v4M12 3 9 6M12 3l3 3M6 8h12l1.5 11.5A2 2 0 0 1 17.5 21h-11a2 2 0 0 1-2-2.5L6 8Z"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <h2 className="font-medium">ผลตรวจสุขภาพ</h2>
+        </div>
+        <p className="mb-4 text-sm text-neutral-500">
+          ติ๊กไว้ตามผลตรวจเลือดของคุณ เพื่อให้แอพเตือนตอนบันทึกอาหารที่ควรระวัง
+        </p>
+        <HealthFlagsForm
+          initial={{
+            highCholesterol: user?.healthFlagHighCholesterol ?? false,
+            highUricAcid: user?.healthFlagHighUricAcid ?? false,
           }}
         />
       </section>

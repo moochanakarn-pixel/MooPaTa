@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { macrosForGrams, MEAL_TYPE_LABEL, per100gFromTotal, type Per100g } from "@/lib/food";
 import { THAI_FOOD_CATALOG, type CatalogFood } from "@/lib/thai-food-catalog";
+import { DAILY_CHOLESTEROL_LIMIT_MG, matchesPurineKeyword } from "@/lib/health-flags";
 import { BarcodeScanner } from "./barcode-scanner";
 import { ImportMealPanel } from "./import-meal-panel";
 
@@ -23,6 +24,7 @@ export interface TodayLogEntry {
   fatG: number;
   sugarG: number | null;
   sodiumMg: number | null;
+  cholesterolMg: number | null;
   fiberG: number | null;
 }
 
@@ -31,6 +33,11 @@ export interface DailyTargets {
   proteinG: number;
   carbG: number;
   fatG: number;
+}
+
+export interface HealthFlags {
+  highCholesterol: boolean;
+  highUricAcid: boolean;
 }
 
 type PendingFood =
@@ -83,10 +90,12 @@ export function FoodLogView({
   todayLogs,
   personalFoods,
   targets,
+  healthFlags,
 }: {
   todayLogs: TodayLogEntry[];
   personalFoods: PersonalFood[];
   targets: DailyTargets | null;
+  healthFlags: HealthFlags;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -123,10 +132,11 @@ export function FoodLogView({
           fatG: acc.fatG + l.fatG,
           sugarG: acc.sugarG + (l.sugarG ?? 0),
           sodiumMg: acc.sodiumMg + (l.sodiumMg ?? 0),
+          cholesterolMg: acc.cholesterolMg + (l.cholesterolMg ?? 0),
           fiberG: acc.fiberG + (l.fiberG ?? 0),
           hasMicronutrients: acc.hasMicronutrients || l.sugarG != null || l.sodiumMg != null || l.fiberG != null,
         }),
-        { calories: 0, proteinG: 0, carbG: 0, fatG: 0, sugarG: 0, sodiumMg: 0, fiberG: 0, hasMicronutrients: false }
+        { calories: 0, proteinG: 0, carbG: 0, fatG: 0, sugarG: 0, sodiumMg: 0, cholesterolMg: 0, fiberG: 0, hasMicronutrients: false }
       ),
     [todayLogs]
   );
@@ -325,6 +335,17 @@ export function FoodLogView({
               ไฟเบอร์ <span className="font-medium text-neutral-300">{Math.round(totals.fiberG)}</span> ก.
             </span>
           </div>
+        )}
+
+        {healthFlags.highCholesterol && totals.cholesterolMg > 0 && (
+          <p
+            className={`mt-2 text-center text-xs ${
+              totals.cholesterolMg > DAILY_CHOLESTEROL_LIMIT_MG ? "text-red-400" : "text-neutral-500"
+            }`}
+          >
+            คอเลสเตอรอลวันนี้ {Math.round(totals.cholesterolMg)} / {DAILY_CHOLESTEROL_LIMIT_MG} มก.
+            {totals.cholesterolMg > DAILY_CHOLESTEROL_LIMIT_MG && " — เกินเพดานแล้ว"}
+          </p>
         )}
       </div>
 
@@ -603,7 +624,17 @@ export function FoodLogView({
                     className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-5 py-4"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-neutral-200">{l.foodName}</p>
+                      <p className="flex items-center gap-1.5 truncate text-sm font-medium text-neutral-200">
+                        <span className="truncate">{l.foodName}</span>
+                        {healthFlags.highUricAcid && matchesPurineKeyword(l.foodName) && (
+                          <span
+                            title="มีพิวรีนสูง — ระวังถ้ากรดยูริกสูง"
+                            className="flex-none rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-400"
+                          >
+                            พิวรีนสูง
+                          </span>
+                        )}
+                      </p>
                       <p className="mt-1 text-xs text-neutral-500">
                         {Math.round(l.grams)} ก. · {Math.round(l.calories)} kcal
                       </p>

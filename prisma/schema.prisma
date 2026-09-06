@@ -39,6 +39,13 @@ model User {
   waterReminderIntervalMin  Int      @default(60)
   lastWaterReminderSentAt   DateTime?
 
+  // Health-flag warnings (src/lib/health-flags.ts) — set by the user from
+  // their own blood-test results, not diagnosed by the app. Purely
+  // rule-based (a daily cholesterol total, a purine-keyword food-name
+  // match), no AI involved.
+  healthFlagHighCholesterol Boolean @default(false)
+  healthFlagHighUricAcid    Boolean @default(false)
+
   connections       ProviderConnection[]
   activities        Activity[]
   foods             Food[]

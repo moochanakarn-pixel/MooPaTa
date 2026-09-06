@@ -42,6 +42,7 @@ export default async function FoodPage() {
       fatG: m.fatG,
       sugarG: m.sugarG,
       sodiumMg: m.sodiumMg,
+      cholesterolMg: m.cholesterolMg,
       fiberG: m.fiberG,
     };
   });
@@ -126,7 +127,15 @@ export default async function FoodPage() {
         }}
       />
 
-      <FoodLogView todayLogs={todayLogs} personalFoods={personalFoods} targets={targets} />
+      <FoodLogView
+        todayLogs={todayLogs}
+        personalFoods={personalFoods}
+        targets={targets}
+        healthFlags={{
+          highCholesterol: user?.healthFlagHighCholesterol ?? false,
+          highUricAcid: user?.healthFlagHighUricAcid ?? false,
+        }}
+      />
     </main>
   );
 }
