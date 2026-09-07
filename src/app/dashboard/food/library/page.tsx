@@ -23,6 +23,8 @@ export default async function FoodLibraryPage() {
     fatPer100g: f.fatPer100g,
     source: f.source,
     logCount: f._count.logs,
+    isFavorite: f.isFavorite,
+    typicalGrams: f.typicalGrams,
   }));
 
   return (
@@ -37,7 +39,7 @@ export default async function FoodLibraryPage() {
       <h1 className="mb-1 text-xl font-bold">คลังอาหารส่วนตัว</h1>
       <p className="mb-8 text-sm text-neutral-500">
         ทุกเมนูที่เคยบันทึก (จากแคตตาล็อก บาร์โค้ด หรือพิมพ์เอง) จะถูกเก็บไว้ที่นี่ให้ค้นหาเจอเวลาบันทึกซ้ำ — แก้ไขค่าพลังงาน/แมโคร
-        หรือลบทิ้งได้ที่นี่
+        หรือลบทิ้งได้ที่นี่ กดดาวเมนูที่กินบ่อยๆ ไว้ จะไปโผล่เป็น &quot;แนะนำมื้อถัดไป&quot; แทนเมนูจากแคตตาล็อกที่หน้าบันทึกอาหาร
       </p>
 
       <FoodLibraryView foods={foods} />

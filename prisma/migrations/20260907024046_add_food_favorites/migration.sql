@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `Food` ADD COLUMN `isFavorite` BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN `typicalGrams` DOUBLE NOT NULL DEFAULT 100;

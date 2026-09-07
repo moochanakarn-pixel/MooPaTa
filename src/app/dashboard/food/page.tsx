@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
-import { FoodLogView, type DailyTargets, type PersonalFood, type TodayLogEntry } from "./food-log-view";
+import { FoodLogView, type DailyTargets, type FavoriteFood, type PersonalFood, type TodayLogEntry } from "./food-log-view";
 import { WaterLogCard, type WaterLogEntry } from "./water-log-card";
 
 export default async function FoodPage() {
@@ -54,7 +54,20 @@ export default async function FoodPage() {
     proteinPer100g: f.proteinPer100g,
     carbPer100g: f.carbPer100g,
     fatPer100g: f.fatPer100g,
+    typicalGrams: f.typicalGrams,
   }));
+
+  const favoriteFoods: FavoriteFood[] = personalFoodRows
+    .filter((f) => f.isFavorite)
+    .map((f) => ({
+      id: f.id,
+      name: f.name,
+      caloriesPer100g: f.caloriesPer100g,
+      proteinPer100g: f.proteinPer100g,
+      carbPer100g: f.carbPer100g,
+      fatPer100g: f.fatPer100g,
+      typicalGrams: f.typicalGrams,
+    }));
 
   let targets: DailyTargets | null = null;
   let waterTargetMl: number | null = null;
@@ -137,6 +150,7 @@ export default async function FoodPage() {
       <FoodLogView
         todayLogs={todayLogs}
         personalFoods={personalFoods}
+        favoriteFoods={favoriteFoods}
         targets={targets}
         healthFlags={{
           highCholesterol: user?.healthFlagHighCholesterol ?? false,

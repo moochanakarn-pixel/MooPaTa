@@ -12,6 +12,8 @@ export interface LibraryFood {
   fatPer100g: number;
   source: "CATALOG" | "BARCODE" | "CUSTOM";
   logCount: number;
+  isFavorite: boolean;
+  typicalGrams: number;
 }
 
 const SOURCE_LABEL: Record<LibraryFood["source"], string> = {
@@ -29,6 +31,7 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
   const [protein, setProtein] = useState(String(food.proteinPer100g));
   const [carb, setCarb] = useState(String(food.carbPer100g));
   const [fat, setFat] = useState(String(food.fatPer100g));
+  const [typicalGrams, setTypicalGrams] = useState(String(food.typicalGrams));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,15 +39,18 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
     // Number("") is 0, not NaN — an emptied field must fail this check
     // rather than silently save as a zero macro, so check the raw string
     // first.
-    const rawFields = [calories, protein, carb, fat];
+    const rawFields = [calories, protein, carb, fat, typicalGrams];
     const caloriesPer100g = Number(calories);
     const proteinPer100g = Number(protein);
     const carbPer100g = Number(carb);
     const fatPer100g = Number(fat);
+    const typicalGramsNum = Number(typicalGrams);
     if (
       !name.trim() ||
       rawFields.some((s) => s.trim() === "") ||
-      [caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g].some((n) => !Number.isFinite(n) || n < 0)
+      [caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g].some((n) => !Number.isFinite(n) || n < 0) ||
+      !Number.isFinite(typicalGramsNum) ||
+      typicalGramsNum <= 0
     ) {
       setError("กรอกข้อมูลให้ถูกต้องก่อน");
       return;
@@ -54,7 +60,7 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
     const res = await fetch(`/api/food/${food.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g }),
+      body: JSON.stringify({ name: name.trim(), caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g, typicalGrams: typicalGramsNum }),
     });
     setSaving(false);
     if (res.ok) {
@@ -85,6 +91,16 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
           <input type="number" min="0" value={fat} onChange={(e) => setFat(e.target.value)} className={INPUT_CLASS} />
         </div>
       </div>
+      <div>
+        <label className="mb-1 block text-[10px] text-neutral-500">ปริมาณที่กินปกติ (กรัม) — ใช้พรีฟิลตอนแนะนำเมนูนี้</label>
+        <input
+          type="number"
+          min="0"
+          value={typicalGrams}
+          onChange={(e) => setTypicalGrams(e.target.value)}
+          className={`${INPUT_CLASS} w-28`}
+        />
+      </div>
       {error && <p className="text-xs text-red-400">{error}</p>}
       <div className="flex gap-2">
         <button
@@ -109,6 +125,7 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -127,6 +144,17 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
     } else {
       setDeleteError("ลบไม่สำเร็จ ลองใหม่อีกครั้ง");
     }
+  }
+
+  async function toggleFavorite(id: string, next: boolean) {
+    setTogglingFavoriteId(id);
+    const res = await fetch(`/api/food/${id}/favorite`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isFavorite: next }),
+    });
+    setTogglingFavoriteId(null);
+    if (res.ok) router.refresh();
   }
 
   if (foods.length === 0) {
@@ -157,16 +185,31 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
             ) : (
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-neutral-200">{f.name}</p>
+                  <p className="flex items-center gap-1.5 truncate text-sm font-medium text-neutral-200">
+                    {f.name}
+                    {f.isFavorite && (
+                      <span title="เมนูโปรด — แนะนำที่หน้าบันทึกอาหาร" className="text-amber-400">
+                        ★
+                      </span>
+                    )}
+                  </p>
                   <p className="mt-1 text-xs text-neutral-500">
                     {Math.round(f.caloriesPer100g)} kcal · {f.proteinPer100g.toFixed(0)}p / {f.carbPer100g.toFixed(0)}c /{" "}
-                    {f.fatPer100g.toFixed(0)}f ต่อ 100 ก.
+                    {f.fatPer100g.toFixed(0)}f ต่อ 100 ก. · ปกติกิน {Math.round(f.typicalGrams)} ก.
                   </p>
                   <p className="mt-1 text-xs text-neutral-600">
                     {SOURCE_LABEL[f.source]} · บันทึกไปแล้ว {f.logCount} ครั้ง
                   </p>
                 </div>
                 <div className="flex flex-none items-center gap-3">
+                  <button
+                    onClick={() => toggleFavorite(f.id, !f.isFavorite)}
+                    disabled={togglingFavoriteId === f.id}
+                    title={f.isFavorite ? "เอาออกจากเมนูโปรด" : "ตั้งเป็นเมนูโปรด"}
+                    className={`text-base transition disabled:opacity-50 ${f.isFavorite ? "text-amber-400 hover:text-amber-300" : "text-neutral-600 hover:text-amber-400"}`}
+                  >
+                    {f.isFavorite ? "★" : "☆"}
+                  </button>
                   <button
                     onClick={() => {
                       setConfirmDeleteId(null);

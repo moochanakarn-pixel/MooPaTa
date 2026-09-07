@@ -28,6 +28,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const proteinPer100g = Number(body.proteinPer100g);
   const carbPer100g = Number(body.carbPer100g);
   const fatPer100g = Number(body.fatPer100g);
+  // Only meaningful for a favorite (see the isFavorite toggle endpoint) —
+  // optional here so this route still works for a plain macro edit that
+  // doesn't touch it.
+  const typicalGrams = body.typicalGrams !== undefined ? Number(body.typicalGrams) : undefined;
 
   if (!name) {
     return NextResponse.json({ error: "invalid_name" }, { status: 400 });
@@ -40,10 +44,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   ) {
     return NextResponse.json({ error: "invalid_macros" }, { status: 400 });
   }
+  if (typicalGrams !== undefined && (!isFiniteNonNegative(typicalGrams) || typicalGrams <= 0)) {
+    return NextResponse.json({ error: "invalid_typical_grams" }, { status: 400 });
+  }
 
   await db.food.update({
     where: { id: params.id },
-    data: { name, caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g },
+    data: { name, caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g, ...(typicalGrams !== undefined ? { typicalGrams } : {}) },
   });
   return NextResponse.json({ ok: true });
 }

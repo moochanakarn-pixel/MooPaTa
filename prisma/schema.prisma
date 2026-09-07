@@ -115,6 +115,13 @@ model Food {
   barcode         String?
   source          FoodSource @default(CUSTOM)
   createdAt       DateTime   @default(now())
+  // Marks a personal go-to food for the "แนะนำมื้อถัดไป" suggestions on the
+  // food page — replaces the built-in catalog there once the user has any
+  // favorites of their own, since those are what they actually eat.
+  // typicalGrams is the portion the suggestion prefills (still editable
+  // before saving, same as the catalog's own typicalGrams).
+  isFavorite   Boolean @default(false)
+  typicalGrams Float   @default(100)
 
   userId String
   user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
