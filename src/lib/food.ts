@@ -41,13 +41,19 @@ export function macrosForGrams(food: Per100g, grams: number): FoodMacros {
 // Back-calculates per-100g values from a total amount at a given portion
 // size — used when a user enters "I ate 215g and it was about 450 kcal,
 // 30g protein..." directly, rather than looking up a per-100g nutrition label.
-export function per100gFromTotal(total: Pick<FoodMacros, "calories" | "proteinG" | "carbG" | "fatG">, grams: number): Per100g {
+export function per100gFromTotal(
+  total: Pick<FoodMacros, "calories" | "proteinG" | "carbG" | "fatG">,
+  grams: number,
+  micros?: { sugarG?: number; sodiumMg?: number }
+): Per100g {
   const ratio = grams > 0 ? 100 / grams : 0;
   return {
     caloriesPer100g: total.calories * ratio,
     proteinPer100g: total.proteinG * ratio,
     carbPer100g: total.carbG * ratio,
     fatPer100g: total.fatG * ratio,
+    sugarPer100g: micros?.sugarG !== undefined ? micros.sugarG * ratio : null,
+    sodiumMgPer100g: micros?.sodiumMg !== undefined ? micros.sodiumMg * ratio : null,
   };
 }
 

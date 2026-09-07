@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { macrosForGrams, MEAL_TYPE_LABEL, per100gFromTotal, type Per100g } from "@/lib/food";
 import { THAI_FOOD_CATALOG, type CatalogFood } from "@/lib/thai-food-catalog";
 import { DAILY_CHOLESTEROL_LIMIT_MG, matchesPurineKeyword } from "@/lib/health-flags";
-import { BarcodeScanner } from "./barcode-scanner";
+import { FoodLabelScanner, type FoodLabelResult } from "./food-label-scanner";
 import { ImportMealPanel } from "./import-meal-panel";
 import { NutrientCarousel, type CustomPage, type NutrientPage } from "./nutrient-carousel";
 
@@ -56,7 +56,7 @@ export interface HealthFlags {
 type PendingFood =
   | { kind: "personal"; food: PersonalFood; grams: number }
   | { kind: "catalog"; food: CatalogFood; grams: number }
-  | { kind: "barcode"; name: string; per100g: Per100g; barcode: string; grams: number }
+  | { kind: "label"; name: string; per100g: Per100g; grams: number }
   | { kind: "custom"; grams: number };
 
 const INPUT_CLASS =
@@ -107,7 +107,6 @@ export function FoodLogView({
   const [customCarb, setCustomCarb] = useState("");
   const [customFat, setCustomFat] = useState("");
   const [saving, setSaving] = useState(false);
-  const [barcodeError, setBarcodeError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   // Starts unset (matches what the server renders) and is filled in by the
@@ -317,31 +316,9 @@ export function FoodLogView({
     setPending({ kind: "custom", grams: 100 });
   }
 
-  async function handleBarcodeDetect(code: string) {
+  function handleLabelSubmit(result: FoodLabelResult) {
     setShowScanner(false);
-    setBarcodeError(null);
-    const res = await fetch(`/api/food/barcode/${code}`);
-    if (!res.ok) {
-      setBarcodeError("ไม่พบข้อมูลสินค้านี้ในฐานข้อมูล — เพิ่มเองแทนได้");
-      return;
-    }
-    const data = await res.json();
-    setPending({
-      kind: "barcode",
-      name: data.name,
-      per100g: {
-        caloriesPer100g: data.caloriesPer100g,
-        proteinPer100g: data.proteinPer100g,
-        carbPer100g: data.carbPer100g,
-        fatPer100g: data.fatPer100g,
-        sugarPer100g: data.sugarPer100g,
-        sodiumMgPer100g: data.sodiumMgPer100g,
-        cholesterolMgPer100g: data.cholesterolMgPer100g,
-        fiberPer100g: data.fiberPer100g,
-      },
-      barcode: data.barcode,
-      grams: data.suggestedGrams ?? 100,
-    });
+    setPending({ kind: "label", name: result.name, per100g: result.per100g, grams: result.grams });
   }
 
   async function submitPending() {
@@ -368,9 +345,9 @@ export function FoodLogView({
         },
         grams: pending.grams,
       };
-    } else if (pending.kind === "barcode") {
+    } else if (pending.kind === "label") {
       body = {
-        food: { name: pending.name, ...pending.per100g, source: "BARCODE", barcode: pending.barcode },
+        food: { name: pending.name, ...pending.per100g, source: "LABEL" },
         grams: pending.grams,
       };
     } else {
@@ -493,7 +470,7 @@ export function FoodLogView({
               <h3 className="mb-3 text-sm font-medium text-neutral-300">
                 {pending.kind === "personal" && pending.food.name}
                 {pending.kind === "catalog" && pending.food.name}
-                {pending.kind === "barcode" && pending.name}
+                {pending.kind === "label" && pending.name}
                 {pending.kind === "custom" && "เพิ่มเมนูเอง"}
               </h3>
 
@@ -604,7 +581,7 @@ export function FoodLogView({
               </div>
             </div>
           ) : showScanner ? (
-            <BarcodeScanner onDetect={handleBarcodeDetect} onClose={() => setShowScanner(false)} />
+            <FoodLabelScanner onSubmit={handleLabelSubmit} onClose={() => setShowScanner(false)} />
           ) : (
             <div>
               <div className="mb-2 flex items-center justify-between">
@@ -622,24 +599,21 @@ export function FoodLogView({
                   autoFocus
                 />
                 <button
-                  onClick={() => {
-                    setBarcodeError(null);
-                    setShowScanner(true);
-                  }}
+                  onClick={() => setShowScanner(true)}
                   className="flex flex-none items-center gap-1.5 rounded-lg border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:border-neutral-600"
                 >
                   <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
                     <path
-                      d="M3 6V4h3M17 6V4h-3M3 14v2h3M17 14v2h-3M6 6v8M9 6v8M12 6v8M15 6v8"
+                      d="M4 8a2 2 0 0 1 2-2h1l.9-1.3h4.2L13 6h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z"
                       stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
+                      strokeWidth="1.4"
+                      strokeLinejoin="round"
                     />
+                    <circle cx="10" cy="11" r="2.6" stroke="currentColor" strokeWidth="1.4" />
                   </svg>
-                  สแกน
+                  สแกนฉลาก
                 </button>
               </div>
-              {barcodeError && <p className="mb-2 text-xs text-red-400">{barcodeError}</p>}
 
               {query.trim() && (
                 <div className="max-h-64 space-y-1 overflow-y-auto">

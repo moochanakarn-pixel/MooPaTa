@@ -141,7 +141,8 @@ model Food {
 
 enum FoodSource {
   CATALOG // picked from the built-in Thai food catalog
-  BARCODE // looked up from a scanned barcode via Open Food Facts
+  BARCODE // legacy — looked up from a scanned barcode via Open Food Facts (feature removed, kept so old rows still resolve)
+  LABEL // typed in after reading a nutrition label photo
   CUSTOM // typed in from scratch
 }
 

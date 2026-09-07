@@ -10,7 +10,7 @@ export interface LibraryFood {
   proteinPer100g: number;
   carbPer100g: number;
   fatPer100g: number;
-  source: "CATALOG" | "BARCODE" | "CUSTOM";
+  source: "CATALOG" | "BARCODE" | "LABEL" | "CUSTOM";
   logCount: number;
   isFavorite: boolean;
   typicalGrams: number;
@@ -19,6 +19,7 @@ export interface LibraryFood {
 const SOURCE_LABEL: Record<LibraryFood["source"], string> = {
   CATALOG: "แคตตาล็อก",
   BARCODE: "บาร์โค้ด",
+  LABEL: "ฉลากอาหาร",
   CUSTOM: "พิมพ์เอง",
 };
 

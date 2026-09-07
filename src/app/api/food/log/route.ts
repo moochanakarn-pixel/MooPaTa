@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { parseBackfillLoggedAt } from "@/lib/streak";
 
-const SOURCES = ["CATALOG", "BARCODE", "CUSTOM"];
+const SOURCES = ["CATALOG", "BARCODE", "LABEL", "CUSTOM"];
 const MEAL_TYPES = ["BREAKFAST", "LUNCH", "DINNER", "SNACK"];
 
 function isFiniteNonNegative(n: unknown): n is number {
@@ -23,9 +23,10 @@ function optionalNonNegativeOrNull(value: unknown): number | null | typeof INVAL
 
 // Logs one eaten portion. Either references an existing Food the user
 // already has (foodId) or creates one first (food) — from the built-in
-// catalog, a barcode lookup, or a fully custom entry. Barcode foods reuse
-// the user's existing row for that barcode instead of creating a duplicate
-// every time the same product gets scanned again.
+// catalog, a scanned nutrition label typed in by hand, or a fully custom
+// entry. barcode is only ever set by old data now (the barcode-scan feature
+// was removed); it still dedupes via the (userId, barcode) unique
+// constraint when present.
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) {
