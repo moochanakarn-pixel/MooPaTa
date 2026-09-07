@@ -82,9 +82,38 @@ function detectColumnIndices(cells: string[]): ColumnIndices | null {
   };
 }
 
+// A single-space "name 250 ก. 350 kcal 28 ก. 48 ก. 6 ก." line — the
+// compact one-liner form Claude/ChatGPT often produces when asked to
+// summarize a meal instead of a table — has no delimiter at all to split
+// on. Tokenizing by whitespace and grouping "number [+ trailing unit
+// word]" as one cell, with every non-numeric token before the first
+// number treated as the name, recovers the same "name, grams, kcal,
+// protein, carb, fat" cells the fixed-layout path already expects.
+function tokenizeCompactLine(line: string): string[] {
+  const tokens = line.split(/\s+/).filter(Boolean);
+  const nameTokens: string[] = [];
+  let i = 0;
+  while (i < tokens.length && !/^\d/.test(tokens[i])) {
+    nameTokens.push(tokens[i]);
+    i++;
+  }
+  const cells = [nameTokens.join(" ")];
+  while (i < tokens.length) {
+    let cell = tokens[i];
+    i++;
+    if (i < tokens.length && !/^\d/.test(tokens[i])) {
+      cell += ` ${tokens[i]}`;
+      i++;
+    }
+    cells.push(cell);
+  }
+  return cells;
+}
+
 // Splits one line into cells, trying the delimiter most likely for how it
 // was pasted: a literal markdown pipe table, a tab-separated copy (common
-// when copying a rendered HTML table), or plain multi-space alignment.
+// when copying a rendered HTML table), plain multi-space alignment, or —
+// failing all of those — the compact single-space one-liner form above.
 function splitCells(line: string): string[] {
   if (line.includes("|")) {
     return line
@@ -98,10 +127,12 @@ function splitCells(line: string): string[] {
       .map((c) => c.trim())
       .filter((c) => c.length > 0);
   }
-  return line
+  const spaced = line
     .split(/\s{2,}/)
     .map((c) => c.trim())
     .filter((c) => c.length > 0);
+  if (spaced.length > 1) return spaced;
+  return tokenizeCompactLine(line);
 }
 
 // A cell's number, taking the midpoint of a "220-250" range (Claude/GPT
@@ -110,6 +141,23 @@ function splitCells(line: string): string[] {
 function cellNumber(cell: string): number | null {
   const m = cell.match(/(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?/);
   if (!m) return null;
+  const lo = parseFloat(m[1]);
+  const hi = m[2] ? parseFloat(m[2]) : lo;
+  return (lo + hi) / 2;
+}
+
+// Same as cellNumber, but specifically for the "grams" column — a count
+// like "1 ชาม" (1 bowl) or "1 คู่" (1 pair) is a serving count, not a
+// weight, and must NOT be read as "1 gram" (which would silently claim a
+// real, trustworthy measurement where there isn't one). Returns null
+// whenever the cell's unit word is present but isn't a weight unit, same
+// as if no quantity column existed at all for that row.
+const GRAM_UNIT_PATTERN = /^(ก\.?|กรัม|g\.?|grams?)$/i;
+function cellGrams(cell: string): number | null {
+  const m = cell.match(/^(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?\s*(.*)$/);
+  if (!m) return null;
+  const unit = m[3].trim();
+  if (unit && !GRAM_UNIT_PATTERN.test(unit)) return null;
   const lo = parseFloat(m[1]);
   const hi = m[2] ? parseFloat(m[2]) : lo;
   return (lo + hi) / 2;
@@ -213,7 +261,7 @@ export function parseMealText(text: string): ParsedMeal {
     // through as its own exact label.
     if (!name || HEADER_KEYWORDS.includes(name)) continue;
 
-    const qty = columns.grams !== null && cells[columns.grams] !== undefined ? cellNumber(cells[columns.grams]) : null;
+    const qty = columns.grams !== null && cells[columns.grams] !== undefined ? cellGrams(cells[columns.grams]) : null;
     const kcal = cellNumber(cells[columns.kcal]);
     const protein = cellNumber(cells[columns.protein]);
     const carb = cellNumber(cells[columns.carb]);
@@ -226,11 +274,15 @@ export function parseMealText(text: string): ParsedMeal {
 
     const hasQty = qty !== null && qty > 0;
     const catalogMatch = findCatalogMatch(name);
-    if (catalogMatch) {
-      // A known dish still has a real, sensible serving size even when the
-      // table itself didn't give one — its own typicalGrams — so this
-      // branch counts as "real grams" either way.
-      const grams = hasQty ? qty : catalogMatch.typicalGrams;
+    // Only fall back to the catalog's own per-100g profile when the source
+    // didn't already give a real weight — a matched name is a firmer basis
+    // than the AI's raw totals-with-no-portion-size, but once the source
+    // gives its own explicit "N grams = X kcal/protein/carb/fat" for this
+    // exact meal (like a specific "ไม่มีหนัง" chicken rice), that pairing is
+    // more specific to what was actually eaten than a generic catalog
+    // average and must win, not get silently swapped out from under it.
+    if (catalogMatch && !hasQty) {
+      const grams = catalogMatch.typicalGrams;
       const ratio = grams / 100;
       items.push({
         name,
@@ -243,10 +295,13 @@ export function parseMealText(text: string): ParsedMeal {
         hasRealGrams: true,
       });
     } else {
-      // No catalog entry and no quantity column: all we have is this row's
-      // absolute totals (typical for a supplement serving like "1 scoop of
-      // whey"), so `grams` here is just an arbitrary denominator for the
-      // per-100g storage math, not a real weight.
+      // Either no catalog entry, or the source already gave its own real
+      // weight for this row — trust its own totals over a generic catalog
+      // average either way. With no catalog entry AND no quantity column,
+      // all we have is this row's absolute totals (typical for a
+      // supplement serving like "1 scoop of whey"), so `grams` here is
+      // just an arbitrary denominator for the per-100g storage math, not a
+      // real weight.
       const grams = hasQty ? qty : 1;
       items.push({
         name,

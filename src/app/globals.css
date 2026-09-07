@@ -9,3 +9,18 @@
 :root {
   color-scheme: light;
 }
+
+/* The native up/down spinner Chrome/Safari draw inside a number input
+   overlaps and clips the last digit in any of this app's narrower number
+   fields (e.g. the AI-import row editor's 5-column macro grid) — "250"
+   renders as "25", "20" as a half-cut "0" that reads as "C". Turning the
+   spinner off everywhere is also just a better fit for a touch UI, where
+   nobody taps a tiny arrow to increment a gram value anyway. */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
