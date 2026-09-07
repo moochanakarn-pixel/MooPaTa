@@ -159,7 +159,7 @@ export async function GET(req: NextRequest) {
 
           <div style={{ display: "flex", gap: 48, marginTop: 8 }}>
             <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
-              <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>{avgWaterL.toFixed(1)} ล.</span>
+              <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>{avgWaterL.toFixed(1)} ลิตร</span>
               <span style={{ fontSize: 20, color: "#a3a3a3" }}>น้ำดื่มเฉลี่ย/วัน</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", width: 260 }}>

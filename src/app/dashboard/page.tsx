@@ -283,13 +283,9 @@ export default async function DashboardPage({
         </div>
         <div className="flex items-center gap-4">
           {connection && <SyncButton />}
-          <a
-            href="/api/export/csv"
-            className="text-sm text-neutral-500 transition hover:text-neutral-300"
-            title="ดาวน์โหลด CSV"
-          >
-            Export CSV
-          </a>
+          <Link href="/dashboard/summary" className="text-sm text-neutral-500 transition hover:text-neutral-300" title="สรุปผลประจำวัน">
+            สรุปผล
+          </Link>
           <Link href="/dashboard/settings" className="text-neutral-500 transition hover:text-neutral-300" title="ตั้งค่า">
             <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
               <path
