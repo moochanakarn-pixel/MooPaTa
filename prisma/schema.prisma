@@ -52,6 +52,15 @@ model User {
   // this flag, same two-part opt-in as the water reminder.
   wheyReminderEnabled Boolean @default(false)
 
+  // Progress photos (front/side/back) — a single current slot per angle,
+  // not a history; re-uploading replaces the previous file. Stores a
+  // relative path under the private uploads/ dir (see
+  // src/app/api/progress-photo), never a public URL — the file is only
+  // ever served back through that auth-gated route.
+  frontPhotoPath String? @db.VarChar(255)
+  sidePhotoPath  String? @db.VarChar(255)
+  backPhotoPath  String? @db.VarChar(255)
+
   connections       ProviderConnection[]
   activities        Activity[]
   foods             Food[]

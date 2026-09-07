@@ -9,3 +9,8 @@ prisma/dev.db
 prisma/dev.db-journal
 .DS_Store
 *.tsbuildinfo
+
+# User-uploaded progress photos — private, served only via the
+# auth-gated /api/progress-photo route, never through /public. Not
+# something to version-control; each deploy environment keeps its own.
+/uploads/

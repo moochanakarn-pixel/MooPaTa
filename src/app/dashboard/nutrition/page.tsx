@@ -19,6 +19,9 @@ import {
 import { WeightLogCard, type WeightLogEntry } from "./weight-log-card";
 import { CalorieTrendChart, type CalorieDayBucket } from "./calorie-trend-chart";
 import { CalorieRing } from "./calorie-ring";
+import { NutritionPeriodComparison } from "./nutrition-period-comparison";
+import { ProgressPhotosCard } from "./progress-photos-card";
+import { PHOTO_ANGLES } from "@/lib/progress-photo-types";
 
 const TREND_DAYS = 14;
 
@@ -161,13 +164,24 @@ export default async function NutritionPage() {
   const trendStart = new Date(todayStart);
   trendStart.setDate(trendStart.getDate() - (TREND_DAYS - 1));
 
-  const [weightRows, trendFoodLogs, trendActivities] = await Promise.all([
+  const thisWeekStart = new Date(todayStart);
+  thisWeekStart.setDate(thisWeekStart.getDate() - ((thisWeekStart.getDay() + 6) % 7)); // Monday
+  const lastWeekStart = new Date(thisWeekStart);
+  lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+  // The trend chart wants a fixed rolling TREND_DAYS window; the week
+  // comparison below wants calendar-week-aligned data. Query from whichever
+  // of the two starts earlier so one fetch covers both — trendStart is
+  // fixed at today-13, while lastWeekStart (last Monday) can land anywhere
+  // from today-7 to today-13 depending on what day of the week it is.
+  const foodQueryStart = trendStart < lastWeekStart ? trendStart : lastWeekStart;
+
+  const [weightRows, trendFoodLogs, trendActivities, twoWeekWaterLogs] = await Promise.all([
     db.weightLog.findMany({
       where: { userId, loggedAt: { gte: sixtyDaysAgo } },
       orderBy: { loggedAt: "asc" },
     }),
     db.foodLog.findMany({
-      where: { userId, loggedAt: { gte: trendStart } },
+      where: { userId, loggedAt: { gte: foodQueryStart } },
       include: { food: true },
     }),
     // trendStart is always <= todayStart, so this also covers today —
@@ -176,6 +190,10 @@ export default async function NutritionPage() {
     db.activity.findMany({
       where: { userId, startedAt: { gte: trendStart } },
       select: { startedAt: true, durationSec: true },
+    }),
+    db.waterLog.findMany({
+      where: { userId, loggedAt: { gte: lastWeekStart } },
+      select: { loggedAt: true, ml: true },
     }),
   ]);
   const weightLogs: WeightLogEntry[] = weightRows.map((w) => ({
@@ -198,6 +216,29 @@ export default async function NutritionPage() {
   const activityDurationTodaySec = durationByDay.get(dayKey(todayStart)) ?? 0;
   const targets = applyActivityBonus(baseTargets, activityDurationTodaySec);
   const todayCaloriesEaten = caloriesByDay.get(dayKey(todayStart)) ?? 0;
+
+  const thisWeekEnd = new Date(thisWeekStart);
+  thisWeekEnd.setDate(thisWeekEnd.getDate() + 7);
+  let thisWeekCalories = 0;
+  let thisWeekProteinG = 0;
+  let lastWeekCalories = 0;
+  let lastWeekProteinG = 0;
+  for (const log of trendFoodLogs) {
+    const m = macrosForGrams(log.food, log.grams);
+    if (log.loggedAt >= thisWeekStart && log.loggedAt < thisWeekEnd) {
+      thisWeekCalories += m.calories;
+      thisWeekProteinG += m.proteinG;
+    } else if (log.loggedAt >= lastWeekStart && log.loggedAt < thisWeekStart) {
+      lastWeekCalories += m.calories;
+      lastWeekProteinG += m.proteinG;
+    }
+  }
+  let thisWeekWaterMl = 0;
+  let lastWeekWaterMl = 0;
+  for (const w of twoWeekWaterLogs) {
+    if (w.loggedAt >= thisWeekStart && w.loggedAt < thisWeekEnd) thisWeekWaterMl += w.ml;
+    else if (w.loggedAt >= lastWeekStart && w.loggedAt < thisWeekStart) lastWeekWaterMl += w.ml;
+  }
 
   const trendDays: CalorieDayBucket[] = Array.from({ length: TREND_DAYS }, (_, i) => {
     const d = new Date(trendStart);
@@ -233,6 +274,13 @@ export default async function NutritionPage() {
       <BmiGauge weightKg={profile.weightKg} heightCm={profile.heightCm} />
 
       <WeightLogCard logs={weightLogs} />
+
+      <ProgressPhotosCard
+        photos={PHOTO_ANGLES.map((angle) => ({
+          angle,
+          hasPhoto: Boolean(angle === "FRONT" ? user.frontPhotoPath : angle === "SIDE" ? user.sidePhotoPath : user.backPhotoPath),
+        }))}
+      />
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <p className="mb-4 text-center text-xs text-neutral-500">แคลอรี่วันนี้</p>
@@ -286,6 +334,11 @@ export default async function NutritionPage() {
       <div className="mb-6">
         <CalorieTrendChart days={trendDays} />
       </div>
+
+      <NutritionPeriodComparison
+        thisWeek={{ calories: thisWeekCalories, proteinG: thisWeekProteinG, waterMl: thisWeekWaterMl }}
+        lastWeek={{ calories: lastWeekCalories, proteinG: lastWeekProteinG, waterMl: lastWeekWaterMl }}
+      />
 
       <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <div className="mb-1 flex items-center gap-3">

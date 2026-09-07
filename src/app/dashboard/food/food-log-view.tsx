@@ -8,7 +8,7 @@ import { THAI_FOOD_CATALOG, type CatalogFood } from "@/lib/thai-food-catalog";
 import { DAILY_CHOLESTEROL_LIMIT_MG, matchesPurineKeyword } from "@/lib/health-flags";
 import { BarcodeScanner } from "./barcode-scanner";
 import { ImportMealPanel } from "./import-meal-panel";
-import { NutrientCarousel, type NutrientPage } from "./nutrient-carousel";
+import { NutrientCarousel, type CustomPage, type NutrientPage } from "./nutrient-carousel";
 
 export interface PersonalFood extends Per100g {
   id: string;
@@ -164,6 +164,78 @@ export function FoodLogView({
     ],
     [totals, targets]
   );
+
+  // Micronutrients ride along as the carousel's last swipe instead of a
+  // separate static block below it — one continuous "swipe through
+  // everything today" gesture instead of a ring you swipe plus a grid you
+  // scroll to separately.
+  const micronutrientPage: CustomPage | undefined = totals.hasMicronutrients
+    ? {
+        key: "micronutrients",
+        label: "สารอาหารอื่นๆ",
+        content: (
+          <>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-col items-center gap-1 rounded-xl bg-neutral-900/60 py-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/10 text-amber-400">
+                  <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                    <path
+                      d="M12 3c2.5 3.2 6 7.5 6 11.2a6 6 0 0 1-12 0C6 10.5 9.5 6.2 12 3Z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.sugarG)} ก.</p>
+                <p className="text-[11px] text-neutral-500">น้ำตาล</p>
+              </div>
+              <div className="flex flex-col items-center gap-1 rounded-xl bg-neutral-900/60 py-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-500/10 text-sky-400">
+                  <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                    <path
+                      d="M4 10h16M6 10l1.5 8.5A2 2 0 0 0 9.47 20h5.06a2 2 0 0 0 1.97-1.5L18 10M9 6.5c0-1.4 1.3-2.5 3-2.5s3 1.1 3 2.5"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.sodiumMg)} มก.</p>
+                <p className="text-[11px] text-neutral-500">โซเดียม</p>
+              </div>
+              <div className="flex flex-col items-center gap-1 rounded-xl bg-neutral-900/60 py-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
+                  <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                    <path
+                      d="M12 21c-4-1-7-5-7-10 0-3 2-6 7-8 5 2 7 5 7 8 0 5-3 9-7 10Zm0-14v14"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.fiberG)} ก.</p>
+                <p className="text-[11px] text-neutral-500">ไฟเบอร์</p>
+              </div>
+            </div>
+            {healthFlags.highCholesterol && totals.cholesterolMg > 0 && (
+              <p
+                className={`mt-3 text-center text-xs ${
+                  totals.cholesterolMg > DAILY_CHOLESTEROL_LIMIT_MG ? "text-red-400" : "text-neutral-500"
+                }`}
+              >
+                คอเลสเตอรอลวันนี้ {Math.round(totals.cholesterolMg)} / {DAILY_CHOLESTEROL_LIMIT_MG} มก.
+                {totals.cholesterolMg > DAILY_CHOLESTEROL_LIMIT_MG && " — เกินเพดานแล้ว"}
+              </p>
+            )}
+          </>
+        ),
+      }
+    : undefined;
 
   // The four real meal types always get their own section (with its own
   // "+" button) even with nothing logged yet — matching the reference
@@ -347,56 +419,7 @@ export function FoodLogView({
     <div>
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <p className="mb-1 text-center text-xs text-neutral-500">{isToday ? "กินไปวันนี้" : "สรุปวันที่เลือก"}</p>
-        {targets ? (
-          <NutrientCarousel pages={nutrientPages} />
-        ) : (
-          <p className="py-6 text-center text-3xl font-extrabold tracking-tight">
-            {Math.round(totals.calories).toLocaleString("th-TH")} <span className="text-lg font-medium text-neutral-500">kcal</span>
-          </p>
-        )}
-
-        {totals.hasMicronutrients && (
-          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-neutral-800 pt-4">
-            <div className="flex flex-col items-center gap-1 rounded-xl bg-neutral-900/60 py-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/10 text-amber-400">
-                <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
-                  <path d="M12 3c2.5 3.2 6 7.5 6 11.2a6 6 0 0 1-12 0C6 10.5 9.5 6.2 12 3Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.sugarG)} ก.</p>
-              <p className="text-[11px] text-neutral-500">น้ำตาล</p>
-            </div>
-            <div className="flex flex-col items-center gap-1 rounded-xl bg-neutral-900/60 py-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-500/10 text-sky-400">
-                <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
-                  <path d="M4 10h16M6 10l1.5 8.5A2 2 0 0 0 9.47 20h5.06a2 2 0 0 0 1.97-1.5L18 10M9 6.5c0-1.4 1.3-2.5 3-2.5s3 1.1 3 2.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.sodiumMg)} มก.</p>
-              <p className="text-[11px] text-neutral-500">โซเดียม</p>
-            </div>
-            <div className="flex flex-col items-center gap-1 rounded-xl bg-neutral-900/60 py-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
-                <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
-                  <path d="M12 21c-4-1-7-5-7-10 0-3 2-6 7-8 5 2 7 5 7 8 0 5-3 9-7 10Zm0-14v14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.fiberG)} ก.</p>
-              <p className="text-[11px] text-neutral-500">ไฟเบอร์</p>
-            </div>
-          </div>
-        )}
-
-        {healthFlags.highCholesterol && totals.cholesterolMg > 0 && (
-          <p
-            className={`mt-2 text-center text-xs ${
-              totals.cholesterolMg > DAILY_CHOLESTEROL_LIMIT_MG ? "text-red-400" : "text-neutral-500"
-            }`}
-          >
-            คอเลสเตอรอลวันนี้ {Math.round(totals.cholesterolMg)} / {DAILY_CHOLESTEROL_LIMIT_MG} มก.
-            {totals.cholesterolMg > DAILY_CHOLESTEROL_LIMIT_MG && " — เกินเพดานแล้ว"}
-          </p>
-        )}
+        <NutrientCarousel pages={nutrientPages} extraPage={micronutrientPage} />
       </div>
 
       {suggestions.length > 0 && !showAdd && (

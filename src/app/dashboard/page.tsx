@@ -12,6 +12,7 @@ import { CollapsibleSection } from "./collapsible-section";
 import { GoalProgress } from "./goal-progress";
 import { HealthSummary } from "./health-summary";
 import { MonthHighlights } from "./month-highlights";
+import { OnboardingCard, type OnboardingStep } from "./onboarding-card";
 import { PeriodComparison } from "./period-comparison";
 import { SyncButton } from "./sync-button";
 import { TrendChart, type WeekBucket } from "./trend-chart";
@@ -94,6 +95,8 @@ export default async function DashboardPage({
     todayWaterAgg,
     recentWeightLogs,
     activeSupplements,
+    totalFoodLogCount,
+    totalWaterLogCount,
   ] = await Promise.all([
       db.user.findUnique({ where: { id: userId } }),
       db.providerConnection.findFirst({ where: { userId, provider: "STRAVA" } }),
@@ -151,6 +154,8 @@ export default async function DashboardPage({
         where: { userId, active: true },
         include: { logs: { where: { takenAt: { gte: todayStart } }, take: 1 } },
       }),
+      db.foodLog.count({ where: { userId } }),
+      db.waterLog.count({ where: { userId } }),
     ]);
 
   const unit = user?.unitSystem ?? "METRIC";
@@ -182,6 +187,18 @@ export default async function DashboardPage({
   const supplementsTakenToday = activeSupplements.filter((s) => s.logs.length > 0).length;
   const hasAnyHealthData =
     healthTargets !== null || todayFoodLogs.length > 0 || (todayWaterAgg._sum.ml ?? 0) > 0 || recentWeightLogs.length > 0 || activeSupplements.length > 0;
+
+  const onboardingSteps: OnboardingStep[] = [
+    { key: "profile", label: "กรอกโปรไฟล์โภชนาการ", done: isProfileComplete(nutritionProfile), href: "/dashboard/settings" },
+    { key: "activity", label: "ซิงค์กิจกรรมจาก Strava", done: stats._count._all > 0, href: "/dashboard" },
+    { key: "food", label: "บันทึกอาหารมื้อแรก", done: totalFoodLogCount > 0, href: "/dashboard/food" },
+    { key: "water", label: "บันทึกน้ำครั้งแรก", done: totalWaterLogCount > 0, href: "/dashboard/food" },
+  ];
+  // Only for genuinely new accounts still working through the checklist —
+  // hides itself once finished, or after two weeks regardless, so it never
+  // reads as nagging a long-term user over a step they've deliberately skipped.
+  const accountAgeDays = user ? (Date.now() - user.createdAt.getTime()) / (24 * 60 * 60 * 1000) : 0;
+  const showOnboarding = onboardingSteps.some((s) => !s.done) && accountAgeDays <= 14;
 
   const typeShares = Object.values(
     thisMonthActivities.reduce<Record<string, { type: string; km: number }>>((acc, a) => {
@@ -292,6 +309,8 @@ export default async function DashboardPage({
         </div>
         </div>
       </header>
+
+      {showOnboarding && <OnboardingCard steps={onboardingSteps} />}
 
       <div className="mb-6 -mx-6 flex gap-2 overflow-x-auto px-6 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
         {[

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 
 export interface NutrientPage {
   key: string;
@@ -10,6 +10,14 @@ export interface NutrientPage {
   unit: string;
   color: string;
   bonusNote?: string;
+}
+
+// A trailing page that isn't a ring — the micronutrient badge grid, which
+// has no single "eaten vs target" number to show as a circle.
+export interface CustomPage {
+  key: string;
+  label: string;
+  content: ReactNode;
 }
 
 const SIZE = 168;
@@ -65,12 +73,14 @@ function NutrientRing({ page }: { page: NutrientPage }) {
 }
 
 // Swipeable "one nutrient at a time" view — calories, then protein/carb/fat
-// each as their own ring — matching the reference app's diary carousel
+// each as their own ring, plus an optional trailing custom page (the
+// micronutrient grid) — matching the reference app's diary carousel
 // instead of cramming everything into one static block.
-export function NutrientCarousel({ pages }: { pages: NutrientPage[] }) {
+export function NutrientCarousel({ pages, extraPage }: { pages: NutrientPage[]; extraPage?: CustomPage }) {
   const [index, setIndex] = useState(0);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const totalPages = pages.length + (extraPage ? 1 : 0);
 
   function onScroll() {
     const el = scrollerRef.current;
@@ -99,17 +109,25 @@ export function NutrientCarousel({ pages }: { pages: NutrientPage[] }) {
         {pages.map((p) => (
           <NutrientRing key={p.key} page={p} />
         ))}
+        {extraPage && (
+          <div className="w-full flex-none snap-center px-2">
+            <p className="mb-2 text-center text-xs text-neutral-500">{extraPage.label}</p>
+            {extraPage.content}
+          </div>
+        )}
       </div>
-      <div className="mt-3 flex justify-center gap-1.5">
-        {pages.map((p, i) => (
-          <button
-            key={p.key}
-            onClick={() => goTo(i)}
-            aria-label={p.label}
-            className={`h-1.5 rounded-full transition-all ${i === index ? "w-5 bg-[#fc4c02]" : "w-1.5 bg-neutral-700"}`}
-          />
-        ))}
-      </div>
+      {totalPages > 1 && (
+        <div className="mt-3 flex justify-center gap-1.5">
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i}
+              onClick={() => goTo(i)}
+              aria-label={i < pages.length ? pages[i].label : extraPage?.label}
+              className={`h-1.5 rounded-full transition-all ${i === index ? "w-5 bg-[#fc4c02]" : "w-1.5 bg-neutral-700"}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
