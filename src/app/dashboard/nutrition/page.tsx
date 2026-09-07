@@ -16,7 +16,6 @@ import {
   BMI_CATEGORY_GUIDANCE,
   type BmiCategory,
 } from "@/lib/nutrition";
-import { PigMascotFace } from "@/components/pig-mascot";
 import { WeightLogCard, type WeightLogEntry } from "./weight-log-card";
 import { CalorieTrendChart, type CalorieDayBucket } from "./calorie-trend-chart";
 import { CalorieRing } from "./calorie-ring";
@@ -137,7 +136,8 @@ export default async function NutritionPage() {
         {backLink}
         <h1 className="mb-8 text-xl font-bold">โภชนาการ</h1>
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-neutral-800 py-16 text-center">
-          <PigMascotFace className="h-16 w-16" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mascot-face.png" alt="" className="h-16 w-16 object-contain" />
           <p className="max-w-xs text-neutral-500">
             กรอกน้ำหนัก ส่วนสูง อายุ และระดับกิจกรรม ในหน้าตั้งค่าก่อน เพื่อคำนวณเป้าหมายแคลอรี่/แมโคร/น้ำให้อัตโนมัติ
           </p>

@@ -5,7 +5,6 @@ import { getSessionUserId } from "@/lib/session";
 import { formatDistanceKm, formatDuration } from "@/lib/format";
 import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
-import { PigMascotFace } from "@/components/pig-mascot";
 import { ActivityFilters } from "./activity-filters";
 import { ActivityHeatmap, buildHeatmapDays, computeStreaks } from "./activity-heatmap";
 import { ActivityListView, type ActivityRow } from "./activity-list-view";
@@ -422,7 +421,8 @@ export default async function DashboardPage({
 
       {activities.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-neutral-800 py-16 text-center">
-          <PigMascotFace className="h-16 w-16" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mascot-face.png" alt="" className="h-16 w-16 object-contain" />
           <p className="text-neutral-500">
             {stats._count._all === 0
               ? 'ยังไม่มีข้อมูลกิจกรรม ลองกด "ซิงค์ข้อมูลจาก Strava" ด้านบน'
