@@ -8,7 +8,10 @@ import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nut
 import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
 import { activityTypeLabel, formatDistanceKm, formatDuration } from "@/lib/format";
 
-const CAL_RING_CIRCUMFERENCE = 2 * Math.PI * 76;
+const CAL_RING_SIZE = 260;
+const CAL_RING_STROKE = 22;
+const CAL_RING_RADIUS = (CAL_RING_SIZE - CAL_RING_STROKE) / 2;
+const CAL_RING_CIRCUMFERENCE = 2 * Math.PI * CAL_RING_RADIUS;
 
 const ALL_FIELDS = ["cal", "macro", "water", "exercise", "streak", "weight"] as const;
 type FieldId = (typeof ALL_FIELDS)[number];
@@ -159,21 +162,28 @@ export async function GET(req: NextRequest) {
       show: true,
       node: (
         <div key="cal" style={rowCardStyle}>
-          <div style={{ display: "flex", alignItems: "center", gap: 28 }}>
-            <div style={{ display: "flex", position: "relative", width: 168, height: 168 }}>
-              <svg width="168" height="168" viewBox="0 0 168 168">
-                <circle cx="84" cy="84" r="76" stroke="rgba(255,255,255,0.1)" strokeWidth="16" fill="none" />
+          <div style={{ display: "flex", alignItems: "center", gap: 44 }}>
+            <div style={{ display: "flex", position: "relative", width: CAL_RING_SIZE, height: CAL_RING_SIZE }}>
+              <svg width={CAL_RING_SIZE} height={CAL_RING_SIZE} viewBox={`0 0 ${CAL_RING_SIZE} ${CAL_RING_SIZE}`}>
                 <circle
-                  cx="84"
-                  cy="84"
-                  r="76"
+                  cx={CAL_RING_SIZE / 2}
+                  cy={CAL_RING_SIZE / 2}
+                  r={CAL_RING_RADIUS}
+                  stroke="rgba(255,255,255,0.1)"
+                  strokeWidth={CAL_RING_STROKE}
+                  fill="none"
+                />
+                <circle
+                  cx={CAL_RING_SIZE / 2}
+                  cy={CAL_RING_SIZE / 2}
+                  r={CAL_RING_RADIUS}
                   stroke="#fc4c02"
-                  strokeWidth="16"
+                  strokeWidth={CAL_RING_STROKE}
                   fill="none"
                   strokeLinecap="round"
                   strokeDasharray={CAL_RING_CIRCUMFERENCE}
                   strokeDashoffset={CAL_RING_CIRCUMFERENCE * (1 - pct / 100)}
-                  transform="rotate(-90 84 84)"
+                  transform={`rotate(-90 ${CAL_RING_SIZE / 2} ${CAL_RING_SIZE / 2})`}
                 />
               </svg>
               <div
@@ -186,16 +196,16 @@ export async function GET(req: NextRequest) {
                   justifyContent: "center",
                 }}
               >
-                <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>{Math.round(macros.calories).toLocaleString("th-TH")}</span>
-                <span style={{ fontSize: 20, color: "#a3a3a3" }}>kcal</span>
+                <span style={{ fontSize: 62, fontWeight: 700, color: "white" }}>{Math.round(macros.calories).toLocaleString("th-TH")}</span>
+                <span style={{ fontSize: 26, color: "#a3a3a3" }}>kcal</span>
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span style={{ fontSize: 26, color: "#d4d4d4" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <span style={{ fontSize: 32, color: "#d4d4d4" }}>
                 {targetCalories ? `จากเป้า ${targetCalories.toLocaleString("th-TH")} kcal` : "แคลอรี่วันนี้"}
               </span>
               {targetCalories && (
-                <span style={{ fontSize: 22, color: "#8f8f8a" }}>
+                <span style={{ fontSize: 27, color: "#8f8f8a" }}>
                   {macros.calories <= targetCalories
                     ? `เหลืออีก ${Math.round(targetCalories - macros.calories).toLocaleString("th-TH")} kcal`
                     : `เกินเป้า ${Math.round(macros.calories - targetCalories).toLocaleString("th-TH")} kcal`}
@@ -211,17 +221,17 @@ export async function GET(req: NextRequest) {
       node: (
         <div key="macro" style={cardStyle}>
           <span style={titleStyle}>แมโคร</span>
-          <div style={{ display: "flex", height: 20, borderRadius: 999, overflow: "hidden", marginTop: 14 }}>
+          <div style={{ display: "flex", height: 28, borderRadius: 999, overflow: "hidden", marginTop: 22 }}>
             {macroShares.map((m) => (
               <div key={m.label} style={{ display: "flex", width: `${(m.kcal / macroKcalTotal) * 100}%`, background: m.color }} />
             ))}
           </div>
-          <div style={{ display: "flex", gap: 36, marginTop: 18 }}>
+          <div style={{ display: "flex", gap: 44, marginTop: 26 }}>
             {macroShares.map((m) => (
-              <div key={m.label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ display: "flex", width: 14, height: 14, borderRadius: 999, background: m.color }} />
-                <span style={{ fontSize: 22, color: "#b5b5b0" }}>{m.label}</span>
-                <span style={{ fontSize: 24, fontWeight: 700, color: "white" }}>{Math.round(m.grams)} ก.</span>
+              <div key={m.label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ display: "flex", width: 18, height: 18, borderRadius: 999, background: m.color }} />
+                <span style={{ fontSize: 27, color: "#b5b5b0" }}>{m.label}</span>
+                <span style={{ fontSize: 30, fontWeight: 700, color: "white" }}>{Math.round(m.grams)} ก.</span>
               </div>
             ))}
           </div>
@@ -235,11 +245,11 @@ export async function GET(req: NextRequest) {
           <div style={iconCircleStyle("rgba(56,189,248,0.16)")}>
             <WaterIcon />
           </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 32, fontWeight: 700, color: "white" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 42, fontWeight: 700, color: "white" }}>
               {`${(waterMl / 1000).toFixed(1)} ลิตร` + (targetWaterMl ? ` / ${(targetWaterMl / 1000).toFixed(1)} ลิตร` : "")}
             </span>
-            <span style={{ fontSize: 20, color: "#9c9c97" }}>น้ำดื่มวันนี้</span>
+            <span style={{ fontSize: 26, color: "#9c9c97" }}>น้ำดื่มวันนี้</span>
           </div>
         </div>
       ),
@@ -252,15 +262,15 @@ export async function GET(req: NextRequest) {
             <span style={titleStyle}>ออกกำลังกาย</span>
             <span style={badgeStyle}>ซิงก์จาก Strava</span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 22, marginTop: 22 }}>
             {activities.slice(0, 4).map((a, i) => (
-              <div key={a.id ?? i} style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <div style={{ ...iconCircleStyle("rgba(252,76,2,0.16)"), width: 52, height: 52 }}>
+              <div key={a.id ?? i} style={{ display: "flex", alignItems: "center", gap: 22 }}>
+                <div style={{ ...iconCircleStyle("rgba(252,76,2,0.16)"), width: 68, height: 68 }}>
                   <RunIcon />
                 </div>
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                  <span style={{ fontSize: 24, fontWeight: 700, color: "white" }}>{activityTypeLabel(a.type)}</span>
-                  <span style={{ fontSize: 20, color: "#9c9c97" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 30, fontWeight: 700, color: "white" }}>{activityTypeLabel(a.type)}</span>
+                  <span style={{ fontSize: 25, color: "#9c9c97" }}>
                     {[
                       a.distanceMeters ? formatDistanceKm(a.distanceMeters, user.unitSystem) : null,
                       formatDuration(a.durationSec),
@@ -283,9 +293,9 @@ export async function GET(req: NextRequest) {
           <div style={iconCircleStyle("rgba(252,76,2,0.16)")}>
             <FlameIcon />
           </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 32, fontWeight: 700, color: "white" }}>{streak} วันติดต่อกัน</span>
-            <span style={{ fontSize: 20, color: "#9c9c97" }}>สตรีคบันทึกอาหาร</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 42, fontWeight: 700, color: "white" }}>{streak} วันติดต่อกัน</span>
+            <span style={{ fontSize: 26, color: "#9c9c97" }}>สตรีคบันทึกอาหาร</span>
           </div>
         </div>
       ),
@@ -297,11 +307,11 @@ export async function GET(req: NextRequest) {
           <div style={iconCircleStyle("rgba(163,230,53,0.15)")}>
             <ScaleIcon />
           </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 32, fontWeight: 700, color: "white" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 42, fontWeight: 700, color: "white" }}>
               {latestWeight ? `${latestWeight.weightKg.toFixed(1)} กก.` : "—"}
             </span>
-            <span style={{ fontSize: 20, color: "#9c9c97" }}>
+            <span style={{ fontSize: 26, color: "#9c9c97" }}>
               {weightDelta !== null
                 ? `${weightDelta > 0 ? "+" : ""}${weightDelta.toFixed(1)} กก. จากครั้งก่อน`
                 : "น้ำหนักล่าสุด"}
@@ -366,11 +376,21 @@ export async function GET(req: NextRequest) {
           สรุปผลประจำวัน
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "center", gap: 24, marginTop: 24 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            justifyContent: orderedBlocks.length > 1 ? "space-around" : "center",
+            gap: 40,
+            marginTop: 32,
+            marginBottom: 32,
+          }}
+        >
           {orderedBlocks.map((b) => b.node)}
         </div>
 
-        <div style={{ display: "flex", justifyContent: "center", fontSize: 20, color: "rgba(255,255,255,0.35)" }}>
+        <div style={{ display: "flex", justifyContent: "center", fontSize: 22, color: "rgba(255,255,255,0.35)" }}>
           moopata.mcnkth.com
         </div>
       </div>
@@ -394,29 +414,29 @@ const cardStyle: React.CSSProperties = {
   flexDirection: "column",
   background: "rgba(255,255,255,0.045)",
   border: "1px solid rgba(255,255,255,0.07)",
-  borderRadius: 28,
-  padding: "28px 32px",
+  borderRadius: 32,
+  padding: "40px 44px",
 };
 
-const rowCardStyle: React.CSSProperties = { ...cardStyle, flexDirection: "row", gap: 24 };
+const rowCardStyle: React.CSSProperties = { ...cardStyle, flexDirection: "row", gap: 32 };
 
-const titleStyle: React.CSSProperties = { fontSize: 22, fontWeight: 700, color: "#c9c9c4", letterSpacing: 0.5 };
+const titleStyle: React.CSSProperties = { fontSize: 27, fontWeight: 700, color: "#c9c9c4", letterSpacing: 0.5 };
 
 const badgeStyle: React.CSSProperties = {
-  fontSize: 18,
+  fontSize: 22,
   fontWeight: 700,
   color: "#fc4c02",
   background: "rgba(252,76,2,0.16)",
-  padding: "6px 16px",
+  padding: "8px 20px",
   borderRadius: 999,
 };
 
 function iconCircleStyle(bg: string): React.CSSProperties {
   return {
-    width: 64,
-    height: 64,
+    width: 84,
+    height: 84,
     flexShrink: 0,
-    borderRadius: 20,
+    borderRadius: 24,
     background: bg,
     display: "flex",
     alignItems: "center",
@@ -426,7 +446,7 @@ function iconCircleStyle(bg: string): React.CSSProperties {
 
 function WaterIcon() {
   return (
-    <svg width="32" height="32" viewBox="0 0 20 20" fill="none">
+    <svg width="42" height="42" viewBox="0 0 20 20" fill="none">
       <path
         d="M10 2.5c2.8 3.6 6 8 6 11.3a6 6 0 0 1-12 0c0-3.3 3.2-7.7 6-11.3Z"
         stroke="#38bdf8"
@@ -439,7 +459,7 @@ function WaterIcon() {
 
 function RunIcon() {
   return (
-    <svg width="26" height="26" viewBox="0 0 20 20" fill="none">
+    <svg width="34" height="34" viewBox="0 0 20 20" fill="none">
       <path d="M4 16 8 9l3 3 5-7" stroke="#fc4c02" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M13 5h3v3" stroke="#fc4c02" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -448,7 +468,7 @@ function RunIcon() {
 
 function FlameIcon() {
   return (
-    <svg width="32" height="32" viewBox="0 0 20 20" fill="none">
+    <svg width="42" height="42" viewBox="0 0 20 20" fill="none">
       <path
         d="M10 2c1 3 4 4.5 4 8a4 4 0 0 1-8 0c0-1 .3-1.8.8-2.5.3.9 1 1.3 1.5 1 .5-2.3-1-3.5-1-5.5C7.9 3.6 8.9 2.6 10 2Z"
         stroke="#fc4c02"
@@ -461,7 +481,7 @@ function FlameIcon() {
 
 function ScaleIcon() {
   return (
-    <svg width="32" height="32" viewBox="0 0 20 20" fill="none">
+    <svg width="42" height="42" viewBox="0 0 20 20" fill="none">
       <path
         d="M10 3v2M6 5h8l1.5 8a2 2 0 0 1-2 2.3H6.5A2 2 0 0 1 4.5 13L6 5Z"
         stroke="#a3e635"
