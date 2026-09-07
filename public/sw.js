@@ -1,5 +1,5 @@
-const CACHE_NAME = "moopata-v2";
-const SHELL_URLS = ["/", "/logo.png"];
+const CACHE_NAME = "moopata-v3";
+const SHELL_URLS = ["/", "/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_URLS)));
@@ -45,8 +45,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
-      icon: "/logo.png",
-      badge: "/logo.png",
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
       data: { url: payload.url || "/dashboard/food" },
     })
   );

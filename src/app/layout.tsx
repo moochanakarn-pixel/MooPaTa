@@ -12,7 +12,7 @@ const fontSans = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "MooPaTa",
   description: "รวมข้อมูลการออกกำลังกายจาก Strava และ Huawei Health ไว้ที่เดียว",
-  icons: { icon: "/logo.png" },
+  icons: { icon: "/icon-32.png", apple: "/icon-180.png" },
   appleWebApp: {
     capable: true,
     // "black-translucent" draws white status-bar icons over the page —
