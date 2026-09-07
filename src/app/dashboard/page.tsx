@@ -9,6 +9,7 @@ import { ActivityFilters } from "./activity-filters";
 import { ActivityHeatmap, buildHeatmapDays, computeStreaks } from "./activity-heatmap";
 import { ActivityIcon } from "./activity-icon";
 import { ActivityListView, type ActivityRow } from "./activity-list-view";
+import { CollapsibleSection } from "./collapsible-section";
 import { GoalProgress } from "./goal-progress";
 import { HealthSummary } from "./health-summary";
 import { MonthHighlights } from "./month-highlights";
@@ -339,6 +340,7 @@ export default async function DashboardPage({
         ))}
       </div>
 
+      <h2 className="mb-3 text-sm font-medium text-neutral-400">สรุปกิจกรรมทั้งหมด</h2>
       <div className="mb-6 grid grid-cols-3 gap-3">
         {statCards.map((s) => (
           <div
@@ -369,52 +371,53 @@ export default async function DashboardPage({
         supplementsTotal={activeSupplements.length}
       />
 
-      {thisMonthActivities.length > 0 && (
-        <div className="mb-6">
-          <MonthHighlights activities={thisMonthActivities} unit={unit} />
-        </div>
-      )}
+      <CollapsibleSection title="สถิติและแนวโน้มเพิ่มเติม">
+        {thisMonthActivities.length > 0 && (
+          <div className="mb-6">
+            <MonthHighlights activities={thisMonthActivities} unit={unit} />
+          </div>
+        )}
 
-      {typeShares.length > 1 && (
-        <div className="mb-6">
-          <TypeBreakdown items={typeShares} />
-        </div>
-      )}
+        {typeShares.length > 1 && (
+          <div className="mb-6">
+            <TypeBreakdown items={typeShares} />
+          </div>
+        )}
 
-      {user?.monthlyGoalKm && (
+        {user?.monthlyGoalKm && (
+          <div className="mb-6">
+            <GoalProgress
+              thisMonthDistanceMeters={thisMonthAgg._sum.distanceMeters ?? 0}
+              goalKm={user.monthlyGoalKm}
+              unit={unit}
+            />
+          </div>
+        )}
+
         <div className="mb-6">
-          <GoalProgress
-            thisMonthDistanceMeters={thisMonthAgg._sum.distanceMeters ?? 0}
-            goalKm={user.monthlyGoalKm}
+          <PeriodComparison
+            thisMonth={{
+              count: thisMonthAgg._count._all,
+              distanceMeters: thisMonthAgg._sum.distanceMeters ?? 0,
+              durationSec: thisMonthAgg._sum.durationSec ?? 0,
+            }}
+            lastMonth={{
+              count: lastMonthAgg._count._all,
+              distanceMeters: lastMonthAgg._sum.distanceMeters ?? 0,
+              durationSec: lastMonthAgg._sum.durationSec ?? 0,
+            }}
             unit={unit}
           />
         </div>
-      )}
 
-      <div className="mb-6">
-        <PeriodComparison
-          thisMonth={{
-            count: thisMonthAgg._count._all,
-            distanceMeters: thisMonthAgg._sum.distanceMeters ?? 0,
-            durationSec: thisMonthAgg._sum.durationSec ?? 0,
-          }}
-          lastMonth={{
-            count: lastMonthAgg._count._all,
-            distanceMeters: lastMonthAgg._sum.distanceMeters ?? 0,
-            durationSec: lastMonthAgg._sum.durationSec ?? 0,
-          }}
-          unit={unit}
-        />
-      </div>
+        <div className="mb-6">
+          <TrendChart weeks={weeklyBuckets} />
+        </div>
 
-      <div className="mb-6">
-        <TrendChart weeks={weeklyBuckets} />
-      </div>
-
-      <div className="mb-8">
         <ActivityHeatmap days={heatmapDays} streaks={streaks} />
-      </div>
+      </CollapsibleSection>
 
+      <h2 className="mb-4 text-sm font-medium text-neutral-400">กิจกรรมล่าสุด</h2>
       <ActivityFilters types={activityTypes.map((t) => t.type)} />
 
       {activities.length === 0 ? (

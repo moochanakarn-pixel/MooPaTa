@@ -370,16 +370,34 @@ export function FoodLogView({
         )}
 
         {totals.hasMicronutrients && (
-          <div className="mt-3 flex justify-center gap-4 border-t border-neutral-800 pt-3 text-xs text-neutral-500">
-            <span>
-              น้ำตาล <span className="font-medium text-neutral-300">{Math.round(totals.sugarG)}</span> ก.
-            </span>
-            <span>
-              โซเดียม <span className="font-medium text-neutral-300">{Math.round(totals.sodiumMg)}</span> มก.
-            </span>
-            <span>
-              ไฟเบอร์ <span className="font-medium text-neutral-300">{Math.round(totals.fiberG)}</span> ก.
-            </span>
+          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-neutral-800 pt-4">
+            <div className="flex flex-col items-center gap-1 rounded-xl bg-neutral-900/60 py-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/10 text-amber-400">
+                <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                  <path d="M12 3c2.5 3.2 6 7.5 6 11.2a6 6 0 0 1-12 0C6 10.5 9.5 6.2 12 3Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.sugarG)} ก.</p>
+              <p className="text-[11px] text-neutral-500">น้ำตาล</p>
+            </div>
+            <div className="flex flex-col items-center gap-1 rounded-xl bg-neutral-900/60 py-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-500/10 text-sky-400">
+                <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                  <path d="M4 10h16M6 10l1.5 8.5A2 2 0 0 0 9.47 20h5.06a2 2 0 0 0 1.97-1.5L18 10M9 6.5c0-1.4 1.3-2.5 3-2.5s3 1.1 3 2.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.sodiumMg)} มก.</p>
+              <p className="text-[11px] text-neutral-500">โซเดียม</p>
+            </div>
+            <div className="flex flex-col items-center gap-1 rounded-xl bg-neutral-900/60 py-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
+                <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5">
+                  <path d="M12 21c-4-1-7-5-7-10 0-3 2-6 7-8 5 2 7 5 7 8 0 5-3 9-7 10Zm0-14v14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.fiberG)} ก.</p>
+              <p className="text-[11px] text-neutral-500">ไฟเบอร์</p>
+            </div>
           </div>
         )}
 

@@ -115,6 +115,32 @@ export function computeTargets(p: NutritionProfile): NutritionTargets {
   };
 }
 
+export type BmiCategory = "UNDER" | "NORMAL" | "OVER" | "OBESE1" | "OBESE2";
+
+export const BMI_CATEGORY_LABEL: Record<BmiCategory, string> = {
+  UNDER: "น้ำหนักน้อยกว่าเกณฑ์",
+  NORMAL: "น้ำหนักปกติ",
+  OVER: "น้ำหนักเกิน",
+  OBESE1: "อ้วนระดับ 1",
+  OBESE2: "อ้วนระดับ 2",
+};
+
+// Asian-Pacific BMI cutoffs (WHO/Thai Ministry of Public Health guidance) —
+// lower thresholds than the Western WHO standard, which is what a Thai
+// audience expects "ปกติ/เกิน/อ้วน" to mean.
+export function computeBmi(weightKg: number, heightCm: number): number {
+  const heightM = heightCm / 100;
+  return weightKg / (heightM * heightM);
+}
+
+export function bmiCategory(bmi: number): BmiCategory {
+  if (bmi < 18.5) return "UNDER";
+  if (bmi < 23) return "NORMAL";
+  if (bmi < 25) return "OVER";
+  if (bmi < 30) return "OBESE1";
+  return "OBESE2";
+}
+
 // Bumps the base water goal on days with logged exercise — roughly 500ml
 // per 30 minutes of activity, capped so one very long day doesn't push the
 // recommendation somewhere unreasonable.

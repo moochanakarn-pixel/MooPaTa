@@ -11,12 +11,51 @@ export interface WaterLogEntry {
 }
 
 const QUICK_ADD_ML = [250, 350, 500];
+const GLASS_ML = 250;
+const MIN_GLASSES = 4;
+const MAX_GLASSES = 14;
 
-function ProgressBar({ ml, targetMl }: { ml: number; targetMl: number }) {
-  const pct = targetMl > 0 ? Math.min((ml / targetMl) * 100, 100) : 0;
+function WaterGlass({ fillPct, tappable, onTap }: { fillPct: number; tappable: boolean; onTap?: () => void }) {
+  const Tag = tappable ? "button" : "div";
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
-      <div className="h-full rounded-full bg-cyan-500" style={{ width: `${pct}%` }} />
+    <Tag
+      onClick={tappable ? onTap : undefined}
+      title={tappable ? `เติม ${GLASS_ML} มล.` : undefined}
+      className={`relative h-11 w-7 flex-none overflow-hidden rounded-b-xl rounded-t-md border-2 transition ${
+        fillPct > 0 ? "border-cyan-600/50" : "border-neutral-700"
+      } ${tappable ? "cursor-pointer hover:border-cyan-500" : ""}`}
+    >
+      <div
+        className="absolute inset-x-0 bottom-0 bg-gradient-to-b from-cyan-400 to-cyan-600 transition-all"
+        style={{ height: `${fillPct}%` }}
+      />
+    </Tag>
+  );
+}
+
+// Kalguroo-style row of glasses: each one represents a standard 250ml
+// serving, filled bottom-up by today's total — tapping the next empty
+// glass is a one-tap way to log exactly that serving, same amount the
+// +250 quick-add button below does.
+function WaterGlasses({ totalMl, targetMl, onAddGlass, disabled }: { totalMl: number; targetMl: number | null; onAddGlass: () => void; disabled: boolean }) {
+  const glassCount = Math.min(Math.max(Math.ceil((targetMl ?? 2000) / GLASS_ML), MIN_GLASSES), MAX_GLASSES);
+  const filledGlasses = Math.floor(totalMl / GLASS_ML);
+  const partialPct = ((totalMl % GLASS_ML) / GLASS_ML) * 100;
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {Array.from({ length: glassCount }, (_, i) => {
+        const fillPct = i < filledGlasses ? 100 : i === filledGlasses ? partialPct : 0;
+        const isNextEmptySlot = i === filledGlasses && fillPct === 0;
+        return (
+          <WaterGlass
+            key={i}
+            fillPct={fillPct}
+            tappable={!disabled && isNextEmptySlot}
+            onTap={onAddGlass}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -87,7 +126,9 @@ export function WaterLogCard({
         {targetMl && <span className="text-lg font-medium text-neutral-500"> / {(targetMl / 1000).toFixed(1)} ลิตร</span>}
         {!targetMl && <span className="text-lg font-medium text-neutral-500"> ลิตร</span>}
       </p>
-      {targetMl && <div className="mb-4"><ProgressBar ml={totalMl} targetMl={targetMl} /></div>}
+      <div className="mb-4">
+        <WaterGlasses totalMl={totalMl} targetMl={targetMl} onAddGlass={() => addWater(GLASS_ML)} disabled={adding !== null} />
+      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         {QUICK_ADD_ML.map((ml) => (

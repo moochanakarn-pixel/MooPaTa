@@ -4,7 +4,17 @@ import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { formatDuration } from "@/lib/format";
 import { macrosForGrams } from "@/lib/food";
-import { applyActivityBonus, computeTargets, isProfileComplete, GOAL_LABEL, ACTIVITY_LEVEL_LABEL } from "@/lib/nutrition";
+import {
+  applyActivityBonus,
+  computeTargets,
+  isProfileComplete,
+  GOAL_LABEL,
+  ACTIVITY_LEVEL_LABEL,
+  computeBmi,
+  bmiCategory,
+  BMI_CATEGORY_LABEL,
+  type BmiCategory,
+} from "@/lib/nutrition";
 import { WeightLogCard, type WeightLogEntry } from "./weight-log-card";
 import { CalorieTrendChart, type CalorieDayBucket } from "./calorie-trend-chart";
 import { CalorieRing } from "./calorie-ring";
@@ -17,6 +27,24 @@ const TREND_DAYS = 14;
 // clock considers "today" for it, consistent with the rest of the app.
 function dayKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+const BMI_BADGE_STYLE: Record<BmiCategory, string> = {
+  UNDER: "bg-sky-500/10 text-sky-400",
+  NORMAL: "bg-lime-500/10 text-lime-400",
+  OVER: "bg-amber-500/10 text-amber-400",
+  OBESE1: "bg-orange-500/10 text-orange-400",
+  OBESE2: "bg-red-500/10 text-red-400",
+};
+
+function BmiBadge({ weightKg, heightCm }: { weightKg: number; heightCm: number }) {
+  const bmi = computeBmi(weightKg, heightCm);
+  const category = bmiCategory(bmi);
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${BMI_BADGE_STYLE[category]}`}>
+      BMI {bmi.toFixed(1)} · {BMI_CATEGORY_LABEL[category]}
+    </span>
+  );
 }
 
 function MacroBar({ proteinG, carbG, fatG }: { proteinG: number; carbG: number; fatG: number }) {
@@ -175,7 +203,10 @@ export default async function NutritionPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
       {backLink}
-      <h1 className="mb-1 text-xl font-bold">โภชนาการ</h1>
+      <div className="mb-1 flex flex-wrap items-center gap-2">
+        <h1 className="text-xl font-bold">โภชนาการ</h1>
+        <BmiBadge weightKg={profile.weightKg} heightCm={profile.heightCm} />
+      </div>
       <p className="mb-8 text-sm text-neutral-500">
         {GOAL_LABEL[user.nutritionGoal]} · {ACTIVITY_LEVEL_LABEL[profile.activityLevel]} ·{" "}
         <Link href="/dashboard/settings" className="text-neutral-400 hover:text-neutral-200 hover:underline">
