@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
-import { buildDayCounts, computeStreak } from "@/lib/streak";
+import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
 import { FoodLogView, type DailyTargets, type FavoriteFood, type PersonalFood, type TodayLogEntry } from "./food-log-view";
 import { LoggingStreakCard, type StreakWeekDay } from "./logging-streak-card";
 import { WaterLogCard, type WaterLogEntry } from "./water-log-card";
@@ -54,8 +54,8 @@ export default async function FoodPage() {
   const streakWeekDays: StreakWeekDay[] = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
     d.setDate(d.getDate() + i);
-    const key = d.toISOString().slice(0, 10);
-    return { dayOfMonth: d.getDate(), isToday: key === todayStart.toISOString().slice(0, 10), logged: foodLoggedByDate.has(key) };
+    const key = localDateKey(d);
+    return { dayOfMonth: d.getDate(), isToday: key === localDateKey(todayStart), logged: foodLoggedByDate.has(key) };
   });
 
   const todayLogs: TodayLogEntry[] = todayLogRows.map((l) => {

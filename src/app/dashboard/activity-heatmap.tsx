@@ -1,3 +1,5 @@
+import { localDateKey } from "@/lib/streak";
+
 export interface HeatmapDay {
   date: string; // YYYY-MM-DD
   km: number;
@@ -18,9 +20,7 @@ export function buildHeatmapDays(rows: { startedAt: Date; distanceMeters: number
 
   const byDay = new Map<string, { km: number; count: number }>();
   for (const row of rows) {
-    const d = new Date(row.startedAt);
-    d.setHours(0, 0, 0, 0);
-    const key = d.toISOString().slice(0, 10);
+    const key = localDateKey(row.startedAt);
     const entry = byDay.get(key) ?? { km: 0, count: 0 };
     entry.km += (row.distanceMeters ?? 0) / 1000;
     entry.count += 1;
@@ -30,7 +30,7 @@ export function buildHeatmapDays(rows: { startedAt: Date; distanceMeters: number
   const days: HeatmapDay[] = [];
   const cursor = new Date(start);
   while (cursor <= today) {
-    const key = cursor.toISOString().slice(0, 10);
+    const key = localDateKey(cursor);
     const entry = byDay.get(key);
     days.push({ date: key, km: entry?.km ?? 0, count: entry?.count ?? 0 });
     cursor.setDate(cursor.getDate() + 1);

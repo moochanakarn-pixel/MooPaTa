@@ -3,6 +3,17 @@ export interface DayCount {
   count: number;
 }
 
+// A LOCAL calendar-day key. Deliberately NOT `date.toISOString().slice(0,
+// 10)` — the server runs with TZ=Asia/Bangkok (UTC+7, see DEPLOY.md), so a
+// Date at local midnight is still the previous day in UTC, and
+// toISOString() would silently key every day-bucket one day early.
+export function localDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 // Buckets a list of timestamps into a full daily grid ending today, ready
 // for computeStreak() or a weekday-picker strip — same shape as the
 // activity heatmap's day buckets, just generic over any kind of log.
@@ -14,16 +25,14 @@ export function buildDayCounts(dates: Date[], daysBack: number): DayCount[] {
 
   const byDay = new Map<string, number>();
   for (const d of dates) {
-    const day = new Date(d);
-    day.setHours(0, 0, 0, 0);
-    const key = day.toISOString().slice(0, 10);
+    const key = localDateKey(d);
     byDay.set(key, (byDay.get(key) ?? 0) + 1);
   }
 
   const days: DayCount[] = [];
   const cursor = new Date(start);
   while (cursor <= today) {
-    const key = cursor.toISOString().slice(0, 10);
+    const key = localDateKey(cursor);
     days.push({ date: key, count: byDay.get(key) ?? 0 });
     cursor.setDate(cursor.getDate() + 1);
   }
