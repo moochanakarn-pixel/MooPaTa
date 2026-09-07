@@ -66,7 +66,6 @@ const MEAL_TYPE_OPTIONS = ["", "BREAKFAST", "LUNCH", "DINNER", "SNACK"].map((val
   value,
   label: MEAL_TYPE_LABEL[value],
 }));
-const MEAL_GROUP_ORDER = ["BREAKFAST", "LUNCH", "DINNER", "SNACK", ""] as const;
 
 // A reasonable starting guess so most people don't have to touch the meal
 // selector at all — still just a default, freely overridable.
@@ -236,25 +235,6 @@ export function FoodLogView({
       }
     : undefined;
 
-  // The four real meal types always get their own section (with its own
-  // "+" button) even with nothing logged yet — matching the reference
-  // app's per-meal layout instead of only showing sections that already
-  // have something in them. "ไม่ระบุมื้อ" only shows up when it actually
-  // has entries (old data from before meal type was tracked), since there's
-  // no meaningful "+" action for a non-meal.
-  const mealGroups = useMemo(() => {
-    const byKey = new Map<string, TodayLogEntry[]>();
-    for (const l of todayLogs) {
-      const key = l.mealType ?? "";
-      if (!byKey.has(key)) byKey.set(key, []);
-      byKey.get(key)!.push(l);
-    }
-    return MEAL_GROUP_ORDER.filter((key) => key !== "" || byKey.has(key)).map((key) => {
-      const entries = byKey.get(key) ?? [];
-      return { key, entries, calories: entries.reduce((sum, l) => sum + l.calories, 0) };
-    });
-  }, [todayLogs]);
-
   // Once the user has started typing custom macros, the portion they typed
   // them for must stay fixed — editing grams afterward would silently
   // rescale the per-100g values stored for reuse without changing what was
@@ -291,13 +271,6 @@ export function FoodLogView({
       .sort((a, b) => b.proteinG - a.proteinG)
       .slice(0, 6);
   }, [remainingCalories, usingFavorites, favoriteFoods]);
-
-  function openAddForMeal(meal: string) {
-    setMealType(meal);
-    setQuery("");
-    setPending(null);
-    setShowAdd(true);
-  }
 
   function pickPersonal(food: PersonalFood) {
     setShowAdd(true);
@@ -665,65 +638,42 @@ export function FoodLogView({
 
       {deleteError && <p className="mb-2 text-xs text-red-400">{deleteError}</p>}
 
-      <div className="space-y-5">
-        {mealGroups.map((group) => (
-          <div key={group.key}>
-            <div className="mb-2 flex items-center justify-between px-1">
-              <h3 className="text-sm font-medium text-neutral-400">{MEAL_TYPE_LABEL[group.key]}</h3>
-              <div className="flex items-center gap-2">
-                {group.entries.length > 0 && <span className="text-xs text-neutral-600">{Math.round(group.calories)} kcal</span>}
-                {group.key !== "" && (
-                  <button
-                    onClick={() => openAddForMeal(group.key)}
-                    title={`เพิ่มอาหาร${MEAL_TYPE_LABEL[group.key]}`}
-                    className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-neutral-700 text-neutral-400 transition hover:border-[#fc4c02] hover:text-[#fc4c02]"
-                  >
-                    <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5">
-                      <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                )}
+      {todayLogs.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-neutral-800 px-5 py-3 text-center text-xs text-neutral-600">
+          ยังไม่ได้บันทึก
+        </p>
+      ) : (
+        <ul className="space-y-2.5">
+          {todayLogs.map((l) => (
+            <li
+              key={l.id}
+              className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-5 py-4"
+            >
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 truncate text-sm font-medium text-neutral-200">
+                  <span className="truncate">{l.foodName}</span>
+                  {healthFlags.highUricAcid && matchesPurineKeyword(l.foodName) && (
+                    <span
+                      title="มีพิวรีนสูง — ระวังถ้ากรดยูริกสูง"
+                      className="flex-none rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-400"
+                    >
+                      พิวรีนสูง
+                    </span>
+                  )}
+                </p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  {Math.round(l.grams)} ก. · {Math.round(l.calories)} kcal
+                </p>
               </div>
-            </div>
-            {group.entries.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-neutral-800 px-5 py-3 text-center text-xs text-neutral-600">
-                ยังไม่ได้บันทึก
-              </p>
-            ) : (
-              <ul className="space-y-2.5">
-                {group.entries.map((l) => (
-                  <li
-                    key={l.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-5 py-4"
-                  >
-                    <div className="min-w-0">
-                      <p className="flex items-center gap-1.5 truncate text-sm font-medium text-neutral-200">
-                        <span className="truncate">{l.foodName}</span>
-                        {healthFlags.highUricAcid && matchesPurineKeyword(l.foodName) && (
-                          <span
-                            title="มีพิวรีนสูง — ระวังถ้ากรดยูริกสูง"
-                            className="flex-none rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-400"
-                          >
-                            พิวรีนสูง
-                          </span>
-                        )}
-                      </p>
-                      <p className="mt-1 text-xs text-neutral-500">
-                        {Math.round(l.grams)} ก. · {Math.round(l.calories)} kcal
-                      </p>
-                    </div>
-                    <button onClick={() => deleteLog(l.id)} className="flex-none text-neutral-600 hover:text-red-400" title="ลบ">
-                      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-                        <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                      </svg>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ))}
-      </div>
+              <button onClick={() => deleteLog(l.id)} className="flex-none text-neutral-600 hover:text-red-400" title="ลบ">
+                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                  <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
