@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "MooPaTa",
     short_name: "MooPaTa",
-    description: "รวมข้อมูลการออกกำลังกายจาก Strava และ Huawei Health ไว้ที่เดียว",
+    description: "รวมข้อมูลการออกกำลังกายจาก Strava ไว้ที่เดียว",
     start_url: "/dashboard",
     display: "standalone",
     background_color: "#f5efe1",

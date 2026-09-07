@@ -51,7 +51,7 @@ export default async function HomePage({
         <div className="space-y-3">
           <h1 className="text-4xl font-extrabold tracking-tight">MooPaTa</h1>
           <p className="text-balance text-neutral-400">
-            รวมข้อมูลการออกกำลังกายจาก Strava และ Huawei Health ไว้ที่เดียว
+            รวมข้อมูลการออกกำลังกายจาก Strava ไว้ที่เดียว
           </p>
         </div>
 
@@ -95,17 +95,6 @@ export default async function HomePage({
               <path d="M7 4l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </a>
-
-          <button
-            disabled
-            title="กำลังรออนุมัติจาก Huawei Developers"
-            className="flex cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-neutral-800 bg-neutral-900/60 px-6 py-3.5 font-semibold text-neutral-500"
-          >
-            เชื่อมต่อกับ Huawei Health
-            <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-[11px] font-medium text-neutral-400">
-              เร็วๆ นี้
-            </span>
-          </button>
         </div>
       </div>
 

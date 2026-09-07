@@ -39,9 +39,9 @@ function parseExercises(value: unknown): ParsedExercise[] | null {
 }
 
 // Optional fields beyond duration — a phone/watch app that recorded the
-// session (e.g. Huawei Health, when its own auto-share to Strava doesn't
-// cover a given sport mode) usually shows these, so letting them be copied
-// in here makes a manually-logged activity as complete as a synced one.
+// session (when its own auto-share to Strava doesn't cover a given sport
+// mode) usually shows these, so letting them be copied in here makes a
+// manually-logged activity as complete as a synced one.
 function optionalNonNegative(value: unknown): number | null {
   const n = Number(value);
   return typeof value === "number" || (typeof value === "string" && value.trim() !== "")

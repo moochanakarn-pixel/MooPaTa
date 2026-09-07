@@ -166,7 +166,7 @@ export function LogActivityForm() {
 
       <div className="border-t border-neutral-800 pt-4">
         <p className="mb-3 text-xs text-neutral-500">
-          ข้อมูลเพิ่มเติม (ไม่บังคับ) — คัดลอกจากแอพนาฬิกา/สายรัดที่บันทึกไว้ได้ เช่น Huawei Health
+          ข้อมูลเพิ่มเติม (ไม่บังคับ) — คัดลอกจากแอพนาฬิกา/สายรัดที่บันทึกไว้ได้
         </p>
         <div className="grid grid-cols-2 gap-3">
           <div>

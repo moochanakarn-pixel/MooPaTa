@@ -15,7 +15,7 @@ export default function TermsPage() {
         <section>
           <h2 className="mb-2 font-semibold text-white">เกี่ยวกับบริการ</h2>
           <p>
-            MooPaTa เป็นโปรเจกต์ส่วนบุคคลที่รวมข้อมูลการออกกำลังกายจาก Strava (และในอนาคตคือ Huawei Health) มาแสดงผลในที่เดียว
+            MooPaTa เป็นโปรเจกต์ส่วนบุคคลที่รวมข้อมูลการออกกำลังกายจาก Strava มาแสดงผลในที่เดียว
             ให้บริการ &quot;ตามสภาพ&quot; (as-is) ไม่มีการรับประกันความถูกต้อง ความต่อเนื่อง หรือความพร้อมใช้งานของบริการ
           </p>
         </section>

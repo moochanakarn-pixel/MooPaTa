@@ -65,7 +65,6 @@ model User {
 
 enum Provider {
   STRAVA
-  HUAWEI_HEALTH
   MANUAL // hand-logged activity, e.g. football/badminton — Strava doesn't track these
 }
 
@@ -164,7 +163,7 @@ enum MealType {
 model ProviderConnection {
   id                String    @id @default(cuid())
   provider          Provider
-  providerAccountId String // athlete id / huawei union id, etc.
+  providerAccountId String // Strava athlete id
   accessTokenEnc    String    @db.Text
   refreshTokenEnc   String    @db.Text
   expiresAt         DateTime

@@ -1,6 +1,6 @@
 # MooPaTa
 
-เว็บแอพรวมข้อมูลการออกกำลังกายจากแอพฟิตเนสหลายแหล่งไว้ที่เดียว เริ่มจาก **Strava** (ใช้งานได้แล้ว) และ **Huawei Health** (รอ Health Kit ได้รับอนุมัติ)
+เว็บแอพรวมข้อมูลการออกกำลังกายจาก **Strava** ไว้ที่เดียว
 
 ## สถาปัตยกรรมคร่าวๆ
 
@@ -8,7 +8,7 @@
 - **MySQL** ผ่าน **Prisma ORM** — เก็บผู้ใช้, token ของแต่ละ provider (เข้ารหัสด้วย AES-256-GCM), และ activity ที่ normalize เป็น schema กลางแล้ว
 - Login ทำผ่าน "Login with Strava" (OAuth2) โดยตรง ไม่มีระบบสมัครสมาชิกแยก — เชื่อม Strava ครั้งแรกคือการสร้างบัญชี
 - Session เก็บเป็น JWT ใน httpOnly cookie (เซ็นด้วย `SESSION_SECRET`)
-- โครง provider adapter (`src/lib/providers/*.ts`) ออกแบบให้ทุก provider คืนข้อมูลรูปแบบเดียวกัน (`NormalizedActivity`) เพื่อให้ต่อ Huawei Health เข้ามาทีหลังโดยไม่ต้องแก้ dashboard/DB schema
+- โครง provider adapter (`src/lib/providers/*.ts`) ให้ Strava คืนข้อมูลผ่าน type กลาง (`NormalizedActivity`) แยกจาก dashboard/DB schema
 
 ## เริ่มต้นใช้งาน (local dev)
 
@@ -75,7 +75,6 @@ prisma/schema.prisma              โมเดล User / ProviderConnection / Ac
 src/lib/crypto.ts                 เข้ารหัส/ถอดรหัส token ด้วย AES-256-GCM
 src/lib/session.ts                สร้าง/ตรวจสอบ session cookie (JWT)
 src/lib/providers/strava.ts       OAuth2 + REST client ของ Strava
-src/lib/providers/huawei.ts       placeholder รอ Huawei Health Kit อนุมัติ
 src/app/api/auth/strava/connect   redirect ไปหน้า authorize ของ Strava
 src/app/api/auth/strava/callback  รับ code, แลก token, สร้าง/ล็อกอิน user
 src/app/api/sync/strava           ดึง activity ใหม่จาก Strava มา upsert ลง DB
@@ -84,7 +83,6 @@ src/app/dashboard                 หน้าแสดงรายการ act
 
 ## ขั้นต่อไป
 
-1. **Huawei Health** — สมัคร Health Kit ที่ HUAWEI Developers (ต้องรออนุมัติ, sandbox จำกัด 100 ผู้ใช้) แล้ว implement `src/lib/providers/huawei.ts` ให้มีรูปแบบเดียวกับ `strava.ts` จากนั้นเพิ่ม branch `HUAWEI_HEALTH` ในหน้า connect/callback/sync
-2. **Auto sync** — ตั้ง cron (เช่น Vercel Cron หรือ node-cron) เรียก sync ให้ทุกผู้ใช้ที่เชื่อมต่อไว้เป็นระยะ หรือใช้ Strava webhook (push แจ้งเมื่อมี activity ใหม่) แทนการ poll
-3. **Rate limit ของ Strava** — ค่าเริ่มต้นจำกัดที่ 200 requests/15 นาที และ 2,000/วัน ต่อแอพ ถ้าผู้ใช้เยอะขึ้นต้องขอเพิ่มผ่าน Strava Developer Program
-4. **Dashboard/สถิติเพิ่มเติม** — ต่อยอดจาก `Activity` table ที่ normalize ไว้แล้ว เช่น กราฟระยะทางรายสัปดาห์, เปรียบเทียบ provider
+1. **Auto sync** — ตั้ง cron (เช่น Vercel Cron หรือ node-cron) เรียก sync ให้ทุกผู้ใช้ที่เชื่อมต่อไว้เป็นระยะ หรือใช้ Strava webhook (push แจ้งเมื่อมี activity ใหม่) แทนการ poll
+2. **Rate limit ของ Strava** — ค่าเริ่มต้นจำกัดที่ 200 requests/15 นาที และ 2,000/วัน ต่อแอพ ถ้าผู้ใช้เยอะขึ้นต้องขอเพิ่มผ่าน Strava Developer Program
+3. **Dashboard/สถิติเพิ่มเติม** — ต่อยอดจาก `Activity` table ที่ normalize ไว้แล้ว เช่น กราฟระยะทางรายสัปดาห์เพิ่มเติม

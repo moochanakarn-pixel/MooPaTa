@@ -8,7 +8,7 @@ export interface HrZoneResult {
 
 // Standard 5-zone model as a percentage of max heart rate (Z1 < 60%, ...,
 // Z5 >= 90%). Simple and doesn't need per-user zone configuration, which
-// Strava/Huawei accounts here don't expose anyway.
+// Strava accounts here don't expose anyway.
 function zoneForHr(hr: number, hrMax: number): number {
   const pct = hr / hrMax;
   if (pct < 0.6) return 1;
