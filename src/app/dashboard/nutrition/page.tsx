@@ -13,6 +13,7 @@ import {
   computeBmi,
   bmiCategory,
   BMI_CATEGORY_LABEL,
+  BMI_CATEGORY_GUIDANCE,
   type BmiCategory,
 } from "@/lib/nutrition";
 import { WeightLogCard, type WeightLogEntry } from "./weight-log-card";
@@ -37,13 +38,32 @@ const BMI_BADGE_STYLE: Record<BmiCategory, string> = {
   OBESE2: "bg-red-500/10 text-red-400",
 };
 
-function BmiBadge({ weightKg, heightCm }: { weightKg: number; heightCm: number }) {
+// BMI is only meaningful across a limited real-world range — clamping the
+// gauge to 15-35 keeps the marker legible instead of pinned at an edge for
+// most people, same idea as Kalguroo's reference gauge.
+const BMI_GAUGE_MIN = 15;
+const BMI_GAUGE_MAX = 35;
+
+function BmiGauge({ weightKg, heightCm }: { weightKg: number; heightCm: number }) {
   const bmi = computeBmi(weightKg, heightCm);
   const category = bmiCategory(bmi);
+  const pct = Math.min(Math.max(((bmi - BMI_GAUGE_MIN) / (BMI_GAUGE_MAX - BMI_GAUGE_MIN)) * 100, 0), 100);
+
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${BMI_BADGE_STYLE[category]}`}>
-      BMI {bmi.toFixed(1)} · {BMI_CATEGORY_LABEL[category]}
-    </span>
+    <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+      <h2 className="mb-3 font-medium">BMI (ดัชนีมวลกาย)</h2>
+      <div className="mb-4 flex items-baseline gap-2">
+        <span className="text-3xl font-extrabold tabular-nums">{bmi.toFixed(1)}</span>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${BMI_BADGE_STYLE[category]}`}>{BMI_CATEGORY_LABEL[category]}</span>
+      </div>
+      <div className="relative mb-4 h-2 w-full rounded-full" style={{ background: "linear-gradient(to right, #38bdf8, #22c55e, #eab308, #f97316, #ef4444)" }}>
+        <div
+          className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-neutral-900 bg-white shadow"
+          style={{ left: `${pct}%` }}
+        />
+      </div>
+      <p className="text-xs text-neutral-500">{BMI_CATEGORY_GUIDANCE[category]}</p>
+    </div>
   );
 }
 
@@ -203,10 +223,7 @@ export default async function NutritionPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
       {backLink}
-      <div className="mb-1 flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-bold">โภชนาการ</h1>
-        <BmiBadge weightKg={profile.weightKg} heightCm={profile.heightCm} />
-      </div>
+      <h1 className="mb-1 text-xl font-bold">โภชนาการ</h1>
       <p className="mb-8 text-sm text-neutral-500">
         {GOAL_LABEL[user.nutritionGoal]} · {ACTIVITY_LEVEL_LABEL[profile.activityLevel]} ·{" "}
         <Link href="/dashboard/settings" className="text-neutral-400 hover:text-neutral-200 hover:underline">
@@ -222,6 +239,8 @@ export default async function NutritionPage() {
         </a>
       </p>
 
+      <BmiGauge weightKg={profile.weightKg} heightCm={profile.heightCm} />
+
       <WeightLogCard logs={weightLogs} />
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
@@ -234,6 +253,31 @@ export default async function NutritionPage() {
           <span>
             TDEE <span className="font-medium text-neutral-300">{targets.tdee.toLocaleString("th-TH")}</span> kcal
           </span>
+        </div>
+
+        <div className="mt-5 space-y-2 border-t border-neutral-800 pt-4 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-500">เป้าหมายพื้นฐาน</span>
+            <span className="font-medium text-neutral-200">{baseTargets.targetCalories.toLocaleString("th-TH")} kcal</span>
+          </div>
+          {targets.targetCalories > baseTargets.targetCalories && (
+            <div className="flex items-center justify-between">
+              <span className="text-neutral-500">เพิ่มจากกิจกรรมวันนี้</span>
+              <span className="font-medium text-emerald-400">
+                +{(targets.targetCalories - baseTargets.targetCalories).toLocaleString("th-TH")} kcal
+              </span>
+            </div>
+          )}
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-500">กินไปแล้ว</span>
+            <span className="font-medium text-neutral-200">{Math.round(todayCaloriesEaten).toLocaleString("th-TH")} kcal</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-neutral-500">เหลืออีก</span>
+            <span className={`font-semibold ${todayCaloriesEaten > targets.targetCalories ? "text-amber-400" : "text-lime-400"}`}>
+              {Math.round(targets.targetCalories - todayCaloriesEaten).toLocaleString("th-TH")} kcal
+            </span>
+          </div>
         </div>
       </div>
 

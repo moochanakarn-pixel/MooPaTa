@@ -109,6 +109,17 @@ const QUICK_ACTIONS = [
       />
     ),
   },
+  {
+    href: "/dashboard/nutrition",
+    label: "บันทึกน้ำหนัก",
+    color: "text-sky-400",
+    icon: (
+      <>
+        <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M10 6.5v3.8l2.6 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+  },
 ];
 
 // Fixed bottom navigation shared by every /dashboard/* page, matching the
@@ -130,7 +141,7 @@ export function BottomNav() {
             className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border-t border-neutral-800 bg-neutral-900 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
           >
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-neutral-700" />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {QUICK_ACTIONS.map((a) => (
                 <Link
                   key={a.href}

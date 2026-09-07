@@ -125,6 +125,14 @@ export const BMI_CATEGORY_LABEL: Record<BmiCategory, string> = {
   OBESE2: "อ้วนระดับ 2",
 };
 
+export const BMI_CATEGORY_GUIDANCE: Record<BmiCategory, string> = {
+  UNDER: "น้ำหนักของคุณต่ำกว่าเกณฑ์ — ลองเพิ่มแคลอรี่และโปรตีนให้พอเหมาะเพื่อเข้าเกณฑ์ปกติ",
+  NORMAL: "น้ำหนักของคุณอยู่ในเกณฑ์ปกติแล้ว รักษาระดับนี้ไว้ได้เลย",
+  OVER: "น้ำหนักของคุณเกินมาตรฐานเล็กน้อยแต่ลดได้ไม่ยาก ทำตามเป้าหมายที่ตั้งไว้ต่อไป",
+  OBESE1: "น้ำหนักของคุณเกินมาตรฐานพอสมควรแต่ลดได้ ไม่ต้องกังวล ทำตามเป้าหมายที่ตั้งไว้ต่อไป",
+  OBESE2: "น้ำหนักของคุณอยู่ในเกณฑ์อ้วน ควรปรึกษาแพทย์หรือผู้เชี่ยวชาญเพื่อวางแผนที่เหมาะสม",
+};
+
 // Asian-Pacific BMI cutoffs (WHO/Thai Ministry of Public Health guidance) —
 // lower thresholds than the Western WHO standard, which is what a Thai
 // audience expects "ปกติ/เกิน/อ้วน" to mean.
