@@ -60,15 +60,21 @@ function WaterGlasses({ totalMl, targetMl, onAddGlass, disabled }: { totalMl: nu
   );
 }
 
-// Quick-add water logging for today — same "today" context as FoodLogView,
-// kept as a separate component/API since water isn't a Food/FoodLog.
+// Quick-add water logging for the viewed day (today by default, or a
+// backfilled past day via the food page's date strip) — same "which day"
+// context as FoodLogView, kept as a separate component/API since water
+// isn't a Food/FoodLog.
 export function WaterLogCard({
   todayLogs,
   targetMl,
+  viewDate,
+  isToday,
   reminderSchedule,
 }: {
   todayLogs: WaterLogEntry[];
   targetMl: number | null;
+  viewDate: string;
+  isToday: boolean;
   reminderSchedule: WaterReminderSchedule;
 }) {
   const router = useRouter();
@@ -88,7 +94,7 @@ export function WaterLogCard({
     const res = await fetch("/api/water/log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ml }),
+      body: JSON.stringify({ ml, ...(isToday ? {} : { loggedAt: viewDate }) }),
     });
     setAdding(null);
     if (res.ok) {

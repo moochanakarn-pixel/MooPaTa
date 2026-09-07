@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
+import { parseBackfillLoggedAt } from "@/lib/streak";
 
 const SOURCES = ["CATALOG", "BARCODE", "CUSTOM"];
 const MEAL_TYPES = ["BREAKFAST", "LUNCH", "DINNER", "SNACK"];
@@ -37,6 +38,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_grams" }, { status: 400 });
   }
   const mealType = body.mealType && MEAL_TYPES.includes(body.mealType) ? body.mealType : null;
+  // Set when logging into a day other than today via the food page's date
+  // strip — see parseBackfillLoggedAt.
+  const loggedAt = parseBackfillLoggedAt(body.loggedAt);
+  if (loggedAt === null) {
+    return NextResponse.json({ error: "invalid_logged_at" }, { status: 400 });
+  }
 
   let foodId: string;
 
@@ -100,6 +107,6 @@ export async function POST(req: NextRequest) {
     foodId = food.id;
   }
 
-  const log = await db.foodLog.create({ data: { userId, foodId, grams, mealType } });
+  const log = await db.foodLog.create({ data: { userId, foodId, grams, mealType, ...(loggedAt ? { loggedAt } : {}) } });
   return NextResponse.json({ ok: true, id: log.id });
 }

@@ -5,37 +5,51 @@ import { getSessionUserId } from "@/lib/session";
 import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
 import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
+import { DateStrip } from "./date-strip";
 import { FoodLogView, type DailyTargets, type FavoriteFood, type PersonalFood, type TodayLogEntry } from "./food-log-view";
 import { LoggingStreakCard, type StreakWeekDay } from "./logging-streak-card";
 import { WaterLogCard, type WaterLogEntry } from "./water-log-card";
 
 const STREAK_DAYS_BACK = 60;
 
-export default async function FoodPage() {
+export default async function FoodPage({ searchParams }: { searchParams: { date?: string } }) {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
+  const todayDate = localDateKey(todayStart);
+
+  // The date strip lets you browse (and backfill into) any day this week
+  // or earlier — never the future. An invalid or future value just falls
+  // back to today rather than erroring, since it only ever comes from our
+  // own link/redirect, never a form a person fills in by hand.
+  const requestedDate = searchParams.date;
+  const viewDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && requestedDate <= todayDate ? requestedDate : todayDate;
+  const [vy, vm, vd] = viewDate.split("-").map(Number);
+  const viewDayStart = new Date(vy, vm - 1, vd);
+  const viewDayEnd = new Date(viewDayStart);
+  viewDayEnd.setDate(viewDayEnd.getDate() + 1);
+
   const streakSince = new Date(todayStart);
   streakSince.setDate(streakSince.getDate() - (STREAK_DAYS_BACK - 1));
 
-  const [user, todayLogRows, personalFoodRows, todayWaterRows, todayActivityAgg, foodStreakRows, weightStreakRows] = await Promise.all([
+  const [user, viewDayLogRows, personalFoodRows, viewDayWaterRows, viewDayActivityAgg, foodStreakRows, weightStreakRows] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.foodLog.findMany({
-      where: { userId, loggedAt: { gte: todayStart } },
+      where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } },
       orderBy: { loggedAt: "asc" },
       include: { food: true },
     }),
     db.food.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 200 }),
-    db.waterLog.findMany({ where: { userId, loggedAt: { gte: todayStart } }, orderBy: { loggedAt: "asc" } }),
-    db.activity.aggregate({ where: { userId, startedAt: { gte: todayStart } }, _sum: { durationSec: true } }),
+    db.waterLog.findMany({ where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } }, orderBy: { loggedAt: "asc" } }),
+    db.activity.aggregate({ where: { userId, startedAt: { gte: viewDayStart, lt: viewDayEnd } }, _sum: { durationSec: true } }),
     db.foodLog.findMany({ where: { userId, loggedAt: { gte: streakSince } }, select: { loggedAt: true } }),
     db.weightLog.findMany({ where: { userId, loggedAt: { gte: streakSince } }, select: { loggedAt: true } }),
   ]);
 
-  const activityDurationTodaySec = todayActivityAgg._sum.durationSec ?? 0;
-  const waterLogs: WaterLogEntry[] = todayWaterRows.map((w) => ({ id: w.id, ml: w.ml, loggedAtMs: w.loggedAt.getTime() }));
+  const activityDurationViewDaySec = viewDayActivityAgg._sum.durationSec ?? 0;
+  const waterLogs: WaterLogEntry[] = viewDayWaterRows.map((w) => ({ id: w.id, ml: w.ml, loggedAtMs: w.loggedAt.getTime() }));
 
   const foodStreakDays = buildDayCounts(
     foodStreakRows.map((r) => r.loggedAt),
@@ -55,10 +69,10 @@ export default async function FoodPage() {
     const d = new Date(weekStart);
     d.setDate(d.getDate() + i);
     const key = localDateKey(d);
-    return { dayOfMonth: d.getDate(), isToday: key === localDateKey(todayStart), logged: foodLoggedByDate.has(key) };
+    return { dayOfMonth: d.getDate(), isToday: key === todayDate, logged: foodLoggedByDate.has(key) };
   });
 
-  const todayLogs: TodayLogEntry[] = todayLogRows.map((l) => {
+  const todayLogs: TodayLogEntry[] = viewDayLogRows.map((l) => {
     const m = macrosForGrams(l.food, l.grams);
     return {
       id: l.id,
@@ -111,7 +125,7 @@ export default async function FoodPage() {
       goalRateKgPerWeek: user.goalRateKgPerWeek,
     };
     if (isProfileComplete(profile)) {
-      const t = applyActivityBonus(computeTargets(profile), activityDurationTodaySec);
+      const t = applyActivityBonus(computeTargets(profile), activityDurationViewDaySec);
       targets = {
         targetCalories: t.targetCalories,
         proteinG: t.proteinG,
@@ -147,7 +161,7 @@ export default async function FoodPage() {
           </Link>
         </div>
       </div>
-      <p className="mb-8 text-sm text-neutral-500">
+      <p className="mb-4 text-sm text-neutral-500">
         {targets ? (
           <>
             เทียบกับเป้าหมายที่หน้า{" "}
@@ -166,6 +180,8 @@ export default async function FoodPage() {
         )}
       </p>
 
+      <DateStrip selectedDate={viewDate} todayDate={todayDate} />
+
       <LoggingStreakCard
         currentStreak={foodStreak.current}
         longestFoodStreak={foodStreak.longest}
@@ -176,6 +192,8 @@ export default async function FoodPage() {
       <WaterLogCard
         todayLogs={waterLogs}
         targetMl={waterTargetMl}
+        viewDate={viewDate}
+        isToday={viewDate === todayDate}
         reminderSchedule={{
           start: user?.waterReminderStart ?? "09:00",
           end: user?.waterReminderEnd ?? "22:00",
@@ -188,6 +206,8 @@ export default async function FoodPage() {
         personalFoods={personalFoods}
         favoriteFoods={favoriteFoods}
         targets={targets}
+        viewDate={viewDate}
+        isToday={viewDate === todayDate}
         healthFlags={{
           highCholesterol: user?.healthFlagHighCholesterol ?? false,
           highUricAcid: user?.healthFlagHighUricAcid ?? false,

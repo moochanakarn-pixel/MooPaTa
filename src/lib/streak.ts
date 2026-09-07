@@ -14,6 +14,25 @@ export function localDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+// Validates an optional "YYYY-MM-DD" backfill date — sent when logging
+// food/water into a day other than today via the food page's date strip.
+// Returns:
+// - undefined if the field wasn't sent at all (caller should default to now())
+// - null if it was sent but isn't a valid, in-range date (caller should reject the request)
+// - otherwise a Date at local noon for that day, clear of any midnight DST/TZ edge case.
+export function parseBackfillLoggedAt(value: unknown): Date | null | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [y, m, d] = value.split("-").map(Number);
+  const date = new Date(y, m - 1, d, 12, 0, 0, 0);
+  if (Number.isNaN(date.getTime()) || date.getMonth() !== m - 1) return null; // rejects e.g. 2026-02-30
+  if (localDateKey(date) > localDateKey(new Date())) return null; // no backfilling into the future
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  if (date < oneYearAgo) return null;
+  return date;
+}
+
 // Buckets a list of timestamps into a full daily grid ending today, ready
 // for computeStreak() or a weekday-picker strip — same shape as the
 // activity heatmap's day buckets, just generic over any kind of log.

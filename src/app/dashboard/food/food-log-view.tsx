@@ -8,6 +8,7 @@ import { THAI_FOOD_CATALOG, type CatalogFood } from "@/lib/thai-food-catalog";
 import { DAILY_CHOLESTEROL_LIMIT_MG, matchesPurineKeyword } from "@/lib/health-flags";
 import { BarcodeScanner } from "./barcode-scanner";
 import { ImportMealPanel } from "./import-meal-panel";
+import { NutrientCarousel, type NutrientPage } from "./nutrient-carousel";
 
 export interface PersonalFood extends Per100g {
   id: string;
@@ -77,51 +78,21 @@ function guessMealType(): string {
   return "SNACK";
 }
 
-// Real (uncapped) percentage — 120% when over target, not clamped to 100 —
-// so "did I already go over, and by how much" is answerable at a glance,
-// same reason the number goes red instead of just the bar.
-function pctOf(eaten: number, target: number): number | null {
-  return target > 0 ? Math.round((eaten / target) * 100) : null;
-}
-
-function MacroChip({ label, eaten, target, color }: { label: string; eaten: number; target: number | null; color: string }) {
-  const pct = target !== null ? pctOf(eaten, target) : null;
-  const over = target !== null && eaten > target;
-  return (
-    <div className="rounded-lg border border-neutral-800/80 bg-neutral-900/40 px-3 py-2 text-center">
-      <p className="text-sm font-bold tabular-nums" style={{ color: over ? "#ef4444" : color }}>
-        {Math.round(eaten)}
-        {target !== null && <span className="font-normal text-neutral-500">/{Math.round(target)}</span>} ก.
-      </p>
-      <p className="text-[11px] text-neutral-500">
-        {label}
-        {pct !== null && <span className={over ? "text-red-400" : undefined}> · {pct}%</span>}
-      </p>
-    </div>
-  );
-}
-
-function ProgressBar({ eaten, target, color }: { eaten: number; target: number; color: string }) {
-  const pct = target > 0 ? Math.min((eaten / target) * 100, 100) : 0;
-  const over = target > 0 && eaten > target;
-  return (
-    <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
-      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: over ? "#ef4444" : color }} />
-    </div>
-  );
-}
-
 export function FoodLogView({
   todayLogs,
   personalFoods,
   favoriteFoods,
   targets,
+  viewDate,
+  isToday,
   healthFlags,
 }: {
   todayLogs: TodayLogEntry[];
   personalFoods: PersonalFood[];
   favoriteFoods: FavoriteFood[];
   targets: DailyTargets | null;
+  viewDate: string;
+  isToday: boolean;
   healthFlags: HealthFlags;
 }) {
   const router = useRouter();
@@ -168,6 +139,38 @@ export function FoodLogView({
     [todayLogs]
   );
 
+  const nutrientPages: NutrientPage[] = useMemo(
+    () => [
+      { key: "calories", label: "แคลอรี่", eaten: totals.calories, target: targets?.targetCalories ?? null, unit: "kcal", color: "#fc4c02" },
+      {
+        key: "protein",
+        label: "โปรตีน",
+        eaten: totals.proteinG,
+        target: targets?.proteinG ?? null,
+        unit: "ก.",
+        color: "#38bdf8",
+        bonusNote: targets && targets.proteinBonusG > 0 ? `รวมเป้าเพิ่มจากกิจกรรม +${targets.proteinBonusG} ก.` : undefined,
+      },
+      {
+        key: "carb",
+        label: "คาร์บ",
+        eaten: totals.carbG,
+        target: targets?.carbG ?? null,
+        unit: "ก.",
+        color: "#f59e0b",
+        bonusNote: targets && targets.carbBonusG > 0 ? `รวมเป้าเพิ่มจากกิจกรรม +${targets.carbBonusG} ก.` : undefined,
+      },
+      { key: "fat", label: "ไขมัน", eaten: totals.fatG, target: targets?.fatG ?? null, unit: "ก.", color: "#f43f5e" },
+    ],
+    [totals, targets]
+  );
+
+  // The four real meal types always get their own section (with its own
+  // "+" button) even with nothing logged yet — matching the reference
+  // app's per-meal layout instead of only showing sections that already
+  // have something in them. "ไม่ระบุมื้อ" only shows up when it actually
+  // has entries (old data from before meal type was tracked), since there's
+  // no meaningful "+" action for a non-meal.
   const mealGroups = useMemo(() => {
     const byKey = new Map<string, TodayLogEntry[]>();
     for (const l of todayLogs) {
@@ -175,8 +178,8 @@ export function FoodLogView({
       if (!byKey.has(key)) byKey.set(key, []);
       byKey.get(key)!.push(l);
     }
-    return MEAL_GROUP_ORDER.filter((key) => byKey.has(key)).map((key) => {
-      const entries = byKey.get(key)!;
+    return MEAL_GROUP_ORDER.filter((key) => key !== "" || byKey.has(key)).map((key) => {
+      const entries = byKey.get(key) ?? [];
       return { key, entries, calories: entries.reduce((sum, l) => sum + l.calories, 0) };
     });
   }, [todayLogs]);
@@ -217,6 +220,13 @@ export function FoodLogView({
       .sort((a, b) => b.proteinG - a.proteinG)
       .slice(0, 6);
   }, [remainingCalories, usingFavorites, favoriteFoods]);
+
+  function openAddForMeal(meal: string) {
+    setMealType(meal);
+    setQuery("");
+    setPending(null);
+    setShowAdd(true);
+  }
 
   function pickPersonal(food: PersonalFood) {
     setShowAdd(true);
@@ -305,6 +315,7 @@ export function FoodLogView({
       body = { food: { name: customName.trim(), ...per100g, source: "CUSTOM" }, grams };
     }
     body.mealType = mealType || null;
+    if (!isToday) body.loggedAt = viewDate;
 
     const res = await fetch("/api/food/log", {
       method: "POST",
@@ -335,37 +346,12 @@ export function FoodLogView({
   return (
     <div>
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-        <p className="text-xs text-neutral-500">กินไปวันนี้</p>
-        <p className="mb-1 text-3xl font-extrabold tracking-tight">
-          {Math.round(totals.calories).toLocaleString("th-TH")}
-          {targets && <span className="text-lg font-medium text-neutral-500"> / {targets.targetCalories.toLocaleString("th-TH")} kcal</span>}
-          {!targets && <span className="text-lg font-medium text-neutral-500"> kcal</span>}
-        </p>
-        {targets && (
-          <p className={`mb-3 text-xs ${totals.calories > targets.targetCalories ? "text-red-400" : "text-neutral-500"}`}>
-            {pctOf(totals.calories, targets.targetCalories)}% ของเป้าหมายวันนี้
-          </p>
-        )}
-        {targets && <ProgressBar eaten={totals.calories} target={targets.targetCalories} color="#fc4c02" />}
-
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <div>
-            <MacroChip label="โปรตีน" eaten={totals.proteinG} target={targets?.proteinG ?? null} color="#38bdf8" />
-            {targets && <div className="mt-1.5"><ProgressBar eaten={totals.proteinG} target={targets.proteinG} color="#38bdf8" /></div>}
-          </div>
-          <div>
-            <MacroChip label="คาร์บ" eaten={totals.carbG} target={targets?.carbG ?? null} color="#f59e0b" />
-            {targets && <div className="mt-1.5"><ProgressBar eaten={totals.carbG} target={targets.carbG} color="#f59e0b" /></div>}
-          </div>
-          <div>
-            <MacroChip label="ไขมัน" eaten={totals.fatG} target={targets?.fatG ?? null} color="#f43f5e" />
-            {targets && <div className="mt-1.5"><ProgressBar eaten={totals.fatG} target={targets.fatG} color="#f43f5e" /></div>}
-          </div>
-        </div>
-
-        {targets && (targets.carbBonusG > 0 || targets.proteinBonusG > 0) && (
-          <p className="mt-3 text-center text-[11px] text-neutral-600">
-            ปรับเป้าเพิ่มจากกิจกรรมวันนี้แล้ว: คาร์บ +{targets.carbBonusG} ก. · โปรตีน +{targets.proteinBonusG} ก.
+        <p className="mb-1 text-center text-xs text-neutral-500">{isToday ? "กินไปวันนี้" : "สรุปวันที่เลือก"}</p>
+        {targets ? (
+          <NutrientCarousel pages={nutrientPages} />
+        ) : (
+          <p className="py-6 text-center text-3xl font-extrabold tracking-tight">
+            {Math.round(totals.calories).toLocaleString("th-TH")} <span className="text-lg font-medium text-neutral-500">kcal</span>
           </p>
         )}
 
@@ -682,16 +668,31 @@ export function FoodLogView({
 
       {deleteError && <p className="mb-2 text-xs text-red-400">{deleteError}</p>}
 
-      {todayLogs.length === 0 ? (
-        <p className="py-8 text-center text-sm text-neutral-600">ยังไม่ได้บันทึกอาหารวันนี้</p>
-      ) : (
-        <div className="space-y-5">
-          {mealGroups.map((group) => (
-            <div key={group.key}>
-              <div className="mb-2 flex items-baseline justify-between px-1">
-                <h3 className="text-sm font-medium text-neutral-400">{MEAL_TYPE_LABEL[group.key]}</h3>
-                <span className="text-xs text-neutral-600">{Math.round(group.calories)} kcal</span>
+      <div className="space-y-5">
+        {mealGroups.map((group) => (
+          <div key={group.key}>
+            <div className="mb-2 flex items-center justify-between px-1">
+              <h3 className="text-sm font-medium text-neutral-400">{MEAL_TYPE_LABEL[group.key]}</h3>
+              <div className="flex items-center gap-2">
+                {group.entries.length > 0 && <span className="text-xs text-neutral-600">{Math.round(group.calories)} kcal</span>}
+                {group.key !== "" && (
+                  <button
+                    onClick={() => openAddForMeal(group.key)}
+                    title={`เพิ่มอาหาร${MEAL_TYPE_LABEL[group.key]}`}
+                    className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-neutral-700 text-neutral-400 transition hover:border-[#fc4c02] hover:text-[#fc4c02]"
+                  >
+                    <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5">
+                      <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                )}
               </div>
+            </div>
+            {group.entries.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-neutral-800 px-5 py-3 text-center text-xs text-neutral-600">
+                ยังไม่ได้บันทึก
+              </p>
+            ) : (
               <ul className="space-y-2.5">
                 {group.entries.map((l) => (
                   <li
@@ -722,10 +723,10 @@ export function FoodLogView({
                   </li>
                 ))}
               </ul>
-            </div>
-          ))}
-        </div>
-      )}
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
