@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MEAL_TYPE_LABEL } from "@/lib/food";
+import { GRAM_UNIT, MEAL_TYPE_LABEL } from "@/lib/food";
 import { parseMealText, type ParsedFoodRow } from "@/lib/meal-import-parse";
 
 const MEAL_TYPE_OPTIONS = ["", "BREAKFAST", "LUNCH", "DINNER", "SNACK"].map((value) => ({
@@ -101,6 +101,14 @@ export function ImportMealPanel({ onClose }: { onClose: () => void }) {
           throw new Error(`invalid_row:${r.name || "(ไม่มีชื่อ)"}`);
         }
         const ratio = 100 / grams;
+        // A row with no real weight column (r.hasRealGrams false — a
+        // supplement serving like "1 scoop of whey" is almost always given
+        // this way) stores its totals under grams=1 as an arbitrary
+        // denominator, not an actual gram. Without marking it unit-based
+        // here too, it'd carry the exact same 100x-inflated-looking per100g
+        // values as a manually-typed "1 ก." custom food (see food-log-view's
+        // gram/unit toggle) — editable, but showing something like "12000
+        // kcal ต่อ 100 ก." makes fixing it later needlessly confusing.
         const res = await fetch("/api/food/log", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -114,6 +122,7 @@ export function ImportMealPanel({ onClose }: { onClose: () => void }) {
               carbPer100g: (Number.isFinite(carbG) ? carbG : 0) * ratio,
               fatPer100g: (Number.isFinite(fatG) ? fatG : 0) * ratio,
               source: "CUSTOM",
+              unitLabel: r.hasRealGrams ? GRAM_UNIT : "หน่วย",
             },
           }),
         });
