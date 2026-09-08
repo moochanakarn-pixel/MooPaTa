@@ -188,10 +188,9 @@ export function FoodLogView({
     [totals, targets]
   );
 
-  // Micronutrients ride along as the carousel's last swipe instead of a
-  // separate static block below it — one continuous "swipe through
-  // everything today" gesture instead of a ring you swipe plus a grid you
-  // scroll to separately.
+  // Micronutrients render as a static block below the calorie/macro rings
+  // in NutrientOverview, rather than a separate section the user has to
+  // scroll to find.
   const micronutrientPage: CustomPage | undefined = totals.hasMicronutrients
     ? {
         key: "micronutrients",
