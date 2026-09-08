@@ -45,7 +45,7 @@ export default async function HomePage({
       <div className="flex w-full flex-col items-center gap-5 rounded-b-[2.5rem] bg-[#fc4c02] px-6 pb-12 pt-16 text-center shadow-lg shadow-orange-950/10">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/mascot-hero.png"
+          src="/icon-512.png"
           alt="MooPaTa"
           className="h-36 w-36 rounded-[1.75rem] ring-4 ring-white/25 drop-shadow-2xl"
         />
