@@ -153,6 +153,9 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-xl font-bold">บันทึกอาหาร</h1>
         <div className="flex items-center gap-3">
+          <Link href="/dashboard/food/history" className="text-xs text-neutral-500 transition hover:text-neutral-300">
+            ประวัติการกิน
+          </Link>
           <Link href="/dashboard/portion-guide" className="text-xs text-neutral-500 transition hover:text-neutral-300">
             กะปริมาณด้วยมือ
           </Link>

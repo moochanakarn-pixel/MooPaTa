@@ -108,6 +108,14 @@ export function FoodLogView({
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editGrams, setEditGrams] = useState("");
+  const [editMealType, setEditMealType] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [repeatingId, setRepeatingId] = useState<string | null>(null);
+  const [copyingDay, setCopyingDay] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
   // Starts unset (matches what the server renders) and is filled in by the
   // effect below right after mount — computing the time-of-day guess in the
   // initializer would run it once during SSR and again on the client, and
@@ -362,6 +370,77 @@ export function FoodLogView({
       router.refresh();
     } else {
       setDeleteError("ลบไม่สำเร็จ ลองใหม่อีกครั้ง");
+    }
+  }
+
+  function startEdit(l: TodayLogEntry) {
+    setEditingId(l.id);
+    setEditGrams(String(l.grams));
+    setEditMealType(l.mealType ?? "");
+    setEditError(null);
+  }
+
+  async function saveEdit(id: string) {
+    const grams = Number(editGrams);
+    if (!Number.isFinite(grams) || grams <= 0) {
+      setEditError("กรอกปริมาณ (กรัม) ให้ถูกต้อง");
+      return;
+    }
+    setEditError(null);
+    setEditSaving(true);
+    const res = await fetch(`/api/food/log/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ grams, mealType: editMealType || null }),
+    });
+    setEditSaving(false);
+    if (res.ok) {
+      setEditingId(null);
+      router.refresh();
+    } else {
+      setEditError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+    }
+  }
+
+  async function repeatLog(id: string) {
+    setDeleteError(null);
+    setRepeatingId(id);
+    const body: Record<string, unknown> = {};
+    if (!isToday) body.loggedAt = viewDate;
+    const res = await fetch(`/api/food/log/${id}/repeat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setRepeatingId(null);
+    if (res.ok) {
+      router.refresh();
+    } else {
+      setDeleteError("ทำซ้ำไม่สำเร็จ ลองใหม่อีกครั้ง");
+    }
+  }
+
+  function prevDateKey(dateKey: string): string {
+    const [y, m, d] = dateKey.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() - 1);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+  }
+
+  async function copyPreviousDay() {
+    setCopyError(null);
+    setCopyingDay(true);
+    const res = await fetch("/api/food/log/copy-day", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fromDate: prevDateKey(viewDate), toDate: viewDate }),
+    });
+    setCopyingDay(false);
+    if (res.ok) {
+      router.refresh();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setCopyError(data.error === "nothing_to_copy" ? "วันก่อนหน้าไม่มีข้อมูลให้คัดลอก" : "คัดลอกไม่สำเร็จ ลองใหม่อีกครั้ง");
     }
   }
 
@@ -639,39 +718,112 @@ export function FoodLogView({
       {deleteError && <p className="mb-2 text-xs text-red-400">{deleteError}</p>}
 
       {todayLogs.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-neutral-800 px-5 py-3 text-center text-xs text-neutral-600">
-          ยังไม่ได้บันทึก
-        </p>
+        <div className="rounded-xl border border-dashed border-neutral-800 px-5 py-4 text-center">
+          <p className="text-xs text-neutral-600">ยังไม่ได้บันทึก</p>
+          <button
+            onClick={copyPreviousDay}
+            disabled={copyingDay}
+            className="mt-2 text-xs text-lime-400 hover:underline disabled:opacity-50"
+          >
+            {copyingDay ? "กำลังคัดลอก..." : "คัดลอกจากวันก่อนหน้าทั้งหมด"}
+          </button>
+          {copyError && <p className="mt-1 text-xs text-red-400">{copyError}</p>}
+        </div>
       ) : (
         <ul className="space-y-2.5">
-          {todayLogs.map((l) => (
-            <li
-              key={l.id}
-              className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-5 py-4"
-            >
-              <div className="min-w-0">
-                <p className="flex items-center gap-1.5 truncate text-sm font-medium text-neutral-200">
-                  <span className="truncate">{l.foodName}</span>
-                  {healthFlags.highUricAcid && matchesPurineKeyword(l.foodName) && (
-                    <span
-                      title="มีพิวรีนสูง — ระวังถ้ากรดยูริกสูง"
-                      className="flex-none rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-400"
-                    >
-                      พิวรีนสูง
-                    </span>
-                  )}
-                </p>
-                <p className="mt-1 text-xs text-neutral-500">
-                  {Math.round(l.grams)} ก. · {Math.round(l.calories)} kcal
-                </p>
-              </div>
-              <button onClick={() => deleteLog(l.id)} className="flex-none text-neutral-600 hover:text-red-400" title="ลบ">
-                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-                  <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                </svg>
-              </button>
-            </li>
-          ))}
+          {todayLogs.map((l) =>
+            editingId === l.id ? (
+              <li key={l.id} className="rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-5 py-4">
+                <p className="mb-3 truncate text-sm font-medium text-neutral-200">{l.foodName}</p>
+                <div className="mb-2 flex items-center gap-2">
+                  <label className="text-xs text-neutral-500">ปริมาณ (กรัม)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editGrams}
+                    onChange={(e) => setEditGrams(e.target.value)}
+                    className={`${INPUT_CLASS} w-24`}
+                  />
+                </div>
+                <div className="mb-2 flex items-center gap-2">
+                  <label className="text-xs text-neutral-500">มื้อ</label>
+                  <select
+                    value={editMealType}
+                    onChange={(e) => setEditMealType(e.target.value)}
+                    className={`${INPUT_CLASS} w-36`}
+                  >
+                    {MEAL_TYPE_OPTIONS.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {editError && <p className="mb-2 text-xs text-red-400">{editError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => saveEdit(l.id)}
+                    disabled={editSaving}
+                    className="rounded-lg bg-[#fc4c02] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#e04402] disabled:opacity-50"
+                  >
+                    {editSaving ? "กำลังบันทึก..." : "บันทึก"}
+                  </button>
+                  <button
+                    onClick={() => setEditingId(null)}
+                    className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-600"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              </li>
+            ) : (
+              <li
+                key={l.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-5 py-4"
+              >
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 truncate text-sm font-medium text-neutral-200">
+                    <span className="truncate">{l.foodName}</span>
+                    {healthFlags.highUricAcid && matchesPurineKeyword(l.foodName) && (
+                      <span
+                        title="มีพิวรีนสูง — ระวังถ้ากรดยูริกสูง"
+                        className="flex-none rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-400"
+                      >
+                        พิวรีนสูง
+                      </span>
+                    )}
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {Math.round(l.grams)} ก. · {Math.round(l.calories)} kcal
+                  </p>
+                </div>
+                <div className="flex flex-none items-center gap-2.5">
+                  <button
+                    onClick={() => repeatLog(l.id)}
+                    disabled={repeatingId === l.id}
+                    className="text-neutral-600 transition hover:text-lime-400 disabled:opacity-50"
+                    title="ทำซ้ำ"
+                  >
+                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                      <rect x="7" y="7" width="9" height="9" rx="1.6" stroke="currentColor" strokeWidth="1.5" />
+                      <path d="M4 13V5.5A1.5 1.5 0 0 1 5.5 4H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                  <button onClick={() => startEdit(l)} className="text-neutral-600 transition hover:text-neutral-300" title="แก้ไข">
+                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                      <path d="M4 16l.5-2.8L13 4.7l2.3 2.3L6.8 15.5 4 16Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                      <path d="M11.3 6.4l2.3 2.3" stroke="currentColor" strokeWidth="1.5" />
+                    </svg>
+                  </button>
+                  <button onClick={() => deleteLog(l.id)} className="text-neutral-600 transition hover:text-red-400" title="ลบ">
+                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                      <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
+              </li>
+            )
+          )}
         </ul>
       )}
     </div>
