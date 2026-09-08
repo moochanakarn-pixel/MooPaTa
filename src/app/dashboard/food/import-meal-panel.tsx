@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { GRAM_UNIT, MEAL_TYPE_LABEL } from "@/lib/food";
+import { GENERIC_UNIT, GRAM_UNIT, MEAL_TYPE_LABEL } from "@/lib/food";
 import { parseMealText, type ParsedFoodRow } from "@/lib/meal-import-parse";
 
 const MEAL_TYPE_OPTIONS = ["", "BREAKFAST", "LUNCH", "DINNER", "SNACK"].map((value) => ({
@@ -122,7 +122,7 @@ export function ImportMealPanel({ onClose }: { onClose: () => void }) {
               carbPer100g: (Number.isFinite(carbG) ? carbG : 0) * ratio,
               fatPer100g: (Number.isFinite(fatG) ? fatG : 0) * ratio,
               source: "CUSTOM",
-              unitLabel: r.hasRealGrams ? GRAM_UNIT : "หน่วย",
+              unitLabel: r.hasRealGrams ? GRAM_UNIT : GENERIC_UNIT,
             },
           }),
         });

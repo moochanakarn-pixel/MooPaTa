@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
-import { GRAM_UNIT } from "@/lib/food";
+import { sanitizeUnitLabel } from "@/lib/food";
 
 function isFiniteNonNegative(n: unknown): n is number {
   return typeof n === "number" && Number.isFinite(n) && n >= 0;
@@ -37,8 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   // the fact — e.g. correcting an entry that was created as "1 ก." when it
   // really meant "1 ชิ้น". Optional so a plain macro edit doesn't need to
   // resend it.
-  const unitLabel =
-    body.unitLabel !== undefined ? (typeof body.unitLabel === "string" && body.unitLabel.trim() ? body.unitLabel.trim().slice(0, 20) : GRAM_UNIT) : undefined;
+  const unitLabel = body.unitLabel !== undefined ? sanitizeUnitLabel(body.unitLabel) : undefined;
 
   if (!name) {
     return NextResponse.json({ error: "invalid_name" }, { status: 400 });

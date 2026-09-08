@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { parseBackfillLoggedAt } from "@/lib/streak";
-import { GRAM_UNIT } from "@/lib/food";
+import { sanitizeUnitLabel } from "@/lib/food";
 
 const SOURCES = ["CATALOG", "BARCODE", "LABEL", "CUSTOM"];
 const MEAL_TYPES = ["BREAKFAST", "LUNCH", "DINNER", "SNACK"];
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     const fatPer100g = Number(f.fatPer100g);
     const source = SOURCES.includes(f.source) ? f.source : "CUSTOM";
     const barcode = typeof f.barcode === "string" && f.barcode.trim() ? f.barcode.trim().slice(0, 64) : null;
-    const unitLabel = typeof f.unitLabel === "string" && f.unitLabel.trim() ? f.unitLabel.trim().slice(0, 20) : GRAM_UNIT;
+    const unitLabel = sanitizeUnitLabel(f.unitLabel);
 
     if (!name) {
       return NextResponse.json({ error: "invalid_name" }, { status: 400 });

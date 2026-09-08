@@ -77,6 +77,19 @@ export function referenceQuantityLabel(unitLabel: string): string {
   return isGramUnit(unitLabel) ? `100 ${GRAM_UNIT}` : `1 ${unitLabel}`;
 }
 
+// Fallback unit name when a count-based food has no more specific one to
+// give it (an AI-imported row with no weight column, say) — used wherever
+// something needs "some kind of count unit" without a real name for it.
+export const GENERIC_UNIT = "หน่วย";
+
+// Trims and length-caps a user-submitted unit label, falling back to
+// GRAM_UNIT for anything blank — the same rule the custom-food and
+// personal-food-edit API routes both need to apply to whatever unit name a
+// person typed in.
+export function sanitizeUnitLabel(value: unknown): string {
+  return typeof value === "string" && value.trim() ? value.trim().slice(0, 20) : GRAM_UNIT;
+}
+
 export const MEAL_TYPE_LABEL: Record<string, string> = {
   BREAKFAST: "มื้อเช้า",
   LUNCH: "มื้อกลางวัน",

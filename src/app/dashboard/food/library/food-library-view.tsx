@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GRAM_UNIT, isGramUnit, macrosForGrams, referenceQuantity, referenceQuantityLabel } from "@/lib/food";
+import { GRAM_UNIT, isGramUnit, macrosForGrams, per100gFromTotal, referenceQuantity, referenceQuantityLabel } from "@/lib/food";
 
 export interface LibraryFood {
   id: string;
@@ -69,17 +69,20 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
     }
     setError(null);
     setSaving(true);
-    // Convert back from "per reference quantity" to the stored per-100 basis.
-    const scale = 100 / referenceQuantity(trimmedUnitLabel);
+    // Convert back from "per reference quantity" to the stored per-100
+    // basis — the same total-at-a-given-portion-size math the custom-food
+    // add form already uses, just running in reverse from the reference
+    // quantity instead of forward from an arbitrary grams input.
+    const per100g = per100gFromTotal(
+      { calories: caloriesRef, proteinG: proteinRef, carbG: carbRef, fatG: fatRef },
+      referenceQuantity(trimmedUnitLabel)
+    );
     const res = await fetch(`/api/food/${food.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: name.trim(),
-        caloriesPer100g: caloriesRef * scale,
-        proteinPer100g: proteinRef * scale,
-        carbPer100g: carbRef * scale,
-        fatPer100g: fatRef * scale,
+        ...per100g,
         typicalGrams: typicalGramsNum,
         unitLabel: trimmedUnitLabel,
       }),

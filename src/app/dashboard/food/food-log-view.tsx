@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  GENERIC_UNIT,
   GRAM_UNIT,
   isGramUnit,
   macrosForGrams,
@@ -323,14 +324,18 @@ export function FoodLogView({
     setPending((p) => (p?.kind === "custom" ? { kind: "custom", grams: mode === "grams" ? 100 : 1 } : p));
   }
 
-  const customUnitLabelTrimmed = customUnitLabel.trim() || "หน่วย";
+  const customUnitLabelTrimmed = customUnitLabel.trim() || GENERIC_UNIT;
 
   // What the quantity field means for whichever food is currently pending —
   // "กรัม" for anything gram-based (catalog/label entries, or a custom food
-  // in grams mode), otherwise the food's own unit.
-  function pendingUnitLabel(p: PendingFood): string {
-    if (p.kind === "custom") return customUnitMode === "unit" ? customUnitLabelTrimmed : GRAM_UNIT;
-    if (p.kind === "personal") return p.food.unitLabel;
+  // in grams mode), otherwise the food's own unit. Reads `pending` straight
+  // from the closure rather than taking it as a parameter, since every call
+  // site already has it in scope and would otherwise just pass it straight
+  // back through.
+  function pendingUnitLabel(): string {
+    if (!pending) return GRAM_UNIT;
+    if (pending.kind === "custom") return customUnitMode === "unit" ? customUnitLabelTrimmed : GRAM_UNIT;
+    if (pending.kind === "personal") return pending.food.unitLabel;
     return GRAM_UNIT;
   }
 
@@ -379,8 +384,7 @@ export function FoodLogView({
         },
         grams
       );
-      const unitLabel = customUnitMode === "unit" ? customUnitLabelTrimmed : GRAM_UNIT;
-      body = { food: { name: customName.trim(), ...per100g, source: "CUSTOM", unitLabel }, grams };
+      body = { food: { name: customName.trim(), ...per100g, source: "CUSTOM", unitLabel: pendingUnitLabel() }, grams };
     }
     body.mealType = mealType || null;
     if (!isToday) body.loggedAt = viewDate;
@@ -603,7 +607,10 @@ export function FoodLogView({
 
               <div className="mb-3 flex items-center gap-2">
                 <label className="text-xs text-neutral-500">
-                  {isGramUnit(pendingUnitLabel(pending)) ? "ปริมาณ (กรัม)" : `จำนวน (${pendingUnitLabel(pending)})`}
+                  {(() => {
+                    const unitLabel = pendingUnitLabel();
+                    return isGramUnit(unitLabel) ? "ปริมาณ (กรัม)" : `จำนวน (${unitLabel})`;
+                  })()}
                 </label>
                 <input
                   type="number"
@@ -674,7 +681,7 @@ export function FoodLogView({
                     />
                   </div>
                   <p className="text-xs text-neutral-500">
-                    กรอกแคลอรี่/แมโครสำหรับ {pending.grams || 0} {pendingUnitLabel(pending)} ด้านบน
+                    กรอกแคลอรี่/แมโครสำหรับ {pending.grams || 0} {pendingUnitLabel()} ด้านบน
                   </p>
                 </div>
               )}
