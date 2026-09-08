@@ -130,6 +130,13 @@ model Food {
   // before saving, same as the catalog's own typicalGrams).
   isFavorite   Boolean @default(false)
   typicalGrams Float   @default(100)
+  // What a "grams" value on this food actually counts — the default "ก."
+  // means grams like every food before this field existed; anything else
+  // (e.g. "ชิ้น", "ที่", "ถ้วย") means grams/typicalGrams/FoodLog.grams for
+  // this food are really a piece/serving count, not a weight. Keeps the
+  // per-100 math in src/lib/food.ts unchanged — it only ever cares about the
+  // ratio to 100, never what the 100 units of "grams" mean.
+  unitLabel String @default("ก.")
 
   userId String
   user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)

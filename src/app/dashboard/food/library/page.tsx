@@ -25,6 +25,7 @@ export default async function FoodLibraryPage() {
     logCount: f._count.logs,
     isFavorite: f.isFavorite,
     typicalGrams: f.typicalGrams,
+    unitLabel: f.unitLabel,
   }));
 
   return (

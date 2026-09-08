@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { GRAM_UNIT, isGramUnit, macrosForGrams, referenceQuantity, referenceQuantityLabel } from "@/lib/food";
 
 export interface LibraryFood {
   id: string;
@@ -14,6 +15,7 @@ export interface LibraryFood {
   logCount: number;
   isFavorite: boolean;
   typicalGrams: number;
+  unitLabel: string;
 }
 
 const SOURCE_LABEL: Record<LibraryFood["source"], string> = {
@@ -28,28 +30,37 @@ const INPUT_CLASS =
 
 function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: () => void; onSaved: () => void }) {
   const [name, setName] = useState(food.name);
-  const [calories, setCalories] = useState(String(food.caloriesPer100g));
-  const [protein, setProtein] = useState(String(food.proteinPer100g));
-  const [carb, setCarb] = useState(String(food.carbPer100g));
-  const [fat, setFat] = useState(String(food.fatPer100g));
+  const [unitLabel, setUnitLabel] = useState(food.unitLabel);
+  // Seeded from the food's own reference quantity (100g, or 1 of its unit)
+  // rather than the raw per100g fields directly — for a unit-based food
+  // that's the only way these numbers land on something a person actually
+  // recognizes (e.g. "150 kcal ต่อ 1 ชิ้น" instead of "15000 kcal/100g").
+  const initialRef = useMemo(() => macrosForGrams(food, referenceQuantity(food.unitLabel)), [food]);
+  const [calories, setCalories] = useState(String(Math.round(initialRef.calories * 100) / 100));
+  const [protein, setProtein] = useState(String(Math.round(initialRef.proteinG * 100) / 100));
+  const [carb, setCarb] = useState(String(Math.round(initialRef.carbG * 100) / 100));
+  const [fat, setFat] = useState(String(Math.round(initialRef.fatG * 100) / 100));
   const [typicalGrams, setTypicalGrams] = useState(String(food.typicalGrams));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const trimmedUnitLabel = unitLabel.trim() || GRAM_UNIT;
+  const refLabel = referenceQuantityLabel(trimmedUnitLabel);
 
   async function save() {
     // Number("") is 0, not NaN — an emptied field must fail this check
     // rather than silently save as a zero macro, so check the raw string
     // first.
     const rawFields = [calories, protein, carb, fat, typicalGrams];
-    const caloriesPer100g = Number(calories);
-    const proteinPer100g = Number(protein);
-    const carbPer100g = Number(carb);
-    const fatPer100g = Number(fat);
+    const caloriesRef = Number(calories);
+    const proteinRef = Number(protein);
+    const carbRef = Number(carb);
+    const fatRef = Number(fat);
     const typicalGramsNum = Number(typicalGrams);
     if (
       !name.trim() ||
       rawFields.some((s) => s.trim() === "") ||
-      [caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g].some((n) => !Number.isFinite(n) || n < 0) ||
+      [caloriesRef, proteinRef, carbRef, fatRef].some((n) => !Number.isFinite(n) || n < 0) ||
       !Number.isFinite(typicalGramsNum) ||
       typicalGramsNum <= 0
     ) {
@@ -58,10 +69,20 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
     }
     setError(null);
     setSaving(true);
+    // Convert back from "per reference quantity" to the stored per-100 basis.
+    const scale = 100 / referenceQuantity(trimmedUnitLabel);
     const res = await fetch(`/api/food/${food.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g, typicalGrams: typicalGramsNum }),
+      body: JSON.stringify({
+        name: name.trim(),
+        caloriesPer100g: caloriesRef * scale,
+        proteinPer100g: proteinRef * scale,
+        carbPer100g: carbRef * scale,
+        fatPer100g: fatRef * scale,
+        typicalGrams: typicalGramsNum,
+        unitLabel: trimmedUnitLabel,
+      }),
     });
     setSaving(false);
     if (res.ok) {
@@ -74,26 +95,39 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
   return (
     <div className="space-y-3 rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
       <input value={name} onChange={(e) => setName(e.target.value)} className={INPUT_CLASS} placeholder="ชื่อเมนู" />
+      <div>
+        <label className="mb-1 block text-[10px] text-neutral-500">
+          หน่วยนับ — &quot;{GRAM_UNIT}&quot; ถ้าชั่งน้ำหนัก หรือพิมพ์หน่วยเอง เช่น ชิ้น, ที่, ถ้วย ถ้านับเป็นจำนวน
+        </label>
+        <input value={unitLabel} onChange={(e) => setUnitLabel(e.target.value)} className={`${INPUT_CLASS} w-32`} placeholder={GRAM_UNIT} />
+      </div>
+      {!isGramUnit(trimmedUnitLabel) && (
+        <p className="text-xs text-amber-400">
+          เปลี่ยนหน่วยแล้วต้องกรอกค่าพลังงาน/แมโครใหม่ให้ตรงกับ &quot;{refLabel}&quot; ด้านล่างด้วย
+        </p>
+      )}
       <div className="grid grid-cols-4 gap-2">
         <div>
-          <label className="mb-1 block text-[10px] text-neutral-500">kcal/100g</label>
+          <label className="mb-1 block text-[10px] text-neutral-500">kcal/{refLabel}</label>
           <input type="number" min="0" value={calories} onChange={(e) => setCalories(e.target.value)} className={INPUT_CLASS} />
         </div>
         <div>
-          <label className="mb-1 block text-[10px] text-neutral-500">โปรตีน/100g</label>
+          <label className="mb-1 block text-[10px] text-neutral-500">โปรตีน/{refLabel}</label>
           <input type="number" min="0" value={protein} onChange={(e) => setProtein(e.target.value)} className={INPUT_CLASS} />
         </div>
         <div>
-          <label className="mb-1 block text-[10px] text-neutral-500">คาร์บ/100g</label>
+          <label className="mb-1 block text-[10px] text-neutral-500">คาร์บ/{refLabel}</label>
           <input type="number" min="0" value={carb} onChange={(e) => setCarb(e.target.value)} className={INPUT_CLASS} />
         </div>
         <div>
-          <label className="mb-1 block text-[10px] text-neutral-500">ไขมัน/100g</label>
+          <label className="mb-1 block text-[10px] text-neutral-500">ไขมัน/{refLabel}</label>
           <input type="number" min="0" value={fat} onChange={(e) => setFat(e.target.value)} className={INPUT_CLASS} />
         </div>
       </div>
       <div>
-        <label className="mb-1 block text-[10px] text-neutral-500">ปริมาณที่กินปกติ (กรัม) — ใช้พรีฟิลตอนแนะนำเมนูนี้</label>
+        <label className="mb-1 block text-[10px] text-neutral-500">
+          ปริมาณที่กินปกติ ({trimmedUnitLabel}) — ใช้พรีฟิลตอนแนะนำเมนูนี้
+        </label>
         <input
           type="number"
           min="0"
@@ -195,8 +229,15 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
                     )}
                   </p>
                   <p className="mt-1 text-xs text-neutral-500">
-                    {Math.round(f.caloriesPer100g)} kcal · {f.proteinPer100g.toFixed(0)}p / {f.carbPer100g.toFixed(0)}c /{" "}
-                    {f.fatPer100g.toFixed(0)}f ต่อ 100 ก. · ปกติกิน {Math.round(f.typicalGrams)} ก.
+                    {(() => {
+                      const ref = macrosForGrams(f, referenceQuantity(f.unitLabel));
+                      return (
+                        <>
+                          {Math.round(ref.calories)} kcal · {ref.proteinG.toFixed(0)}p / {ref.carbG.toFixed(0)}c / {ref.fatG.toFixed(0)}f ต่อ{" "}
+                          {referenceQuantityLabel(f.unitLabel)} · ปกติกิน {Math.round(f.typicalGrams)} {f.unitLabel}
+                        </>
+                      );
+                    })()}
                   </p>
                   <p className="mt-1 text-xs text-neutral-600">
                     {SOURCE_LABEL[f.source]} · บันทึกไปแล้ว {f.logCount} ครั้ง

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `Food` ADD COLUMN `unitLabel` VARCHAR(191) NOT NULL DEFAULT 'ก.';

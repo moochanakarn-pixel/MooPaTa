@@ -87,6 +87,7 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
       sodiumMg: m.sodiumMg,
       cholesterolMg: m.cholesterolMg,
       fiberG: m.fiberG,
+      unitLabel: l.food.unitLabel,
     };
   });
 
@@ -98,6 +99,7 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
     carbPer100g: f.carbPer100g,
     fatPer100g: f.fatPer100g,
     typicalGrams: f.typicalGrams,
+    unitLabel: f.unitLabel,
   }));
 
   const favoriteFoods: FavoriteFood[] = personalFoodRows
@@ -110,6 +112,7 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
       carbPer100g: f.carbPer100g,
       fatPer100g: f.fatPer100g,
       typicalGrams: f.typicalGrams,
+      unitLabel: f.unitLabel,
     }));
 
   let targets: DailyTargets | null = null;

@@ -11,6 +11,7 @@ interface SearchResult {
   mealType: string | null;
   calories: number;
   date: string;
+  unitLabel: string;
 }
 
 const INPUT_CLASS =
@@ -102,7 +103,7 @@ export function FoodHistoryView() {
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-neutral-200">{r.foodName}</p>
                 <p className="mt-1 text-xs text-neutral-500">
-                  {formatThaiDate(r.date)} · {Math.round(r.grams)} ก. · {Math.round(r.calories)} kcal
+                  {formatThaiDate(r.date)} · {Math.round(r.grams)} {r.unitLabel} · {Math.round(r.calories)} kcal
                   {r.mealType && ` · ${MEAL_TYPE_LABEL[r.mealType]}`}
                 </p>
               </div>

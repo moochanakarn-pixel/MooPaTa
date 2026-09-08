@@ -57,6 +57,26 @@ export function per100gFromTotal(
   };
 }
 
+// Every food before unit-mode existed stored grams; "ก." is still what a
+// plain weight-based food carries as its unitLabel today.
+export const GRAM_UNIT = "ก.";
+
+export function isGramUnit(unitLabel: string): boolean {
+  return unitLabel === GRAM_UNIT;
+}
+
+// The portion a food's per-100 values are best shown against: 100g for a
+// weight-based food (matches the stored per100g fields directly), or 1 of
+// the unit for a count-based one — "100 ชิ้น" of a custom food is never
+// what anyone means, but "1 ชิ้น" is exactly the portion it was created from.
+export function referenceQuantity(unitLabel: string): number {
+  return isGramUnit(unitLabel) ? 100 : 1;
+}
+
+export function referenceQuantityLabel(unitLabel: string): string {
+  return isGramUnit(unitLabel) ? `100 ${GRAM_UNIT}` : `1 ${unitLabel}`;
+}
+
 export const MEAL_TYPE_LABEL: Record<string, string> = {
   BREAKFAST: "มื้อเช้า",
   LUNCH: "มื้อกลางวัน",

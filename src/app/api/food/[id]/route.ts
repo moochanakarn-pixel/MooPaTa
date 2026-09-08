@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
+import { GRAM_UNIT } from "@/lib/food";
 
 function isFiniteNonNegative(n: unknown): n is number {
   return typeof n === "number" && Number.isFinite(n) && n >= 0;
@@ -32,6 +33,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   // optional here so this route still works for a plain macro edit that
   // doesn't touch it.
   const typicalGrams = body.typicalGrams !== undefined ? Number(body.typicalGrams) : undefined;
+  // Lets a food be reclassified between weight-based and count-based after
+  // the fact — e.g. correcting an entry that was created as "1 ก." when it
+  // really meant "1 ชิ้น". Optional so a plain macro edit doesn't need to
+  // resend it.
+  const unitLabel =
+    body.unitLabel !== undefined ? (typeof body.unitLabel === "string" && body.unitLabel.trim() ? body.unitLabel.trim().slice(0, 20) : GRAM_UNIT) : undefined;
 
   if (!name) {
     return NextResponse.json({ error: "invalid_name" }, { status: 400 });
@@ -50,7 +57,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   await db.food.update({
     where: { id: params.id },
-    data: { name, caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g, ...(typicalGrams !== undefined ? { typicalGrams } : {}) },
+    data: {
+      name,
+      caloriesPer100g,
+      proteinPer100g,
+      carbPer100g,
+      fatPer100g,
+      ...(typicalGrams !== undefined ? { typicalGrams } : {}),
+      ...(unitLabel !== undefined ? { unitLabel } : {}),
+    },
   });
   return NextResponse.json({ ok: true });
 }

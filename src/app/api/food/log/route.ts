@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { parseBackfillLoggedAt } from "@/lib/streak";
+import { GRAM_UNIT } from "@/lib/food";
 
 const SOURCES = ["CATALOG", "BARCODE", "LABEL", "CUSTOM"];
 const MEAL_TYPES = ["BREAKFAST", "LUNCH", "DINNER", "SNACK"];
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
     const fatPer100g = Number(f.fatPer100g);
     const source = SOURCES.includes(f.source) ? f.source : "CUSTOM";
     const barcode = typeof f.barcode === "string" && f.barcode.trim() ? f.barcode.trim().slice(0, 64) : null;
+    const unitLabel = typeof f.unitLabel === "string" && f.unitLabel.trim() ? f.unitLabel.trim().slice(0, 20) : GRAM_UNIT;
 
     if (!name) {
       return NextResponse.json({ error: "invalid_name" }, { status: 400 });
@@ -96,14 +98,44 @@ export async function POST(req: NextRequest) {
     // for one product. CUSTOM/CATALOG entries have no barcode to dedupe on
     // (MySQL treats each NULL in a unique index as distinct), so they always
     // create a fresh row.
+    // A custom food's "typical" portion defaults to whatever amount it was
+    // just created with — the only signal we have, and a much better guess
+    // for a unit-based food (e.g. "1 ชิ้น") than the generic 100 default,
+    // which used to leave the re-pick prefill silently wrong.
+    const typicalGrams = source === "CUSTOM" ? grams : undefined;
+
     const food = barcode
       ? await db.food.upsert({
           where: { userId_barcode: { userId, barcode } },
           update: {},
-          create: { userId, name, caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g, source, barcode, ...micronutrients },
+          create: {
+            userId,
+            name,
+            caloriesPer100g,
+            proteinPer100g,
+            carbPer100g,
+            fatPer100g,
+            source,
+            barcode,
+            unitLabel,
+            ...(typicalGrams !== undefined ? { typicalGrams } : {}),
+            ...micronutrients,
+          },
         })
       : await db.food.create({
-          data: { userId, name, caloriesPer100g, proteinPer100g, carbPer100g, fatPer100g, source, barcode, ...micronutrients },
+          data: {
+            userId,
+            name,
+            caloriesPer100g,
+            proteinPer100g,
+            carbPer100g,
+            fatPer100g,
+            source,
+            barcode,
+            unitLabel,
+            ...(typicalGrams !== undefined ? { typicalGrams } : {}),
+            ...micronutrients,
+          },
         });
     foodId = food.id;
   }

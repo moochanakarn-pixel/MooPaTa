@@ -3,7 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { macrosForGrams, MEAL_TYPE_LABEL, per100gFromTotal, type Per100g } from "@/lib/food";
+import {
+  GRAM_UNIT,
+  isGramUnit,
+  macrosForGrams,
+  MEAL_TYPE_LABEL,
+  per100gFromTotal,
+  referenceQuantity,
+  referenceQuantityLabel,
+  type Per100g,
+} from "@/lib/food";
 import { THAI_FOOD_CATALOG, type CatalogFood } from "@/lib/thai-food-catalog";
 import { DAILY_CHOLESTEROL_LIMIT_MG, matchesPurineKeyword } from "@/lib/health-flags";
 import { FoodLabelScanner, type FoodLabelResult } from "./food-label-scanner";
@@ -14,6 +23,7 @@ export interface PersonalFood extends Per100g {
   id: string;
   name: string;
   typicalGrams: number;
+  unitLabel: string;
 }
 
 // Same shape as PersonalFood — kept as its own name since a "favorite" is a
@@ -34,6 +44,7 @@ export interface TodayLogEntry {
   sodiumMg: number | null;
   cholesterolMg: number | null;
   fiberG: number | null;
+  unitLabel: string;
 }
 
 export interface DailyTargets {
@@ -105,6 +116,12 @@ export function FoodLogView({
   const [customProtein, setCustomProtein] = useState("");
   const [customCarb, setCustomCarb] = useState("");
   const [customFat, setCustomFat] = useState("");
+  // Separates "I'm entering a weight" from "I'm entering a piece/serving
+  // count" for a from-scratch food — the root cause of the 100x-inflated
+  // library entries was typing "1" meaning "1 piece" into a grams-only
+  // field, which per100gFromTotal then read as "1 gram".
+  const [customUnitMode, setCustomUnitMode] = useState<"grams" | "unit">("grams");
+  const [customUnitLabel, setCustomUnitLabel] = useState("ชิ้น");
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -294,7 +311,28 @@ export function FoodLogView({
     setCustomProtein("");
     setCustomCarb("");
     setCustomFat("");
+    setCustomUnitMode("grams");
+    setCustomUnitLabel("ชิ้น");
     setPending({ kind: "custom", grams: 100 });
+  }
+
+  // Switching mode also resets the quantity to a sane default for that mode
+  // (100g vs. 1 piece) — only reachable before any macro is typed in, same
+  // as the quantity field itself being locked once customMacrosStarted.
+  function setCustomMode(mode: "grams" | "unit") {
+    setCustomUnitMode(mode);
+    setPending((p) => (p?.kind === "custom" ? { kind: "custom", grams: mode === "grams" ? 100 : 1 } : p));
+  }
+
+  const customUnitLabelTrimmed = customUnitLabel.trim() || "หน่วย";
+
+  // What the quantity field means for whichever food is currently pending —
+  // "กรัม" for anything gram-based (catalog/label entries, or a custom food
+  // in grams mode), otherwise the food's own unit.
+  function pendingUnitLabel(p: PendingFood): string {
+    if (p.kind === "custom") return customUnitMode === "unit" ? customUnitLabelTrimmed : GRAM_UNIT;
+    if (p.kind === "personal") return p.food.unitLabel;
+    return GRAM_UNIT;
   }
 
   function handleLabelSubmit(result: FoodLabelResult) {
@@ -342,7 +380,8 @@ export function FoodLogView({
         },
         grams
       );
-      body = { food: { name: customName.trim(), ...per100g, source: "CUSTOM" }, grams };
+      const unitLabel = customUnitMode === "unit" ? customUnitLabelTrimmed : GRAM_UNIT;
+      body = { food: { name: customName.trim(), ...per100g, source: "CUSTOM", unitLabel }, grams };
     }
     body.mealType = mealType || null;
     if (!isToday) body.loggedAt = viewDate;
@@ -526,8 +565,47 @@ export function FoodLogView({
                 {pending.kind === "custom" && "เพิ่มเมนูเอง"}
               </h3>
 
+              {pending.kind === "custom" && (
+                <div className="mb-3 flex items-center gap-2">
+                  <label className="text-xs text-neutral-500">ประเภทปริมาณ</label>
+                  <div className="flex overflow-hidden rounded-lg border border-neutral-700 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setCustomMode("grams")}
+                      disabled={customMacrosStarted}
+                      className={`px-2.5 py-1.5 transition disabled:opacity-50 ${
+                        customUnitMode === "grams" ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:bg-neutral-800"
+                      }`}
+                    >
+                      กรัม
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCustomMode("unit")}
+                      disabled={customMacrosStarted}
+                      className={`border-l border-neutral-700 px-2.5 py-1.5 transition disabled:opacity-50 ${
+                        customUnitMode === "unit" ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:bg-neutral-800"
+                      }`}
+                    >
+                      หน่วย/ที่
+                    </button>
+                  </div>
+                  {customUnitMode === "unit" && (
+                    <input
+                      value={customUnitLabel}
+                      onChange={(e) => setCustomUnitLabel(e.target.value)}
+                      disabled={customMacrosStarted}
+                      placeholder="เช่น ชิ้น, ที่, ถ้วย"
+                      className={`${INPUT_CLASS} w-28 disabled:opacity-50`}
+                    />
+                  )}
+                </div>
+              )}
+
               <div className="mb-3 flex items-center gap-2">
-                <label className="text-xs text-neutral-500">ปริมาณ (กรัม)</label>
+                <label className="text-xs text-neutral-500">
+                  {isGramUnit(pendingUnitLabel(pending)) ? "ปริมาณ (กรัม)" : `จำนวน (${pendingUnitLabel(pending)})`}
+                </label>
                 <input
                   type="number"
                   min="1"
@@ -596,7 +674,9 @@ export function FoodLogView({
                       className={INPUT_CLASS}
                     />
                   </div>
-                  <p className="text-xs text-neutral-500">กรอกแคลอรี่/แมโครสำหรับปริมาณ {pending.grams || 0} กรัมด้านบน</p>
+                  <p className="text-xs text-neutral-500">
+                    กรอกแคลอรี่/แมโครสำหรับ {pending.grams || 0} {pendingUnitLabel(pending)} ด้านบน
+                  </p>
                 </div>
               )}
 
@@ -679,7 +759,9 @@ export function FoodLogView({
                           className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-sm hover:bg-neutral-800/50"
                         >
                           <span className="text-neutral-200">{f.name}</span>
-                          <span className="text-xs text-neutral-500">{Math.round(f.caloriesPer100g)} kcal/100ก.</span>
+                          <span className="text-xs text-neutral-500">
+                            {Math.round(macrosForGrams(f, referenceQuantity(f.unitLabel)).calories)} kcal/{referenceQuantityLabel(f.unitLabel)}
+                          </span>
                         </button>
                       ))}
                     </>
@@ -736,7 +818,9 @@ export function FoodLogView({
               <li key={l.id} className="rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-5 py-4">
                 <p className="mb-3 truncate text-sm font-medium text-neutral-200">{l.foodName}</p>
                 <div className="mb-2 flex items-center gap-2">
-                  <label className="text-xs text-neutral-500">ปริมาณ (กรัม)</label>
+                  <label className="text-xs text-neutral-500">
+                    {isGramUnit(l.unitLabel) ? "ปริมาณ (กรัม)" : `จำนวน (${l.unitLabel})`}
+                  </label>
                   <input
                     type="number"
                     min="1"
@@ -794,7 +878,7 @@ export function FoodLogView({
                     )}
                   </p>
                   <p className="mt-1 text-xs text-neutral-500">
-                    {Math.round(l.grams)} ก. · {Math.round(l.calories)} kcal
+                    {Math.round(l.grams)} {l.unitLabel} · {Math.round(l.calories)} kcal
                   </p>
                 </div>
                 <div className="flex flex-none items-center gap-2.5">

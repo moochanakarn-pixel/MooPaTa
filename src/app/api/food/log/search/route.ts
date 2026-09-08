@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
       mealType: l.mealType,
       calories: m.calories,
       date: localDateKey(l.loggedAt),
+      unitLabel: l.food.unitLabel,
     };
   });
 
