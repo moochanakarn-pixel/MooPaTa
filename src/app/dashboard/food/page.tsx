@@ -76,6 +76,7 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
     const m = macrosForGrams(l.food, l.grams);
     return {
       id: l.id,
+      foodId: l.foodId,
       foodName: l.food.name,
       grams: l.grams,
       mealType: l.mealType,

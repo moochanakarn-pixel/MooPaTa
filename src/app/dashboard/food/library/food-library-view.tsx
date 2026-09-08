@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { GRAM_UNIT, isGramUnit, macrosForGrams, per100gFromTotal, referenceQuantity, referenceQuantityLabel } from "@/lib/food";
 
 export interface LibraryFood {
@@ -158,12 +158,24 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
 
 export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // Deep link from the diary's inline edit form ("แก้ไขค่าพลังงาน... ที่คลังอาหารส่วนตัว")
+  // — jumps straight into editing that food instead of making the user
+  // search for it themselves.
+  const [editingId, setEditingId] = useState<string | null>(() => searchParams.get("edit"));
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
+  const editingItemRef = useRef<HTMLLIElement | null>(null);
+
+  useEffect(() => {
+    if (editingId) editingItemRef.current?.scrollIntoView({ block: "center" });
+    // Only meant to run once, right after landing here via the deep link —
+    // not on every later editingId change from clicking แก้ไข manually.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -210,7 +222,11 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
 
       <ul className="space-y-2.5">
         {filtered.map((f) => (
-          <li key={f.id} className="rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-5 py-4">
+          <li
+            key={f.id}
+            ref={editingId === f.id ? editingItemRef : undefined}
+            className="rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-5 py-4"
+          >
             {editingId === f.id ? (
               <EditForm
                 food={f}

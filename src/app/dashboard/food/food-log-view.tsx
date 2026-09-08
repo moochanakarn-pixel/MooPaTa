@@ -34,6 +34,7 @@ export type FavoriteFood = PersonalFood;
 
 export interface TodayLogEntry {
   id: string;
+  foodId: string;
   foodName: string;
   grams: number;
   mealType: string | null;
@@ -849,6 +850,13 @@ export function FoodLogView({
                     ))}
                   </select>
                 </div>
+                <p className="mb-2 text-xs text-neutral-600">
+                  แก้ได้แค่ปริมาณ/มื้อตรงนี้ — ค่าแคลอรี่/โปรตีน/คาร์บ/ไขมันของเมนูนี้ ไปแก้ได้ที่{" "}
+                  <Link href={`/dashboard/food/library?edit=${l.foodId}`} className="text-lime-400 hover:underline">
+                    คลังอาหารส่วนตัว
+                  </Link>{" "}
+                  (แก้ที่นั่นจะมีผลกับทุกครั้งที่เคยบันทึกเมนูนี้ด้วย)
+                </p>
                 {editError && <p className="mb-2 text-xs text-red-400">{editError}</p>}
                 <div className="flex gap-2">
                   <button
