@@ -41,20 +41,23 @@ export default async function HomePage({
   ];
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center overflow-hidden px-6">
-      <div className="pointer-events-none absolute inset-x-0 top-[-10%] h-[500px] bg-glow-orange" />
-
-      <div className="relative z-10 flex w-full max-w-md flex-1 flex-col items-center justify-center gap-8 py-20 text-center">
+    <main className="flex min-h-screen flex-col items-center">
+      <div className="flex w-full flex-col items-center gap-5 rounded-b-[2.5rem] bg-[#fc4c02] px-6 pb-12 pt-16 text-center shadow-lg shadow-orange-950/10">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/mascot-hero.png" alt="MooPaTa" className="h-32 w-32 drop-shadow-xl" />
-
-        <div className="space-y-3">
-          <h1 className="text-4xl font-extrabold tracking-tight">MooPaTa</h1>
-          <p className="text-balance text-neutral-400">
+        <img
+          src="/mascot-hero.png"
+          alt="MooPaTa"
+          className="h-36 w-36 rounded-[1.75rem] ring-4 ring-white/25 drop-shadow-2xl"
+        />
+        <div className="space-y-2">
+          <h1 className="text-5xl font-extrabold tracking-tight text-white">MooPaTa</h1>
+          <p className="text-balance text-sm font-medium text-orange-50/90">
             รวมข้อมูลการออกกำลังกายจาก Strava ไว้ที่เดียว
           </p>
         </div>
+      </div>
 
+      <div className="relative z-10 flex w-full max-w-md flex-1 flex-col items-center gap-8 px-6 py-10 text-center">
         <div className="grid w-full grid-cols-2 gap-3">
           {features.map((f) => (
             <div
