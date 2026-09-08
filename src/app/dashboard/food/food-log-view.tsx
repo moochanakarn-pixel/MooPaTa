@@ -17,7 +17,7 @@ import { THAI_FOOD_CATALOG, type CatalogFood } from "@/lib/thai-food-catalog";
 import { DAILY_CHOLESTEROL_LIMIT_MG, matchesPurineKeyword } from "@/lib/health-flags";
 import { FoodLabelScanner, type FoodLabelResult } from "./food-label-scanner";
 import { ImportMealPanel } from "./import-meal-panel";
-import { NutrientCarousel, type CustomPage, type NutrientPage } from "./nutrient-carousel";
+import { NutrientOverview, type CustomPage, type NutrientPage } from "./nutrient-overview";
 
 export interface PersonalFood extends Per100g {
   id: string;
@@ -487,7 +487,7 @@ export function FoodLogView({
     <div>
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <p className="mb-1 text-center text-xs text-neutral-500">{isToday ? "กินไปวันนี้" : "สรุปวันที่เลือก"}</p>
-        <NutrientCarousel pages={nutrientPages} extraPage={micronutrientPage} />
+        <NutrientOverview pages={nutrientPages} extraPage={micronutrientPage} />
       </div>
 
       {suggestions.length > 0 && !showAdd && (
