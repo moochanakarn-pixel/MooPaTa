@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { activityTypeLabel, formatDistanceParts, formatDuration, formatElevationM, formatSpeedKmh } from "@/lib/format";
 import { getSessionUserId } from "@/lib/session";
 import { loadShareFonts } from "@/lib/share-fonts";
+import { cardStyle } from "@/lib/share-card-styles";
 
 // Matches src/lib/activity-colors.ts, but as raw hex — satori (the engine
 // behind ImageResponse) only understands inline style values, not
@@ -133,100 +134,107 @@ export async function GET(req: NextRequest) {
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "center", gap: 32 }}>
-          <div
-            style={{
-              display: "flex",
-              alignSelf: "flex-start",
-              padding: "10px 24px",
-              borderRadius: 999,
-              background: "rgba(252,76,2,0.15)",
-              color: "#fc4c02",
-              fontSize: 26,
-              fontWeight: 700,
-            }}
-          >
-            {periodLabel}
+        <div
+          style={{
+            display: "flex",
+            alignSelf: "flex-start",
+            marginTop: 28,
+            padding: "10px 24px",
+            borderRadius: 999,
+            background: "rgba(252,76,2,0.15)",
+            color: "#fc4c02",
+            fontSize: 26,
+            fontWeight: 700,
+          }}
+        >
+          {periodLabel}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-around", gap: 40, marginTop: 32, marginBottom: 32 }}>
+          <div style={cardStyle}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
+              <span style={{ fontSize: 100, fontWeight: 700, color: "white", lineHeight: 1 }}>{distance.value}</span>
+              <span style={{ fontSize: 34, fontWeight: 700, color: "#a3a3a3" }}>{distance.unitLabel}</span>
+            </div>
+
+            {longest && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 24 }}>
+                <span style={{ fontSize: 28 }}>🏆</span>
+                {/* Two sibling flex children with a gap, not text + nested span
+                    with a trailing space — satori trims whitespace at a text
+                    node's boundary with an adjacent element, so a literal
+                    space there silently disappears. */}
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <span style={{ fontSize: 26, color: "#d4d4d4" }}>
+                    ไกลที่สุด: {longest.name ?? activityTypeLabel(longest.type)}
+                  </span>
+                  <span style={{ fontSize: 26, fontWeight: 700, color: "white" }}>
+                    {formatDistanceParts(longest.distanceMeters, unit).value}{" "}
+                    {formatDistanceParts(longest.distanceMeters, unit).unitLabel}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
-            <span style={{ fontSize: 140, fontWeight: 700, color: "white", lineHeight: 1 }}>{distance.value}</span>
-            <span style={{ fontSize: 40, fontWeight: 700, color: "#a3a3a3" }}>{distance.unitLabel}</span>
-          </div>
-
-          {longest && (
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 28 }}>🏆</span>
-              {/* Two sibling flex children with a gap, not text + nested span
-                  with a trailing space — satori trims whitespace at a text
-                  node's boundary with an adjacent element, so a literal
-                  space there silently disappears. */}
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <span style={{ fontSize: 24, color: "#d4d4d4" }}>
-                  ไกลที่สุด: {longest.name ?? activityTypeLabel(longest.type)}
-                </span>
-                <span style={{ fontSize: 24, fontWeight: 700, color: "white" }}>
-                  {formatDistanceParts(longest.distanceMeters, unit).value}{" "}
-                  {formatDistanceParts(longest.distanceMeters, unit).unitLabel}
-                </span>
+          <div style={cardStyle}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+              <div style={{ display: "flex", gap: 48 }}>
+                <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
+                  <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>{agg._count._all}</span>
+                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>กิจกรรม</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
+                  <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>
+                    {formatDuration(agg._sum.durationSec ?? 0)}
+                  </span>
+                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>เวลารวม</span>
+                </div>
               </div>
-            </div>
-          )}
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 8 }}>
-            <div style={{ display: "flex", gap: 48 }}>
-              <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
-                <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>{agg._count._all}</span>
-                <span style={{ fontSize: 20, color: "#a3a3a3" }}>กิจกรรม</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
-                <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>
-                  {formatDuration(agg._sum.durationSec ?? 0)}
-                </span>
-                <span style={{ fontSize: 20, color: "#a3a3a3" }}>เวลารวม</span>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 48 }}>
-              <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
-                <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>
-                  {formatElevationM(agg._sum.elevationGainM, unit)}
-                </span>
-                <span style={{ fontSize: 20, color: "#a3a3a3" }}>ไต่ระดับรวม</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
-                <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>{formatSpeedKmh(avgSpeedMs, unit)}</span>
-                <span style={{ fontSize: 20, color: "#a3a3a3" }}>ความเร็วเฉลี่ย</span>
+              <div style={{ display: "flex", gap: 48 }}>
+                <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
+                  <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>
+                    {formatElevationM(agg._sum.elevationGainM, unit)}
+                  </span>
+                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>ไต่ระดับรวม</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
+                  <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>{formatSpeedKmh(avgSpeedMs, unit)}</span>
+                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>ความเร็วเฉลี่ย</span>
+                </div>
               </div>
             </div>
           </div>
 
           {byType.length > 0 && totalTypeCount > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 16 }}>
-              <div style={{ display: "flex", height: 20, width: 520, borderRadius: 999, overflow: "hidden" }}>
-                {byType.map((t) => (
-                  <div
-                    key={t.type}
-                    style={{
-                      display: "flex",
-                      width: `${((t._sum.distanceMeters ?? 0) / (totalDistanceM || 1)) * 100}%`,
-                      background: typeColor(t.type),
-                    }}
-                  />
-                ))}
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {byType.map((t) => (
-                  <div key={t.type} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: 520 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ display: "flex", width: 16, height: 16, borderRadius: 999, background: typeColor(t.type) }} />
-                      <span style={{ fontSize: 24, color: "#d4d4d4" }}>{activityTypeLabel(t.type)}</span>
+            <div style={cardStyle}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", height: 20, width: 520, borderRadius: 999, overflow: "hidden" }}>
+                  {byType.map((t) => (
+                    <div
+                      key={t.type}
+                      style={{
+                        display: "flex",
+                        width: `${((t._sum.distanceMeters ?? 0) / (totalDistanceM || 1)) * 100}%`,
+                        background: typeColor(t.type),
+                      }}
+                    />
+                  ))}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {byType.map((t) => (
+                    <div key={t.type} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: 520 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ display: "flex", width: 16, height: 16, borderRadius: 999, background: typeColor(t.type) }} />
+                        <span style={{ fontSize: 26, color: "#d4d4d4" }}>{activityTypeLabel(t.type)}</span>
+                      </div>
+                      <span style={{ fontSize: 26, fontWeight: 700, color: "white" }}>
+                        {formatDistanceParts(t._sum.distanceMeters ?? 0, unit).value}{" "}
+                        {formatDistanceParts(t._sum.distanceMeters ?? 0, unit).unitLabel} · {t._count._all} ครั้ง
+                      </span>
                     </div>
-                    <span style={{ fontSize: 24, fontWeight: 700, color: "white" }}>
-                      {formatDistanceParts(t._sum.distanceMeters ?? 0, unit).value}{" "}
-                      {formatDistanceParts(t._sum.distanceMeters ?? 0, unit).unitLabel} · {t._count._all} ครั้ง
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           )}

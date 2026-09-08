@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { macrosForGrams } from "@/lib/food";
 import { getSessionUserId } from "@/lib/session";
 import { loadShareFonts } from "@/lib/share-fonts";
+import { cardStyle, rowCardStyle } from "@/lib/share-card-styles";
 
 // "Wrapped"-style monthly nutrition summary — same story-ratio PNG as the
 // activity period card (src/app/api/share/period/route.tsx), but built from
@@ -104,39 +105,42 @@ export async function GET(req: NextRequest) {
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "center", gap: 32 }}>
-          <div
-            style={{
-              display: "flex",
-              alignSelf: "flex-start",
-              padding: "10px 24px",
-              borderRadius: 999,
-              background: "rgba(163,230,53,0.15)",
-              color: "#a3e635",
-              fontSize: 26,
-              fontWeight: 700,
-            }}
-          >
-            สรุปโภชนาการเดือนนี้
+        <div
+          style={{
+            display: "flex",
+            alignSelf: "flex-start",
+            marginTop: 28,
+            padding: "10px 24px",
+            borderRadius: 999,
+            background: "rgba(163,230,53,0.15)",
+            color: "#a3e635",
+            fontSize: 26,
+            fontWeight: 700,
+          }}
+        >
+          สรุปโภชนาการเดือนนี้
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-around", gap: 40, marginTop: 32, marginBottom: 32 }}>
+          <div style={cardStyle}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
+              <span style={{ fontSize: 100, fontWeight: 700, color: "white", lineHeight: 1 }}>
+                {Math.round(avgCalories).toLocaleString("th-TH")}
+              </span>
+              <span style={{ fontSize: 34, fontWeight: 700, color: "#a3a3a3" }}>kcal/วัน เฉลี่ย</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 24 }}>
+              <span style={{ fontSize: 28 }}>📝</span>
+              <span style={{ fontSize: 26, color: "#d4d4d4" }}>บันทึกอาหารแล้ว</span>
+              <span style={{ fontSize: 26, fontWeight: 700, color: "white" }}>
+                {loggedDays}/{daysElapsed} วัน
+              </span>
+            </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
-            <span style={{ fontSize: 140, fontWeight: 700, color: "white", lineHeight: 1 }}>
-              {Math.round(avgCalories).toLocaleString("th-TH")}
-            </span>
-            <span style={{ fontSize: 40, fontWeight: 700, color: "#a3a3a3" }}>kcal/วัน เฉลี่ย</span>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 28 }}>📝</span>
-            <span style={{ fontSize: 24, color: "#d4d4d4" }}>บันทึกอาหารแล้ว</span>
-            <span style={{ fontSize: 24, fontWeight: 700, color: "white" }}>
-              {loggedDays}/{daysElapsed} วัน
-            </span>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 8 }}>
-            <div style={{ display: "flex", height: 20, width: 520, borderRadius: 999, overflow: "hidden" }}>
+          <div style={cardStyle}>
+            <span style={{ fontSize: 27, fontWeight: 700, color: "#c9c9c4", letterSpacing: 0.5 }}>แมโครเฉลี่ย/วัน</span>
+            <div style={{ display: "flex", height: 28, borderRadius: 999, overflow: "hidden", marginTop: 22 }}>
               {macroShares.map((m) => (
                 <div
                   key={m.label}
@@ -144,29 +148,30 @@ export async function GET(req: NextRequest) {
                 />
               ))}
             </div>
-            <div style={{ display: "flex", gap: 32 }}>
+            <div style={{ display: "flex", gap: 44, marginTop: 26 }}>
               {macroShares.map((m) => (
-                <div key={m.label} style={{ display: "flex", flexDirection: "column" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ display: "flex", width: 14, height: 14, borderRadius: 999, background: m.color }} />
-                    <span style={{ fontSize: 20, color: "#a3a3a3" }}>{m.label}</span>
-                  </div>
-                  <span style={{ fontSize: 28, fontWeight: 700, color: "white" }}>{Math.round(m.grams)} ก./วัน</span>
+                <div key={m.label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ display: "flex", width: 18, height: 18, borderRadius: 999, background: m.color }} />
+                  <span style={{ fontSize: 27, color: "#b5b5b0" }}>{m.label}</span>
+                  <span style={{ fontSize: 30, fontWeight: 700, color: "white" }}>{Math.round(m.grams)} ก.</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 48, marginTop: 8 }}>
-            <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
-              <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>{avgWaterL.toFixed(1)} ลิตร</span>
-              <span style={{ fontSize: 20, color: "#a3a3a3" }}>น้ำดื่มเฉลี่ย/วัน</span>
+          <div style={rowCardStyle}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ fontSize: 42, fontWeight: 700, color: "white" }}>{avgWaterL.toFixed(1)} ลิตร</span>
+              <span style={{ fontSize: 26, color: "#9c9c97" }}>น้ำดื่มเฉลี่ย/วัน</span>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
-              <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>
+          </div>
+
+          <div style={rowCardStyle}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <span style={{ fontSize: 42, fontWeight: 700, color: "white" }}>
                 {weightDelta !== null ? `${weightDelta > 0 ? "+" : ""}${weightDelta.toFixed(1)} กก.` : "—"}
               </span>
-              <span style={{ fontSize: 20, color: "#a3a3a3" }}>น้ำหนักเปลี่ยนแปลง</span>
+              <span style={{ fontSize: 26, color: "#9c9c97" }}>น้ำหนักเปลี่ยนแปลง</span>
             </div>
           </div>
         </div>

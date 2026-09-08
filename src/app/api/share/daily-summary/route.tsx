@@ -7,6 +7,7 @@ import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
 import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
 import { activityTypeLabel, formatDistanceKm, formatDuration } from "@/lib/format";
+import { cardStyle, iconCircleStyle, rowCardStyle, titleStyle } from "@/lib/share-card-styles";
 
 const CAL_RING_SIZE = 260;
 const CAL_RING_STROKE = 22;
@@ -409,19 +410,6 @@ export async function GET(req: NextRequest) {
   });
 }
 
-const cardStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  background: "rgba(255,255,255,0.045)",
-  border: "1px solid rgba(255,255,255,0.07)",
-  borderRadius: 32,
-  padding: "40px 44px",
-};
-
-const rowCardStyle: React.CSSProperties = { ...cardStyle, flexDirection: "row", gap: 32 };
-
-const titleStyle: React.CSSProperties = { fontSize: 27, fontWeight: 700, color: "#c9c9c4", letterSpacing: 0.5 };
-
 const badgeStyle: React.CSSProperties = {
   fontSize: 22,
   fontWeight: 700,
@@ -430,19 +418,6 @@ const badgeStyle: React.CSSProperties = {
   padding: "8px 20px",
   borderRadius: 999,
 };
-
-function iconCircleStyle(bg: string): React.CSSProperties {
-  return {
-    width: 84,
-    height: 84,
-    flexShrink: 0,
-    borderRadius: 24,
-    background: bg,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-}
 
 function WaterIcon() {
   return (
