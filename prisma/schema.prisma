@@ -137,6 +137,13 @@ model Food {
   // per-100 math in src/lib/food.ts unchanged — it only ever cares about the
   // ratio to 100, never what the 100 units of "grams" mean.
   unitLabel String @default("ก.")
+  // Soft-delete — set when the user removes this food from their personal
+  // library. Never hard-deleted: every FoodLog still points at this row
+  // (see logs below) and computes its macros from it live, so actually
+  // deleting the row would silently wipe that day's diary history along
+  // with it. A non-null deletedAt just hides it from the library list and
+  // from being picked/suggested again.
+  deletedAt DateTime?
 
   userId String
   user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)

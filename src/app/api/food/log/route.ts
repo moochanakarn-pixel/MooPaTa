@@ -107,7 +107,10 @@ export async function POST(req: NextRequest) {
     const food = barcode
       ? await db.food.upsert({
           where: { userId_barcode: { userId, barcode } },
-          update: {},
+          // Un-deletes it if this barcode was previously removed from the
+          // library — logging it again is a clear signal the user wants it
+          // back, not that it should stay hidden.
+          update: { deletedAt: null },
           create: {
             userId,
             name,

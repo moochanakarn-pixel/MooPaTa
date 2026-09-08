@@ -41,7 +41,7 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
       orderBy: { loggedAt: "asc" },
       include: { food: true },
     }),
-    db.food.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 200 }),
+    db.food.findMany({ where: { userId, deletedAt: null }, orderBy: { createdAt: "desc" }, take: 200 }),
     db.waterLog.findMany({ where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } }, orderBy: { loggedAt: "asc" } }),
     db.activity.aggregate({ where: { userId, startedAt: { gte: viewDayStart, lt: viewDayEnd } }, _sum: { durationSec: true } }),
     db.foodLog.findMany({ where: { userId, loggedAt: { gte: streakSince } }, select: { loggedAt: true } }),

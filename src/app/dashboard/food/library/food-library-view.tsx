@@ -296,10 +296,10 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
             )}
 
             {confirmDeleteId === f.id && (
-              <div className="mt-3 rounded-lg border border-red-900/60 bg-red-950/30 p-3">
-                <p className="text-xs text-red-300">
+              <div className="mt-3 rounded-lg border border-neutral-700 bg-neutral-900/60 p-3">
+                <p className="text-xs text-neutral-300">
                   {f.logCount > 0
-                    ? `ลบ "${f.name}" จะลบประวัติการกินที่บันทึกด้วยเมนูนี้ทั้งหมด ${f.logCount} รายการไปด้วย — ยืนยันลบหรือไม่?`
+                    ? `ลบ "${f.name}" ออกจากคลัง? ประวัติการกิน ${f.logCount} รายการที่เคยบันทึกไว้จะยังอยู่เหมือนเดิม — จะแค่ไม่มาโผล่แนะนำหรือค้นเจอในคลังอีก`
                     : `ลบ "${f.name}" ออกจากคลัง?`}
                 </p>
                 {deleteError && <p className="mt-1 text-xs text-red-400">{deleteError}</p>}
@@ -307,7 +307,7 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
                   <button
                     onClick={() => confirmDelete(f.id)}
                     disabled={deleting}
-                    className="rounded-lg bg-red-700 px-3 py-1 text-xs font-medium text-white transition hover:bg-red-600 disabled:opacity-50"
+                    className="rounded-lg bg-rose-600 px-3 py-1 text-xs font-medium text-white transition hover:bg-rose-500 disabled:opacity-50"
                   >
                     {deleting ? "กำลังลบ..." : "ยืนยันลบ"}
                   </button>

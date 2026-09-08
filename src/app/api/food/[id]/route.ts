@@ -69,10 +69,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   return NextResponse.json({ ok: true });
 }
 
-// Deletes a personal food. This cascades to every FoodLog that referenced
-// it (see the Food.logs relation's onDelete: Cascade) — the client is
-// expected to show the caller how many log entries that will take with it
-// before calling this, since it's otherwise a silent history wipe.
+// Removes a personal food from the library — a soft delete (sets
+// deletedAt), never db.food.delete. Every FoodLog still points at this row
+// and computes its macros from it live (see src/lib/food.ts), so actually
+// deleting it would silently wipe every day's diary history that ever
+// logged it. Soft-deleting just hides it from the library list and from
+// being picked/suggested again; existing diary entries keep working exactly
+// as before.
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   const userId = await getSessionUserId();
   if (!userId) {
@@ -84,6 +87,6 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
-  await db.food.delete({ where: { id: params.id } });
+  await db.food.update({ where: { id: params.id }, data: { deletedAt: new Date() } });
   return NextResponse.json({ ok: true });
 }

@@ -9,7 +9,7 @@ export default async function FoodLibraryPage() {
   if (!userId) redirect("/");
 
   const rows = await db.food.findMany({
-    where: { userId },
+    where: { userId, deletedAt: null },
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { logs: true } } },
   });
