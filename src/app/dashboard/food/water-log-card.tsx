@@ -40,13 +40,19 @@ function WaterGlass({ fillPct, tappable, onTap }: { fillPct: number; tappable: b
 function WaterGlasses({ totalMl, targetMl, onAddGlass, disabled }: { totalMl: number; targetMl: number | null; onAddGlass: () => void; disabled: boolean }) {
   const glassCount = Math.min(Math.max(Math.ceil((targetMl ?? 2000) / GLASS_ML), MIN_GLASSES), MAX_GLASSES);
   const filledGlasses = Math.floor(totalMl / GLASS_ML);
-  const partialPct = ((totalMl % GLASS_ML) / GLASS_ML) * 100;
+  const remainderMl = totalMl % GLASS_ML;
+  const partialPct = (remainderMl / GLASS_ML) * 100;
+  // Any logged amount that isn't an exact multiple of 250 (a +300/+500
+  // quick-add, a custom amount) leaves a partially-filled glass sitting at
+  // index filledGlasses — the next fully-empty glass is the one after that,
+  // not filledGlasses itself, or nothing would ever be tappable again.
+  const nextEmptyIndex = remainderMl > 0 ? filledGlasses + 1 : filledGlasses;
 
   return (
     <div className="flex flex-wrap gap-2">
       {Array.from({ length: glassCount }, (_, i) => {
-        const fillPct = i < filledGlasses ? 100 : i === filledGlasses ? partialPct : 0;
-        const isNextEmptySlot = i === filledGlasses && fillPct === 0;
+        const fillPct = i < filledGlasses ? 100 : i === filledGlasses && remainderMl > 0 ? partialPct : 0;
+        const isNextEmptySlot = i === nextEmptyIndex;
         return (
           <WaterGlass
             key={i}
@@ -79,10 +85,16 @@ export function WaterLogCard({
 }) {
   const router = useRouter();
   const [adding, setAdding] = useState<number | null>(null);
+  const [undoing, setUndoing] = useState(false);
   const [customMl, setCustomMl] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const totalMl = todayLogs.reduce((sum, l) => sum + l.ml, 0);
+  // The most recently added entry — the only one "ลบรายการล่าสุด" ever
+  // needs, so a mis-tap (or logging the wrong amount) can be corrected
+  // without showing every entry logged today as a growing row of pills,
+  // which got unreadable fast once someone logged more than 3-4 times.
+  const lastEntry = todayLogs.length > 0 ? todayLogs.reduce((a, b) => (a.loggedAtMs >= b.loggedAtMs ? a : b)) : null;
 
   async function addWater(ml: number) {
     if (!Number.isFinite(ml) || ml <= 0) {
@@ -105,9 +117,13 @@ export function WaterLogCard({
     }
   }
 
-  async function deleteWater(id: string) {
-    const res = await fetch(`/api/water/log/${id}`, { method: "DELETE" });
+  async function undoLast() {
+    if (!lastEntry) return;
+    setUndoing(true);
+    const res = await fetch(`/api/water/log/${lastEntry.id}`, { method: "DELETE" });
+    setUndoing(false);
     if (res.ok) router.refresh();
+    else setError("ลบไม่สำเร็จ ลองใหม่อีกครั้ง");
   }
 
   return (
@@ -162,27 +178,22 @@ export function WaterLogCard({
         >
           เพิ่ม
         </button>
+        {lastEntry && (
+          <button
+            onClick={undoLast}
+            disabled={undoing}
+            title={`ลบรายการล่าสุด (${lastEntry.ml} มล.)`}
+            className="ml-auto flex items-center gap-1 text-xs text-neutral-500 transition hover:text-red-300 disabled:opacity-50"
+          >
+            <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5">
+              <path d="M8 5 4 9l4 4M4 9h8a4 4 0 0 1 0 8h-1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {undoing ? "กำลังลบ..." : "ลบรายการล่าสุด"}
+          </button>
+        )}
       </div>
 
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
-
-      {todayLogs.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          {todayLogs.map((l) => (
-            <button
-              key={l.id}
-              onClick={() => deleteWater(l.id)}
-              title="กดเพื่อลบ"
-              className="flex items-center gap-1 rounded-full border border-neutral-800 bg-neutral-900/60 px-2.5 py-1 text-xs text-neutral-400 transition hover:border-red-800 hover:text-red-300"
-            >
-              {l.ml} มล.
-              <svg viewBox="0 0 20 20" fill="none" className="h-2.5 w-2.5">
-                <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </button>
-          ))}
-        </div>
-      )}
 
       <WaterReminderToggle initialSchedule={reminderSchedule} />
     </div>
