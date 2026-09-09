@@ -117,12 +117,18 @@ const DAYS = [
     items: [
       { name: "ไข่แดงดอง", kcal: 70, p: 3, f: 5, c: 3, unit: GENERIC_UNIT, qty: 1 },
       { name: "ข้าวผัดแซลมอน", kcal: 320, p: 12, f: 12, c: 42, unit: GENERIC_UNIT, qty: 1 },
-      { name: "เวย์ Soy Isolate รอบ 1", kcal: 130, p: 30, f: 1, c: 1, unit: GENERIC_UNIT, qty: 1 },
+      // Real diary names, seen in the live dry-run, don't contain "Soy
+      // Isolate" at all ("เวย์รอบ 1 (โปรตีน 30g)" / "เวย์รอบ 2 (หลัง
+      // ออกกำลังกายเบาๆ, โปรตีน 30g)") — the substring matcher misses
+      // them against "เวย์ Soy Isolate รอบ N" and would have created a
+      // duplicate entry instead of correcting the real one. aliases are
+      // tried the same way the main name is.
+      { name: "เวย์ Soy Isolate รอบ 1", aliases: ["เวย์รอบ 1"], kcal: 130, p: 30, f: 1, c: 1, unit: GENERIC_UNIT, qty: 1 },
       { name: "ปลาแซลมอนดิบ", kcal: 115, p: 13, f: 7, c: 0, unit: GRAM_UNIT, qty: 57 },
       { name: "ข้าวสวย", kcal: 230, p: 4, f: 0, c: 50, unit: GRAM_UNIT, qty: 180 },
       { name: "ไก่ลอกหนัง", kcal: 165, p: 27, f: 6, c: 0, unit: GRAM_UNIT, qty: 100 },
       { name: "ไข่ต้ม", kcal: 70, p: 6, f: 5, c: 0, unit: "ฟอง", qty: 1 },
-      { name: "เวย์ Soy Isolate รอบ 2", kcal: 130, p: 30, f: 1, c: 1, unit: GENERIC_UNIT, qty: 1 },
+      { name: "เวย์ Soy Isolate รอบ 2", aliases: ["เวย์รอบ 2"], kcal: 130, p: 30, f: 1, c: 1, unit: GENERIC_UNIT, qty: 1 },
       { name: "ไข่ต้มเพิ่ม", kcal: 70, p: 6, f: 5, c: 0, unit: "ฟอง", qty: 1 },
     ],
   },
@@ -157,11 +163,14 @@ const DAYS = [
 function normalize(s) {
   return s.toLowerCase().replace(/\s+/g, "").trim();
 }
-function namesLooselyMatch(a, b) {
-  const na = normalize(a);
-  const nb = normalize(b);
-  if (!na || !nb) return false;
-  return na.includes(nb) || nb.includes(na);
+function namesLooselyMatch(existingName, item) {
+  const na = normalize(existingName);
+  const candidates = [item.name, ...(item.aliases ?? [])];
+  return candidates.some((c) => {
+    const nb = normalize(c);
+    if (!na || !nb) return false;
+    return na.includes(nb) || nb.includes(na);
+  });
 }
 function dayRange(dayKey) {
   const [y, m, d] = dayKey.split("-").map(Number);
@@ -209,7 +218,7 @@ async function main() {
     console.log(`=== ${day} (${existingLogs.length} existing log(s)) ===`);
 
     for (const item of items) {
-      const candidate = existingLogs.find((l) => !claimed.has(l.id) && namesLooselyMatch(l.food.name, item.name));
+      const candidate = existingLogs.find((l) => !claimed.has(l.id) && namesLooselyMatch(l.food.name, item));
       const per100g = per100gFromTotal({ kcal: item.kcal, p: item.p, f: item.f, c: item.c }, item.qty);
 
       if (candidate) {
