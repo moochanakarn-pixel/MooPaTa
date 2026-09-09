@@ -6,7 +6,7 @@ import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
 import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
 import { DateStrip } from "./date-strip";
-import { FoodLogView, type DailyTargets, type FavoriteFood, type PersonalFood, type TodayLogEntry } from "./food-log-view";
+import { FoodLogView, type DailyTargets, type PersonalFood, type TodayLogEntry } from "./food-log-view";
 import { LoggingStreakCard, type StreakWeekDay } from "./logging-streak-card";
 import { WaterLogCard, type WaterLogEntry } from "./water-log-card";
 
@@ -34,19 +34,25 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
   const streakSince = new Date(todayStart);
   streakSince.setDate(streakSince.getDate() - (STREAK_DAYS_BACK - 1));
 
-  const [user, viewDayLogRows, personalFoodRows, viewDayWaterRows, viewDayActivityAgg, foodStreakRows, weightStreakRows] = await Promise.all([
-    db.user.findUnique({ where: { id: userId } }),
-    db.foodLog.findMany({
-      where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } },
-      orderBy: { loggedAt: "asc" },
-      include: { food: true },
-    }),
-    db.food.findMany({ where: { userId, deletedAt: null }, orderBy: { createdAt: "desc" }, take: 200 }),
-    db.waterLog.findMany({ where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } }, orderBy: { loggedAt: "asc" } }),
-    db.activity.aggregate({ where: { userId, startedAt: { gte: viewDayStart, lt: viewDayEnd } }, _sum: { durationSec: true } }),
-    db.foodLog.findMany({ where: { userId, loggedAt: { gte: streakSince } }, select: { loggedAt: true } }),
-    db.weightLog.findMany({ where: { userId, loggedAt: { gte: streakSince } }, select: { loggedAt: true } }),
-  ]);
+  const [user, viewDayLogRows, personalFoodRows, viewDayWaterRows, viewDayActivityAgg, foodStreakRows, weightStreakRows, foodLogCounts] =
+    await Promise.all([
+      db.user.findUnique({ where: { id: userId } }),
+      db.foodLog.findMany({
+        where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } },
+        orderBy: { loggedAt: "asc" },
+        include: { food: true },
+      }),
+      db.food.findMany({ where: { userId, deletedAt: null }, orderBy: { createdAt: "desc" }, take: 200 }),
+      db.waterLog.findMany({ where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } }, orderBy: { loggedAt: "asc" } }),
+      db.activity.aggregate({ where: { userId, startedAt: { gte: viewDayStart, lt: viewDayEnd } }, _sum: { durationSec: true } }),
+      db.foodLog.findMany({ where: { userId, loggedAt: { gte: streakSince } }, select: { loggedAt: true } }),
+      db.weightLog.findMany({ where: { userId, loggedAt: { gte: streakSince } }, select: { loggedAt: true } }),
+      // How many times each food has actually been logged, all-time — the
+      // basis for the "เมนูที่กินบ่อย" quick-pick list inside the add-food
+      // panel (see FoodLogView), replacing the old isFavorite-driven one.
+      db.foodLog.groupBy({ by: ["foodId"], where: { userId }, _count: { _all: true } }),
+    ]);
+  const logCountByFoodId = new Map(foodLogCounts.map((r) => [r.foodId, r._count._all]));
 
   const activityDurationViewDaySec = viewDayActivityAgg._sum.durationSec ?? 0;
   const waterLogs: WaterLogEntry[] = viewDayWaterRows.map((w) => ({ id: w.id, ml: w.ml, loggedAtMs: w.loggedAt.getTime() }));
@@ -101,20 +107,8 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
     fatPer100g: f.fatPer100g,
     typicalGrams: f.typicalGrams,
     unitLabel: f.unitLabel,
+    logCount: logCountByFoodId.get(f.id) ?? 0,
   }));
-
-  const favoriteFoods: FavoriteFood[] = personalFoodRows
-    .filter((f) => f.isFavorite)
-    .map((f) => ({
-      id: f.id,
-      name: f.name,
-      caloriesPer100g: f.caloriesPer100g,
-      proteinPer100g: f.proteinPer100g,
-      carbPer100g: f.carbPer100g,
-      fatPer100g: f.fatPer100g,
-      typicalGrams: f.typicalGrams,
-      unitLabel: f.unitLabel,
-    }));
 
   let targets: DailyTargets | null = null;
   let waterTargetMl: number | null = null;
@@ -211,7 +205,6 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
       <FoodLogView
         todayLogs={todayLogs}
         personalFoods={personalFoods}
-        favoriteFoods={favoriteFoods}
         targets={targets}
         viewDate={viewDate}
         isToday={viewDate === todayDate}

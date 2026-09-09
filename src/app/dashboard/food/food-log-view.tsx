@@ -25,12 +25,10 @@ export interface PersonalFood extends Per100g {
   name: string;
   typicalGrams: number;
   unitLabel: string;
+  // How many times this food has actually been logged, all-time — drives
+  // the "เมนูที่กินบ่อย" quick-pick list in the add-food panel.
+  logCount: number;
 }
-
-// Same shape as PersonalFood — kept as its own name since a "favorite" is a
-// distinct concept (a personal food the user starred for the suggestion
-// row), even though nothing about the data itself differs.
-export type FavoriteFood = PersonalFood;
 
 export interface TodayLogEntry {
   id: string;
@@ -93,7 +91,6 @@ function guessMealType(): string {
 export function FoodLogView({
   todayLogs,
   personalFoods,
-  favoriteFoods,
   targets,
   viewDate,
   isToday,
@@ -101,7 +98,6 @@ export function FoodLogView({
 }: {
   todayLogs: TodayLogEntry[];
   personalFoods: PersonalFood[];
-  favoriteFoods: FavoriteFood[];
   targets: DailyTargets | null;
   viewDate: string;
   isToday: boolean;
@@ -276,27 +272,33 @@ export function FoodLogView({
     : [];
 
   // How much room is left today, at typical serving sizes — the basis for
-  // the "แนะนำมื้อถัดไป" suggestions below. Ranked by protein density since
-  // that's usually the harder macro to hit, once there's still calorie
-  // headroom to spend. Memoized like totals/mealGroups above so typing in
-  // the search box or editing custom-macro fields doesn't re-sort the
-  // catalog on every keystroke.
+  // the "เมนูที่กินบ่อย" quick-pick list inside the add-food panel.
+  // Memoized like totals/mealGroups above so typing in the search box or
+  // editing custom-macro fields doesn't re-sort the list on every keystroke.
   //
-  // Favorites (the user's own starred foods, see the library page) take
-  // over this row entirely once any exist — a curated "what I actually
-  // eat" list beats generic catalog dishes the user may never make. Falls
-  // back to the catalog only for someone with no favorites yet.
+  // Ranked by actual logging frequency — a real "what I actually eat"
+  // list beats generic catalog dishes the user may never make. Falls back
+  // to the catalog only for someone with no logging history yet at all.
   const remainingCalories = targets ? targets.targetCalories - totals.calories : null;
-  const usingFavorites = favoriteFoods.length > 0;
+  const frequentPersonalFoods = useMemo(() => personalFoods.filter((f) => f.logCount > 0).sort((a, b) => b.logCount - a.logCount), [personalFoods]);
+  const usingFrequent = frequentPersonalFoods.length > 0;
   const suggestions = useMemo(() => {
     if (remainingCalories === null || remainingCalories <= 0) return [];
-    const source = usingFavorites ? favoriteFoods : THAI_FOOD_CATALOG;
-    return source
-      .map((f) => ({ food: f, ...macrosForGrams(f, f.typicalGrams) }))
+    if (usingFrequent) {
+      // Already sorted by logCount — most-eaten first.
+      return frequentPersonalFoods
+        .map((f) => ({ food: f, ...macrosForGrams(f, f.typicalGrams) }))
+        .filter((s) => s.calories <= remainingCalories)
+        .slice(0, 6);
+    }
+    // No logging history yet at all — fall back to the built-in catalog,
+    // ranked by protein density since that's usually the harder macro to
+    // hit once there's still calorie headroom to spend.
+    return THAI_FOOD_CATALOG.map((f) => ({ food: f, ...macrosForGrams(f, f.typicalGrams) }))
       .filter((s) => s.calories <= remainingCalories)
       .sort((a, b) => b.proteinG - a.proteinG)
       .slice(0, 6);
-  }, [remainingCalories, usingFavorites, favoriteFoods]);
+  }, [remainingCalories, usingFrequent, frequentPersonalFoods]);
 
   function pickPersonal(food: PersonalFood) {
     setShowAdd(true);
@@ -493,40 +495,6 @@ export function FoodLogView({
         <p className="mb-1 text-center text-xs text-neutral-500">{isToday ? "กินไปวันนี้" : "สรุปวันที่เลือก"}</p>
         <NutrientOverview pages={nutrientPages} extraPage={micronutrientPage} />
       </div>
-
-      {suggestions.length > 0 && !showAdd && (
-        <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-medium">
-              {usingFavorites ? "เมนูโปรดของคุณ" : "แนะนำมื้อถัดไป"}
-            </h2>
-            <span className="text-xs text-neutral-500">เหลือ {Math.round(remainingCalories ?? 0)} kcal วันนี้</span>
-          </div>
-          <div className="space-y-1.5">
-            {suggestions.map((s) => (
-              <button
-                key={usingFavorites ? (s.food as FavoriteFood).id : s.food.name}
-                onClick={() => (usingFavorites ? pickPersonal(s.food as FavoriteFood) : pickCatalog(s.food as CatalogFood))}
-                className="flex w-full items-center justify-between rounded-lg border border-neutral-800/60 px-3 py-2 text-left text-sm transition hover:border-neutral-700 hover:bg-neutral-800/40"
-              >
-                <span className="text-neutral-200">{s.food.name}</span>
-                <span className="text-xs text-neutral-500">
-                  {Math.round(s.calories)} kcal · โปรตีน {Math.round(s.proteinG)} ก.
-                </span>
-              </button>
-            ))}
-          </div>
-          {!usingFavorites && (
-            <p className="mt-3 text-xs text-neutral-600">
-              เมนูพวกนี้มาจากแคตตาล็อกทั่วไป — กดดาวเมนูที่กินบ่อยๆ ที่{" "}
-              <Link href="/dashboard/food/library" className="text-lime-400 hover:underline">
-                คลังอาหารส่วนตัว
-              </Link>{" "}
-              จะได้แนะนำแบบที่คุณกินจริงแทน
-            </p>
-          )}
-        </div>
-      )}
 
       {showImport && <ImportMealPanel onClose={() => setShowImport(false)} />}
 
@@ -753,6 +721,29 @@ export function FoodLogView({
                   สแกนฉลาก
                 </button>
               </div>
+
+              {!query.trim() && suggestions.length > 0 && (
+                <div className="mb-1">
+                  <div className="mb-1 flex items-center justify-between px-1">
+                    <p className="text-[11px] text-neutral-600">{usingFrequent ? "เมนูที่กินบ่อย" : "แนะนำจากรายการอาหารไทย"}</p>
+                    <span className="text-[11px] text-neutral-600">เหลือ {Math.round(remainingCalories ?? 0)} kcal วันนี้</span>
+                  </div>
+                  <div className="space-y-1">
+                    {suggestions.map((s) => (
+                      <button
+                        key={usingFrequent ? (s.food as PersonalFood).id : s.food.name}
+                        onClick={() => (usingFrequent ? pickPersonal(s.food as PersonalFood) : pickCatalog(s.food as CatalogFood))}
+                        className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-sm hover:bg-neutral-800/50"
+                      >
+                        <span className="text-neutral-200">{s.food.name}</span>
+                        <span className="text-xs text-neutral-500">
+                          {Math.round(s.calories)} kcal · โปรตีน {Math.round(s.proteinG)} ก.
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {query.trim() && (
                 <div className="max-h-64 space-y-1 overflow-y-auto">
