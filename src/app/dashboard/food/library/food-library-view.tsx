@@ -211,8 +211,19 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
     return <p className="py-12 text-center text-sm text-neutral-600">ยังไม่มีเมนูในคลัง — บันทึกอาหารสักครั้งแล้วจะมาโผล่ที่นี่</p>;
   }
 
+  // A deep link from an old diary entry can point at a food that has since
+  // been soft-deleted from the library (deletedAt set) — the library page
+  // only ever passes non-deleted foods in, so editingId here would silently
+  // match nothing and the link would look like it did nothing. Say why.
+  const editingTargetMissing = editingId !== null && !foods.some((f) => f.id === editingId);
+
   return (
     <div>
+      {editingTargetMissing && (
+        <p className="mb-4 rounded-lg border border-neutral-800 bg-neutral-900/40 px-4 py-3 text-xs text-neutral-400">
+          เมนูที่จะแก้ไขถูกลบออกจากคลังไปแล้ว จึงแก้ไขไม่ได้ — ประวัติการกินเดิมยังอยู่เหมือนเดิม
+        </p>
+      )}
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}

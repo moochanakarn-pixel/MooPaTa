@@ -219,19 +219,47 @@ async function main() {
           unitLabel: candidate.food.unitLabel,
           caloriesPer100g: candidate.food.caloriesPer100g,
         };
+        // Food rows can be shared across many FoodLog entries — quick-repeat
+        // and "pick from library" both re-log by foodId rather than creating
+        // a fresh row (see src/app/dashboard/food/food-log-view.tsx). If we
+        // mutated candidate.foodId in place, we'd silently rewrite the
+        // macros of every OTHER day (in or out of this 1-8 Sep range) that
+        // happens to share the same row — e.g. multiple "เวย์ Soy Isolate"
+        // scoops this week alone have different ground-truth kcal per day.
+        // So: only update the Food row in place when this log is its only
+        // reference; otherwise fork a fresh Food row for this log alone,
+        // same as "picking a different catalog entry" would.
+        const refCount = await db.foodLog.count({ where: { foodId: candidate.foodId } });
+        const shared = refCount > 1;
         console.log(
-          `  UPDATE "${candidate.food.name}" -> "${item.name}": grams ${before.grams}->${item.qty} (${before.unitLabel}->${item.unit}), ` +
+          `  UPDATE "${candidate.food.name}" -> "${item.name}" ${shared ? "(shared row -> forking a new one) " : ""}` +
+            `: grams ${before.grams}->${item.qty} (${before.unitLabel}->${item.unit}), ` +
             `kcal/100 ${before.caloriesPer100g.toFixed(1)}->${per100g.caloriesPer100g.toFixed(1)} ` +
             `(=> ${item.kcal}kcal/${item.p}p/${item.c}c/${item.f}f at qty ${item.qty})`
         );
         if (APPLY) {
-          await db.food.update({
-            where: { id: candidate.foodId },
-            data: { name: item.name, unitLabel: item.unit, typicalGrams: item.qty, ...per100g },
-          });
+          let targetFoodId = candidate.foodId;
+          if (shared) {
+            const forked = await db.food.create({
+              data: {
+                userId: user.id,
+                name: item.name,
+                source: "CUSTOM",
+                unitLabel: item.unit,
+                typicalGrams: item.qty,
+                ...per100g,
+              },
+            });
+            targetFoodId = forked.id;
+          } else {
+            await db.food.update({
+              where: { id: candidate.foodId },
+              data: { name: item.name, unitLabel: item.unit, typicalGrams: item.qty, ...per100g },
+            });
+          }
           await db.foodLog.update({
             where: { id: candidate.id },
-            data: { grams: item.qty, ...(item.mealType ? { mealType: item.mealType } : {}) },
+            data: { foodId: targetFoodId, grams: item.qty, ...(item.mealType ? { mealType: item.mealType } : {}) },
           });
         }
         totalUpdated++;
