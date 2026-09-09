@@ -33,10 +33,24 @@ export default async function HomePage({
       desc: "ดูความสม่ำเสมอย้อนหลังได้เป็นปี",
     },
     {
-      icon: ["M10 3v10m0 0 3.5-3.5M10 13l-3.5-3.5M4 15v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1"],
+      // Same diary-book path used by the bottom nav's "ไดอารี่" tab, so the
+      // landing page's promise and the in-app icon read as the same feature.
+      icon: ["M5 3v14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6.5L11.5 3H6a1 1 0 0 0-1 0Z M11 3v3.5a1 1 0 0 0 1 1H15M8 11h4M8 14h4"],
+      color: "#22c55e",
+      title: "บันทึกอาหาร น้ำ น้ำหนัก",
+      desc: "คำนวณแคลอรี่และแมโครที่ควรได้ให้อัตโนมัติ",
+    },
+    {
+      icon: ["M10 3.5c-2 0-3.5 1.5-3.5 3.5v2.3L5 12h10l-1.5-2.7V7c0-2-1.5-3.5-3.5-3.5Z", "M8.5 14a1.5 1.5 0 0 0 3 0"],
       color: "#8b5cf6",
+      title: "แจ้งเตือนน้ำ+อาหารเสริม",
+      desc: "เตือนตรงเวลา ไม่พลาดแม้วันยุ่ง",
+    },
+    {
+      icon: ["M10 3v10m0 0 3.5-3.5M10 13l-3.5-3.5M4 15v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1"],
+      color: "#f43f5e",
       title: "แชร์การ์ดสวยๆ",
-      desc: "สรุปกิจกรรม/สัปดาห์/เดือน พร้อมโพสต์โซเชียล",
+      desc: "สรุปกิจกรรมหรือโภชนาการ พร้อมโพสต์โซเชียล",
     },
   ];
 
@@ -52,7 +66,7 @@ export default async function HomePage({
         <div className="space-y-2">
           <h1 className="text-5xl font-extrabold tracking-tight text-white">MooPaTa</h1>
           <p className="text-balance text-sm font-medium text-orange-50/90">
-            รวมข้อมูลการออกกำลังกายจาก Strava ไว้ที่เดียว
+            รวมข้อมูลออกกำลังกายจาก Strava พร้อมบันทึกอาหาร น้ำ น้ำหนัก ไว้ที่เดียว
           </p>
         </div>
       </div>
