@@ -67,16 +67,22 @@ export async function syncStravaConnection(
     !connection.lastReconciledAt || Date.now() - connection.lastReconciledAt.getTime() > RECONCILE_INTERVAL_MS;
 
   if (dueForReconcile) {
-    const currentStravaIds = await fetchAllStravaActivityIds(accessToken);
-    const stored = await db.activity.findMany({
-      where: { userId, provider: "STRAVA" },
-      select: { id: true, providerActId: true },
-    });
-    const staleIds = stored.filter((s) => !currentStravaIds.has(s.providerActId)).map((s) => s.id);
-    if (staleIds.length > 0) {
-      await db.activity.deleteMany({ where: { id: { in: staleIds } } });
+    const { ids: currentStravaIds, complete } = await fetchAllStravaActivityIds(accessToken);
+    if (complete) {
+      const stored = await db.activity.findMany({
+        where: { userId, provider: "STRAVA" },
+        select: { id: true, providerActId: true },
+      });
+      const staleIds = stored.filter((s) => !currentStravaIds.has(s.providerActId)).map((s) => s.id);
+      if (staleIds.length > 0) {
+        await db.activity.deleteMany({ where: { id: { in: staleIds } } });
+      }
+      deleted = staleIds.length;
     }
-    deleted = staleIds.length;
+    // else: couldn't page through this athlete's entire Strava history
+    // within the safety cap, so the id set can't be trusted to reflect
+    // "everything not in it was deleted" — skip deleting this round rather
+    // than risk mass-deleting real, older activities.
     await db.providerConnection.update({
       where: { id: connection.id },
       data: { lastReconciledAt: new Date() },

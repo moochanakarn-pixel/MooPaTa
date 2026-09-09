@@ -160,24 +160,8 @@ interface StravaActivity {
   start_latlng?: [number, number] | null;
 }
 
-// Pull recent activities for the athlete. `afterUnix` lets us do incremental
-// syncs by only asking for activities newer than the last one we have.
-export async function fetchStravaActivities(
-  accessToken: string,
-  afterUnix?: number
-): Promise<NormalizedActivity[]> {
-  const params = new URLSearchParams({ per_page: "50" });
-  if (afterUnix) params.set("after", String(afterUnix));
-
-  const res = await stravaFetch(`${STRAVA_API_BASE}/athlete/activities?${params.toString()}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) {
-    throw new Error(`Strava activities fetch failed: ${res.status} ${await res.text()}`);
-  }
-  const activities = (await res.json()) as StravaActivity[];
-
-  return activities.map((a) => ({
+function normalizeActivity(a: StravaActivity): NormalizedActivity {
+  return {
     providerActId: String(a.id),
     type: a.sport_type ?? a.type,
     name: a.name,
@@ -205,15 +189,56 @@ export async function fetchStravaActivities(
     startLat: a.start_latlng?.[0],
     startLng: a.start_latlng?.[1],
     raw: a,
-  }));
+  };
+}
+
+// Pull activities for the athlete, paginating through everything Strava
+// returns. `afterUnix` lets us do incremental syncs by only asking for
+// activities newer than the last one we have — in that case a single page
+// almost always covers it (few new activities since the last sync), so
+// pagination costs nothing extra in the common case. Without it (a brand
+// new connection, or one that's gone unsynced long enough to have more than
+// one page of history), a single 50-per-page call used to silently return
+// only the most recent 50 activities and stop there — any older history
+// never made it in. per_page/maxPages match fetchAllStravaActivityIds's
+// cap below (10,000 activities) for the same reason: a generous but bounded
+// safety limit against a runaway loop.
+export async function fetchStravaActivities(accessToken: string, afterUnix?: number): Promise<NormalizedActivity[]> {
+  const perPage = 200;
+  const maxPages = 50;
+  const results: NormalizedActivity[] = [];
+
+  for (let page = 1; page <= maxPages; page++) {
+    const params = new URLSearchParams({ per_page: String(perPage), page: String(page) });
+    if (afterUnix) params.set("after", String(afterUnix));
+
+    const res = await stravaFetch(`${STRAVA_API_BASE}/athlete/activities?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      throw new Error(`Strava activities fetch failed: ${res.status} ${await res.text()}`);
+    }
+    const batch = (await res.json()) as StravaActivity[];
+    results.push(...batch.map(normalizeActivity));
+    if (batch.length < perPage) break;
+  }
+
+  return results;
 }
 
 // Every activity id currently on Strava for this athlete, across all pages.
 // Used to reconcile deletions: an activity we have stored but that no longer
 // shows up here was removed on Strava's side and should be removed here too.
-export async function fetchAllStravaActivityIds(accessToken: string): Promise<Set<string>> {
+// `complete` is false if pagination hit maxPages without reaching a final,
+// under-full page — meaning there could be more history beyond the cap that
+// was never fetched. Callers must treat an incomplete id set as unusable for
+// inferring deletions: mass-deleting every stored activity absent from a
+// partial set would misclassify real, older activities (beyond the cap) as
+// removed from Strava.
+export async function fetchAllStravaActivityIds(accessToken: string): Promise<{ ids: Set<string>; complete: boolean }> {
   const ids = new Set<string>();
   const maxPages = 50; // 50 * 200 = 10,000 activities, generous safety cap
+  let complete = true;
 
   for (let page = 1; page <= maxPages; page++) {
     const params = new URLSearchParams({ per_page: "200", page: String(page) });
@@ -226,9 +251,10 @@ export async function fetchAllStravaActivityIds(accessToken: string): Promise<Se
     const batch = (await res.json()) as { id: number }[];
     for (const a of batch) ids.add(String(a.id));
     if (batch.length < 200) break;
+    if (page === maxPages) complete = false;
   }
 
-  return ids;
+  return { ids, complete };
 }
 
 // Revokes MooPaTa's access on Strava's side too, so the app disappears from
