@@ -95,13 +95,19 @@ export function computeTargets(p: NutritionProfile): NutritionTargets {
   const rate = p.goalRateKgPerWeek ?? DEFAULT_RATE_KG_PER_WEEK;
   const dailyDelta = (rate * KCAL_PER_KG_FAT) / 7;
   const rawTarget = p.goal === "LOSE" ? tdee - dailyDelta : p.goal === "GAIN" ? tdee + dailyDelta : tdee;
-  const targetCalories = Math.max(rawTarget, MIN_SAFE_CALORIES);
+  const floorTargetCalories = Math.max(rawTarget, MIN_SAFE_CALORIES);
 
   const proteinG = p.weightKg * PROTEIN_G_PER_KG;
   const proteinKcal = proteinG * 4;
-  const fatKcal = targetCalories * FAT_SHARE_OF_CALORIES;
+  const fatKcal = floorTargetCalories * FAT_SHARE_OF_CALORIES;
+  // Protein (a fixed g/kg floor, never cut) plus the fat share can together
+  // already exceed a very low, MIN_SAFE_CALORIES-clamped target (e.g. a
+  // heavy user on an aggressive LOSE rate) — carbG can't go negative, so
+  // raise the displayed target to match what protein+fat actually cost
+  // instead of showing a calorie target that doesn't sum to its own macros.
+  const targetCalories = Math.max(floorTargetCalories, proteinKcal + fatKcal);
+  const carbKcal = targetCalories - proteinKcal - fatKcal;
   const fatG = fatKcal / 9;
-  const carbKcal = Math.max(targetCalories - proteinKcal - fatKcal, 0);
   const carbG = carbKcal / 4;
 
   return {

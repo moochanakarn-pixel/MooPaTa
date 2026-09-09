@@ -496,7 +496,7 @@ export function FoodLogView({
         <NutrientOverview pages={nutrientPages} extraPage={micronutrientPage} />
       </div>
 
-      {showImport && <ImportMealPanel onClose={() => setShowImport(false)} />}
+      {showImport && <ImportMealPanel onClose={() => setShowImport(false)} viewDate={viewDate} isToday={isToday} />}
 
       {!showAdd && !showImport ? (
         <div className="mb-6 flex gap-2">

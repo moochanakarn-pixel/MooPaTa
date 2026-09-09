@@ -56,7 +56,15 @@ function toEditable(rows: ParsedFoodRow[]): EditableRow[] {
 // back as an editable, individually-removable preview rather than saved
 // straight away — free-form text parsing will sometimes get a row wrong,
 // and this is the safety net for that.
-export function ImportMealPanel({ onClose }: { onClose: () => void }) {
+export function ImportMealPanel({
+  onClose,
+  viewDate,
+  isToday,
+}: {
+  onClose: () => void;
+  viewDate: string;
+  isToday: boolean;
+}) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [rows, setRows] = useState<EditableRow[] | null>(null);
@@ -115,6 +123,7 @@ export function ImportMealPanel({ onClose }: { onClose: () => void }) {
           body: JSON.stringify({
             grams,
             mealType: mealType || null,
+            ...(isToday ? {} : { loggedAt: viewDate }),
             food: {
               name: r.name.trim(),
               caloriesPer100g: (Number.isFinite(calories) ? calories : 0) * ratio,
@@ -132,7 +141,7 @@ export function ImportMealPanel({ onClose }: { onClose: () => void }) {
         const res = await fetch("/api/water/log", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ml: Math.round(water) }),
+          body: JSON.stringify({ ml: Math.round(water), ...(isToday ? {} : { loggedAt: viewDate }) }),
         });
         if (!res.ok) throw new Error("save_failed");
       }
