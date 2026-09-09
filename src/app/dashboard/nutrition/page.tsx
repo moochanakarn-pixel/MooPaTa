@@ -16,14 +16,17 @@ import {
   BMI_CATEGORY_GUIDANCE,
   type BmiCategory,
 } from "@/lib/nutrition";
+import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
 import { WeightLogCard, type WeightLogEntry } from "./weight-log-card";
 import { CalorieTrendChart, type CalorieDayBucket } from "./calorie-trend-chart";
 import { CalorieRing } from "./calorie-ring";
 import { NutritionPeriodComparison } from "./nutrition-period-comparison";
 import { ProgressPhotosCard } from "./progress-photos-card";
+import { LoggingStreakCard, type StreakWeekDay } from "./logging-streak-card";
 import { PHOTO_ANGLES } from "@/lib/progress-photo-types";
 
 const TREND_DAYS = 14;
+const STREAK_DAYS_BACK = 60;
 
 // Local calendar date, matching todayStart's own use of local getters below
 // (and how "today" is computed elsewhere in the app, e.g. the streak/heatmap
@@ -175,7 +178,7 @@ export default async function NutritionPage() {
   // from today-7 to today-13 depending on what day of the week it is.
   const foodQueryStart = trendStart < lastWeekStart ? trendStart : lastWeekStart;
 
-  const [weightRows, trendFoodLogs, trendActivities, twoWeekWaterLogs] = await Promise.all([
+  const [weightRows, trendFoodLogs, trendActivities, twoWeekWaterLogs, foodStreakRows] = await Promise.all([
     db.weightLog.findMany({
       where: { userId, loggedAt: { gte: sixtyDaysAgo } },
       orderBy: { loggedAt: "asc" },
@@ -195,7 +198,32 @@ export default async function NutritionPage() {
       where: { userId, loggedAt: { gte: lastWeekStart } },
       select: { loggedAt: true, ml: true },
     }),
+    // For the logging-streak card — a wider window than trendFoodLogs
+    // (which only covers TREND_DAYS/last-week), matching STREAK_DAYS_BACK.
+    db.foodLog.findMany({ where: { userId, loggedAt: { gte: sixtyDaysAgo } }, select: { loggedAt: true } }),
   ]);
+
+  const foodStreakDays = buildDayCounts(
+    foodStreakRows.map((r) => r.loggedAt),
+    STREAK_DAYS_BACK
+  );
+  const weightStreakDays = buildDayCounts(
+    weightRows.map((r) => r.loggedAt),
+    STREAK_DAYS_BACK
+  );
+  const foodStreak = computeStreak(foodStreakDays);
+  const weightStreak = computeStreak(weightStreakDays);
+
+  const foodLoggedByDate = new Set(foodStreakDays.filter((d) => d.count > 0).map((d) => d.date));
+  const streakWeekStart = new Date(todayStart);
+  streakWeekStart.setDate(streakWeekStart.getDate() - ((streakWeekStart.getDay() + 6) % 7)); // Monday
+  const todayDateKey = localDateKey(todayStart);
+  const streakWeekDays: StreakWeekDay[] = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(streakWeekStart);
+    d.setDate(d.getDate() + i);
+    const key = localDateKey(d);
+    return { dayOfMonth: d.getDate(), isToday: key === todayDateKey, logged: foodLoggedByDate.has(key) };
+  });
   const weightLogs: WeightLogEntry[] = weightRows.map((w) => ({
     id: w.id,
     weightKg: w.weightKg,
@@ -270,6 +298,13 @@ export default async function NutritionPage() {
           แชร์สรุปเดือนนี้
         </a>
       </p>
+
+      <LoggingStreakCard
+        currentStreak={foodStreak.current}
+        longestFoodStreak={foodStreak.longest}
+        longestWeightStreak={weightStreak.longest}
+        weekDays={streakWeekDays}
+      />
 
       <BmiGauge weightKg={profile.weightKg} heightCm={profile.heightCm} />
 

@@ -4,13 +4,10 @@ import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
-import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
+import { localDateKey } from "@/lib/streak";
 import { DateStrip } from "./date-strip";
 import { FoodLogView, type DailyTargets, type PersonalFood, type TodayLogEntry } from "./food-log-view";
-import { LoggingStreakCard, type StreakWeekDay } from "./logging-streak-card";
 import { WaterLogCard, type WaterLogEntry } from "./water-log-card";
-
-const STREAK_DAYS_BACK = 60;
 
 export default async function FoodPage({ searchParams }: { searchParams: { date?: string } }) {
   const userId = await getSessionUserId();
@@ -31,52 +28,25 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
   const viewDayEnd = new Date(viewDayStart);
   viewDayEnd.setDate(viewDayEnd.getDate() + 1);
 
-  const streakSince = new Date(todayStart);
-  streakSince.setDate(streakSince.getDate() - (STREAK_DAYS_BACK - 1));
-
-  const [user, viewDayLogRows, personalFoodRows, viewDayWaterRows, viewDayActivityAgg, foodStreakRows, weightStreakRows, foodLogCounts] =
-    await Promise.all([
-      db.user.findUnique({ where: { id: userId } }),
-      db.foodLog.findMany({
-        where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } },
-        orderBy: { loggedAt: "asc" },
-        include: { food: true },
-      }),
-      db.food.findMany({ where: { userId, deletedAt: null }, orderBy: { createdAt: "desc" }, take: 200 }),
-      db.waterLog.findMany({ where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } }, orderBy: { loggedAt: "asc" } }),
-      db.activity.aggregate({ where: { userId, startedAt: { gte: viewDayStart, lt: viewDayEnd } }, _sum: { durationSec: true } }),
-      db.foodLog.findMany({ where: { userId, loggedAt: { gte: streakSince } }, select: { loggedAt: true } }),
-      db.weightLog.findMany({ where: { userId, loggedAt: { gte: streakSince } }, select: { loggedAt: true } }),
-      // How many times each food has actually been logged, all-time — the
-      // basis for the "เมนูที่กินบ่อย" quick-pick list inside the add-food
-      // panel (see FoodLogView), replacing the old isFavorite-driven one.
-      db.foodLog.groupBy({ by: ["foodId"], where: { userId }, _count: { _all: true } }),
-    ]);
+  const [user, viewDayLogRows, personalFoodRows, viewDayWaterRows, viewDayActivityAgg, foodLogCounts] = await Promise.all([
+    db.user.findUnique({ where: { id: userId } }),
+    db.foodLog.findMany({
+      where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } },
+      orderBy: { loggedAt: "asc" },
+      include: { food: true },
+    }),
+    db.food.findMany({ where: { userId, deletedAt: null }, orderBy: { createdAt: "desc" }, take: 200 }),
+    db.waterLog.findMany({ where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } }, orderBy: { loggedAt: "asc" } }),
+    db.activity.aggregate({ where: { userId, startedAt: { gte: viewDayStart, lt: viewDayEnd } }, _sum: { durationSec: true } }),
+    // How many times each food has actually been logged, all-time — the
+    // basis for the "เมนูที่กินบ่อย" quick-pick list inside the add-food
+    // panel (see FoodLogView), replacing the old isFavorite-driven one.
+    db.foodLog.groupBy({ by: ["foodId"], where: { userId }, _count: { _all: true } }),
+  ]);
   const logCountByFoodId = new Map(foodLogCounts.map((r) => [r.foodId, r._count._all]));
 
   const activityDurationViewDaySec = viewDayActivityAgg._sum.durationSec ?? 0;
   const waterLogs: WaterLogEntry[] = viewDayWaterRows.map((w) => ({ id: w.id, ml: w.ml, loggedAtMs: w.loggedAt.getTime() }));
-
-  const foodStreakDays = buildDayCounts(
-    foodStreakRows.map((r) => r.loggedAt),
-    STREAK_DAYS_BACK
-  );
-  const weightStreakDays = buildDayCounts(
-    weightStreakRows.map((r) => r.loggedAt),
-    STREAK_DAYS_BACK
-  );
-  const foodStreak = computeStreak(foodStreakDays);
-  const weightStreak = computeStreak(weightStreakDays);
-
-  const foodLoggedByDate = new Set(foodStreakDays.filter((d) => d.count > 0).map((d) => d.date));
-  const weekStart = new Date(todayStart);
-  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7)); // Monday
-  const streakWeekDays: StreakWeekDay[] = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() + i);
-    const key = localDateKey(d);
-    return { dayOfMonth: d.getDate(), isToday: key === todayDate, logged: foodLoggedByDate.has(key) };
-  });
 
   const todayLogs: TodayLogEntry[] = viewDayLogRows.map((l) => {
     const m = macrosForGrams(l.food, l.grams);
@@ -182,13 +152,6 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
       </p>
 
       <DateStrip selectedDate={viewDate} todayDate={todayDate} />
-
-      <LoggingStreakCard
-        currentStreak={foodStreak.current}
-        longestFoodStreak={foodStreak.longest}
-        longestWeightStreak={weightStreak.longest}
-        weekDays={streakWeekDays}
-      />
 
       <WaterLogCard
         todayLogs={waterLogs}
