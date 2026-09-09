@@ -54,14 +54,31 @@ export async function POST(req: NextRequest) {
       const sinceEndMs = now.getTime() - endedAtMs;
       if (sinceEndMs < WINDOW_MIN_MS || sinceEndMs > WINDOW_MAX_MS) continue;
 
+      // Atomically claim this activity before sending — re-checks
+      // wheyReminderSentAt: null as a conditional UPDATE rather than relying
+      // on the findMany filter above staying true, so an overlapping cron
+      // invocation can't also see it as unclaimed and send a duplicate
+      // reminder for the same workout.
+      const claim = await db.activity.updateMany({
+        where: { id: activity.id, wheyReminderSentAt: null },
+        data: { wheyReminderSentAt: now },
+      });
+      if (claim.count === 0) {
+        results.push({ userId, activityId: activity.id, sent: false });
+        continue;
+      }
+
       const label = activity.name?.trim() || activityTypeLabel(activity.type);
       const sentCount = await sendPushToUser(userId, {
         title: "ถึงเวลากินเวย์แล้ว 💪",
         body: `${label} เสร็จไปแล้วประมาณครึ่งชั่วโมง — เติมโปรตีนตอนนี้ร่างกายดูดซึมได้ดีที่สุด`,
         url: "/dashboard/supplements",
       });
-      if (sentCount > 0) {
-        await db.activity.update({ where: { id: activity.id }, data: { wheyReminderSentAt: now } });
+      if (sentCount === 0) {
+        // Nothing actually went out — release the claim so a later run can
+        // retry, matching the original "only mark sent once delivered"
+        // behavior.
+        await db.activity.update({ where: { id: activity.id }, data: { wheyReminderSentAt: null } });
       }
       results.push({ userId, activityId: activity.id, sent: sentCount > 0 });
     }

@@ -68,6 +68,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Atomically claim the right to send this user's reminder before doing
+    // so — re-checks the same staleness condition as the read above, but as
+    // a single conditional UPDATE, so an overlapping cron invocation (a
+    // manual trigger while the scheduled run is still mid-loop, a retried
+    // request) can't also pass the check above and send a second, duplicate
+    // push for the same window. Only one concurrent request can win this.
+    const staleThreshold = new Date(now.getTime() - user.waterReminderIntervalMin * 60_000);
+    const claim = await db.user.updateMany({
+      where: { id: userId, OR: [{ lastWaterReminderSentAt: null }, { lastWaterReminderSentAt: { lte: staleThreshold } }] },
+      data: { lastWaterReminderSentAt: now },
+    });
+    if (claim.count === 0) {
+      results.push({ userId, sent: false, reason: "too_soon" });
+      continue;
+    }
+
     const profile = {
       weightKg: user.weightKg,
       heightCm: user.heightCm,
@@ -98,8 +114,12 @@ export async function POST(req: NextRequest) {
       body: `วันนี้ดื่มไปแล้ว ${(drunkMl / 1000).toFixed(1)} ลิตร ยังเหลืออีก ${remainingL} ลิตรถึงจะถึงเป้า`,
       url: "/dashboard/food",
     });
-    if (sentCount > 0) {
-      await db.user.update({ where: { id: userId }, data: { lastWaterReminderSentAt: now } });
+    if (sentCount === 0) {
+      // Nothing actually went out (no active subscription, or a transient
+      // push failure) — release the claim above so a later run can retry,
+      // matching the original "only mark sent once actually delivered"
+      // behavior.
+      await db.user.update({ where: { id: userId }, data: { lastWaterReminderSentAt: user.lastWaterReminderSentAt } });
     }
     results.push({ userId, sent: sentCount > 0, reason: sentCount > 0 ? "reminded" : "no_active_subscription" });
   }
