@@ -286,17 +286,6 @@ export default async function DashboardPage({
           <Link href="/dashboard/summary" className="text-sm text-neutral-500 transition hover:text-neutral-300" title="สรุปผลประจำวัน">
             สรุปผล
           </Link>
-          <Link href="/dashboard/settings" className="text-neutral-500 transition hover:text-neutral-300" title="ตั้งค่า">
-            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-              <path
-                d="M10.5 3.5h3l.4 2.1a7 7 0 0 1 1.9 1.1l2-.8 1.5 2.6-1.6 1.4a7 7 0 0 1 0 2.2l1.6 1.4-1.5 2.6-2-.8a7 7 0 0 1-1.9 1.1l-.4 2.1h-3l-.4-2.1a7 7 0 0 1-1.9-1.1l-2 .8-1.5-2.6 1.6-1.4a7 7 0 0 1 0-2.2L4.7 8.5l1.5-2.6 2 .8a7 7 0 0 1 1.9-1.1l.4-2.1Z"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinejoin="round"
-              />
-              <circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.4" />
-            </svg>
-          </Link>
           <form action="/api/auth/logout" method="POST">
             <button className="text-sm text-neutral-500 transition hover:text-neutral-300">
               ออกจากระบบ
