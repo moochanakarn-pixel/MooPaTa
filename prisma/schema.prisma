@@ -356,14 +356,23 @@ model Supplement {
 // Marks one supplement as taken at a point in time — existence of a row for
 // today is what the checklist checkbox reflects.
 model SupplementLog {
-  id      String   @id @default(cuid())
-  takenAt DateTime @default(now())
+  id        String   @id @default(cuid())
+  takenAt   DateTime @default(now())
+  // Local calendar day ("YYYY-MM-DD", same format as src/lib/streak.ts's
+  // localDateKey) that `takenAt` falls on, set explicitly by the toggle
+  // route rather than derived in SQL. The unique constraint below is what
+  // makes toggling atomic — the route always attempts a create first and
+  // treats a unique-constraint conflict as "already taken today" — instead
+  // of the old check-then-act pattern, which could create two rows for the
+  // same day under a double-tap/concurrent request race.
+  takenDate String   @db.VarChar(10)
 
   userId       String
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   supplementId String
   supplement   Supplement @relation(fields: [supplementId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, supplementId, takenDate])
   @@index([userId, takenAt])
   @@index([supplementId, takenAt])
 }

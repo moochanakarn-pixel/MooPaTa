@@ -14,12 +14,23 @@ export interface SupplementItem {
 const INPUT_CLASS =
   "w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
 
-function SupplementRow({ item, onToggle, onDelete }: { item: SupplementItem; onToggle: () => void; onDelete: () => void }) {
+function SupplementRow({
+  item,
+  toggling,
+  onToggle,
+  onDelete,
+}: {
+  item: SupplementItem;
+  toggling: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-4 py-3">
       <button
         onClick={onToggle}
-        className={`flex h-6 w-6 flex-none items-center justify-center rounded-md border transition ${
+        disabled={toggling}
+        className={`flex h-6 w-6 flex-none items-center justify-center rounded-md border transition disabled:opacity-50 ${
           item.takenToday ? "border-emerald-600 bg-emerald-600/20 text-emerald-400" : "border-neutral-700 text-transparent"
         }`}
         title={item.takenToday ? "กินแล้ววันนี้" : "ยังไม่ได้กิน"}
@@ -52,9 +63,12 @@ export function SupplementList({ items }: { items: SupplementItem[] }) {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   async function toggle(id: string) {
+    setTogglingId(id);
     await fetch(`/api/supplements/${id}/toggle`, { method: "POST" });
+    setTogglingId(null);
     router.refresh();
   }
 
@@ -95,7 +109,13 @@ export function SupplementList({ items }: { items: SupplementItem[] }) {
       ) : (
         <div className="mb-4 space-y-2">
           {items.map((item) => (
-            <SupplementRow key={item.id} item={item} onToggle={() => toggle(item.id)} onDelete={() => remove(item.id)} />
+            <SupplementRow
+              key={item.id}
+              item={item}
+              toggling={togglingId === item.id}
+              onToggle={() => toggle(item.id)}
+              onDelete={() => remove(item.id)}
+            />
           ))}
         </div>
       )}
