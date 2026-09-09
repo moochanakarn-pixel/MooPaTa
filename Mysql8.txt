@@ -1,0 +1,27 @@
+สรุปสิ่งที่ทำมาทั้งหมด
+
+เป้าหมาย: ติดตั้ง MySQL 8.4 ให้รันคู่กับ MySQL 5.1 (เดิมอยู่ที่ port 3307) บนเครื่อง Windows เดียวกัน โดยไม่ให้ชนกัน
+
+1. เลือกเวอร์ชัน
+เลือกโหลด MySQL 8.4.11 LTS Community Server แบบ ZIP Archive (ไม่ใช่ MSI Installer) เพื่อคุมการติดตั้งเอง ไม่ให้ไปยุ่งกับ service ของ 5.1
+2. ติดตั้งแบบ Manual
+แตกไฟล์ไปที่ D:\MySQL8
+สร้างโฟลเดอร์ D:\MySQL8\data
+สร้างไฟล์ config D:\MySQL8\my.ini กำหนด port=3308 (แยกจาก 3307 ของ 5.1) พร้อม basedir/datadir/socket
+รัน mysqld --initialize-insecure เพื่อ initialize data directory
+3. ติดตั้งเป็น Windows Service
+ติดตั้ง service ชื่อ MySQL80 (แยกจาก service เดิมของ 5.1)
+เจอปัญหา Error 193 ("not a valid Win32 application") — สาเหตุคือ path ที่ mysqld --install ลงทะเบียนไว้ขาด .exe
+แก้ด้วย sc config MySQL80 binPath= "D:\MySQL8\bin\mysqld.exe ..." ระบุ path เต็มพร้อม .exe
+Start service สำเร็จ → เชื่อมต่อผ่าน mysql -P 3308 ได้
+4. เชื่อมต่อผ่าน SQLyog
+เจอปัญหา Error 2058 (caching_sha2_password plugin โหลดไม่ได้) เพราะ SQLyog ไม่รองรับ authentication plugin ใหม่ของ MySQL 8
+แก้โดยเพิ่ม mysql_native_password=ON ใน my.ini แล้ว restart service
+รัน ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'pospwnet'; เปลี่ยน root ให้ใช้ plugin เก่าที่ SQLyog รองรับ
+เชื่อมต่อ SQLyog สำเร็จ ✅
+ผลลัพธ์สุดท้าย
+Instance	Port	สถานะ
+MySQL 5.1	3307	ใช้งานเดิม
+MySQL 8.4.11	3308	ติดตั้งใหม่ รันเป็น service MySQL80, เชื่อมต่อผ่าน SQLyog ได้แล้ว
+
+ทั้งสองตัวรันแยกกันสมบูรณ์ ไม่ชนกัน พร้อมใช้งานคู่ขนานกันบนเครื่องเดียว
