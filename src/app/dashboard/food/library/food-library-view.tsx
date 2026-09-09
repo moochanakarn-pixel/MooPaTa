@@ -306,7 +306,7 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
                   <p className="flex items-center gap-1.5 truncate text-sm font-medium text-neutral-200">
                     {f.name}
                     {f.isFavorite && (
-                      <span title="เมนูโปรด — แนะนำที่หน้าบันทึกอาหาร" className="text-amber-400">
+                      <span title="เมนูโปรด" className="text-amber-400">
                         ★
                       </span>
                     )}

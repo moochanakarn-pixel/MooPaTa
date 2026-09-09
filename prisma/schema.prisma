@@ -123,11 +123,13 @@ model Food {
   barcode         String?
   source          FoodSource @default(CUSTOM)
   createdAt       DateTime   @default(now())
-  // Marks a personal go-to food for the "แนะนำมื้อถัดไป" suggestions on the
-  // food page — replaces the built-in catalog there once the user has any
-  // favorites of their own, since those are what they actually eat.
-  // typicalGrams is the portion the suggestion prefills (still editable
-  // before saving, same as the catalog's own typicalGrams).
+  // A manual "โปรด" (favorite) star toggled from the personal library
+  // (src/app/dashboard/food/library) — purely a display/sort affordance
+  // for the user's own reference now; the food page's "เมนูที่กินบ่อย"
+  // quick-pick suggestions are ranked by actual log frequency
+  // (FoodLog count, computed server-side), not by this flag.
+  // typicalGrams is the portion size a re-pick of this food prefills,
+  // editable before saving.
   isFavorite   Boolean @default(false)
   typicalGrams Float   @default(100)
   // What a "grams" value on this food actually counts — the default "ก."
