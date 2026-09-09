@@ -168,7 +168,38 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
+  const [merging, setMerging] = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
   const editingItemRef = useRef<HTMLLIElement | null>(null);
+
+  // Foods sharing the exact same name (case-insensitive) — new entries
+  // can't create these anymore (see POST /api/food/log's reuse check), but
+  // rows from before that existed, or from anything that wrote to the DB
+  // directly, still can. Grouped here just to show the "รวมเมนูซ้ำ" banner;
+  // the merge itself is done server-side against the user's full food list,
+  // not this possibly search-filtered one.
+  const duplicateGroups = useMemo(() => {
+    const groups = new Map<string, LibraryFood[]>();
+    for (const f of foods) {
+      const key = f.name.trim().toLowerCase();
+      const group = groups.get(key);
+      if (group) group.push(f);
+      else groups.set(key, [f]);
+    }
+    return [...groups.values()].filter((g) => g.length > 1);
+  }, [foods]);
+
+  async function mergeDuplicates() {
+    setMergeError(null);
+    setMerging(true);
+    const res = await fetch("/api/food/merge-duplicates", { method: "POST" });
+    setMerging(false);
+    if (res.ok) {
+      router.refresh();
+    } else {
+      setMergeError("รวมเมนูซ้ำไม่สำเร็จ ลองใหม่อีกครั้ง");
+    }
+  }
 
   useEffect(() => {
     if (editingId) editingItemRef.current?.scrollIntoView({ block: "center" });
@@ -224,6 +255,28 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
           เมนูที่จะแก้ไขถูกลบออกจากคลังไปแล้ว จึงแก้ไขไม่ได้ — ประวัติการกินเดิมยังอยู่เหมือนเดิม
         </p>
       )}
+
+      {duplicateGroups.length > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-800/60 bg-amber-950/20 p-4">
+          <p className="text-sm text-amber-200">
+            พบเมนูชื่อซ้ำกัน {duplicateGroups.length} กลุ่ม ({duplicateGroups.reduce((s, g) => s + g.length, 0)} รายการ):{" "}
+            {duplicateGroups.map((g) => `${g[0].name} (×${g.length})`).join(", ")}
+          </p>
+          <p className="mt-1 text-xs text-amber-200/70">
+            กดรวมแล้วแต่ละกลุ่มจะเหลือรายการเดียว (เก็บอันที่บันทึกไปแล้วเยอะสุดไว้) — ประวัติการกินทั้งหมดยังอยู่ครบ
+            แค่ชี้ไปที่เมนูเดียวกันแทน
+          </p>
+          {mergeError && <p className="mt-1 text-xs text-red-400">{mergeError}</p>}
+          <button
+            onClick={mergeDuplicates}
+            disabled={merging}
+            className="mt-2 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-amber-500 disabled:opacity-50"
+          >
+            {merging ? "กำลังรวม..." : "รวมเมนูซ้ำทั้งหมด"}
+          </button>
+        </div>
+      )}
+
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
