@@ -92,54 +92,69 @@ export async function POST(req: NextRequest) {
       fiberPer100g: fiberPer100g as number | null,
     };
 
-    // Barcode foods are deduped via the (userId, barcode) unique constraint —
-    // upsert makes this atomic, so two racing requests for the same barcode
-    // (a double-tapped save, a retried request) can't create two Food rows
-    // for one product. CUSTOM/CATALOG entries have no barcode to dedupe on
-    // (MySQL treats each NULL in a unique index as distinct), so they always
-    // create a fresh row.
-    // A custom food's "typical" portion defaults to whatever amount it was
-    // just created with — the only signal we have, and a much better guess
-    // for a unit-based food (e.g. "1 ชิ้น") than the generic 100 default,
-    // which used to leave the re-pick prefill silently wrong.
-    const typicalGrams = source === "CUSTOM" ? grams : undefined;
+    // Re-typing (or re-picking from the catalog, or re-scanning a label
+    // for) a food with the exact same name as one already in this user's
+    // library reuses that row instead of creating another one — the
+    // library otherwise grows one row per re-entry of the same dish
+    // forever, since nothing but barcode used to dedupe at all. Case
+    // differences alone don't create a new row (MySQL's default collation
+    // already compares case-insensitively, same assumption the food-log
+    // search route relies on) but different wording/spacing still does —
+    // this only catches the exact-name case, not near-duplicates.
+    const existingByName = await db.food.findFirst({ where: { userId, deletedAt: null, name } });
 
-    const food = barcode
-      ? await db.food.upsert({
-          where: { userId_barcode: { userId, barcode } },
-          // Un-deletes it if this barcode was previously removed from the
-          // library — logging it again is a clear signal the user wants it
-          // back, not that it should stay hidden.
-          update: { deletedAt: null },
-          create: {
-            userId,
-            name,
-            caloriesPer100g,
-            proteinPer100g,
-            carbPer100g,
-            fatPer100g,
-            source,
-            barcode,
-            unitLabel,
-            ...(typicalGrams !== undefined ? { typicalGrams } : {}),
-            ...micronutrients,
-          },
-        })
-      : await db.food.create({
-          data: {
-            userId,
-            name,
-            caloriesPer100g,
-            proteinPer100g,
-            carbPer100g,
-            fatPer100g,
-            source,
-            barcode,
-            unitLabel,
-            ...(typicalGrams !== undefined ? { typicalGrams } : {}),
-            ...micronutrients,
-          },
-        });
+    let food;
+    if (existingByName) {
+      food = existingByName;
+    } else if (barcode) {
+      // Barcode foods are additionally deduped via the (userId, barcode)
+      // unique constraint — upsert makes this atomic, so two racing
+      // requests for the same barcode (a double-tapped save, a retried
+      // request) can't create two Food rows for one product.
+      // A custom food's "typical" portion defaults to whatever amount it
+      // was just created with — the only signal we have, and a much
+      // better guess for a unit-based food (e.g. "1 ชิ้น") than the
+      // generic 100 default, which used to leave the re-pick prefill
+      // silently wrong.
+      const typicalGrams = source === "CUSTOM" ? grams : undefined;
+      food = await db.food.upsert({
+        where: { userId_barcode: { userId, barcode } },
+        // Un-deletes it if this barcode was previously removed from the
+        // library — logging it again is a clear signal the user wants it
+        // back, not that it should stay hidden.
+        update: { deletedAt: null },
+        create: {
+          userId,
+          name,
+          caloriesPer100g,
+          proteinPer100g,
+          carbPer100g,
+          fatPer100g,
+          source,
+          barcode,
+          unitLabel,
+          ...(typicalGrams !== undefined ? { typicalGrams } : {}),
+          ...micronutrients,
+        },
+      });
+    } else {
+      const typicalGrams = source === "CUSTOM" ? grams : undefined;
+      food = await db.food.create({
+        data: {
+          userId,
+          name,
+          caloriesPer100g,
+          proteinPer100g,
+          carbPer100g,
+          fatPer100g,
+          source,
+          barcode,
+          unitLabel,
+          ...(typicalGrams !== undefined ? { typicalGrams } : {}),
+          ...micronutrients,
+        },
+      });
+    }
     foodId = food.id;
   }
 
