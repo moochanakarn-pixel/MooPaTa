@@ -13,12 +13,23 @@ const MEAL_TYPE_OPTIONS = ["", "BREAKFAST", "LUNCH", "DINNER", "SNACK"].map((val
 const INPUT_CLASS =
   "w-full rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1.5 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
 
-const PLACEHOLDER = `วางตารางที่ AI คำนวณให้มาตรงนี้ เช่น:
+const PLACEHOLDER = `รูปแบบ: ชื่อเมนู | ปริมาณ | แคลอรี่ | โปรตีน | คาร์บ | ไขมัน
 
 ข้าวสวย  235 ก.  300 kcal  4.5 ก.  65 ก.  0.7 ก.
 กระเพราเนื้อสับ  135 ก.  230 kcal  20 ก.  6.5 ก.  15 ก.
 
 ดื่มน้ำ 550 มล.`;
+
+// A ready-made prompt the user can copy straight into Claude/ChatGPT — the
+// real first hurdle for someone new to this feature isn't reading the
+// parsed result, it's not knowing how to ask an AI for one in a format
+// this parser can actually read. Getting the AI's answer to already match
+// the expected shape (name, grams, kcal, protein, carb, fat — one line per
+// dish) also means less for the heuristic parser to have to guess at.
+const AI_PROMPT_TEMPLATE = `ช่วยคำนวณแคลอรี่ โปรตีน คาร์บ และไขมัน ของมื้ออาหารนี้ให้หน่อย: [อธิบายอาหารที่กินตรงนี้ เช่น ข้าวกะเพราหมูสับ 1 จาน กับไข่ดาว 1 ฟอง]
+
+ตอบกลับมาเป็นตาราง ต่อเมนูหนึ่งบรรทัด ไม่ต้องมีคำอธิบายอื่นแทรก ในรูปแบบนี้:
+ชื่อเมนู ปริมาณ(กรัม) แคลอรี่(kcal) โปรตีน(กรัม) คาร์บ(กรัม) ไขมัน(กรัม)`;
 
 // A row the user is reviewing before it gets saved — same shape as a
 // parsed row, but with fields as editable strings and a keep/remove flag,
@@ -71,6 +82,17 @@ export function ImportMealPanel({
   const [mealType, setMealType] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(AI_PROMPT_TEMPLATE);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("คัดลอกไม่สำเร็จ ลองกดค้างที่ข้อความด้านล่างเพื่อคัดลอกเองแทน");
+    }
+  }
 
   function parse() {
     const result = parseMealText(text);
@@ -165,6 +187,20 @@ export function ImportMealPanel({
 
       {!rows ? (
         <>
+          <div className="mb-3 rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
+            <p className="text-xs text-neutral-400">
+              1. คัดลอกคำสั่งนี้ไปวางถาม AI (Claude, ChatGPT) แล้วเติมว่ามื้อนี้กินอะไรไปบ้าง
+            </p>
+            <button
+              type="button"
+              onClick={copyPrompt}
+              className="mt-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800"
+            >
+              {copied ? "คัดลอกแล้ว ✓" : "คัดลอกคำสั่งสำหรับถาม AI"}
+            </button>
+            <p className="mt-2 text-xs text-neutral-400">2. คัดลอกคำตอบที่ได้มาวางในช่องด้านล่างนี้</p>
+          </div>
+
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -173,7 +209,7 @@ export function ImportMealPanel({
             className={`${INPUT_CLASS} resize-y font-mono text-xs`}
           />
           <p className="mt-2 text-xs text-neutral-600">
-            วางตารางแคลอรี่/แมโครที่ AI คำนวณให้ (เช่นจาก Claude, ChatGPT) — ต้องมีชื่อเมนู ปริมาณ kcal โปรตีน คาร์บ ต่อบรรทัด
+            ต้องมีชื่อเมนู ปริมาณ แคลอรี่ โปรตีน คาร์บ และไขมัน ต่อบรรทัด — วางเป็นตารางหรือบรรทัดเดียวติดกันแบบตัวอย่างข้างบนก็ได้
           </p>
           {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
           <button
