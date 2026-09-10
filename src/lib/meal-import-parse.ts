@@ -1,5 +1,3 @@
-import { THAI_FOOD_CATALOG } from "./thai-food-catalog";
-
 // Parses a pasted nutrition-breakdown table (the shape Claude/ChatGPT tends
 // to produce when asked "how many calories is this meal") into food rows
 // ready to log. Never trusted blindly — the caller always shows these back
@@ -12,11 +10,6 @@ export interface ParsedFoodRow {
   proteinG: number;
   carbG: number;
   fatG: number;
-  // true when these numbers came from our own curated catalog (matched by
-  // name) instead of the AI's estimated range — a dish like "ลาบหมู" has a
-  // known, consistent per-100g profile, which is a firmer number than an
-  // LLM's guess at both the calorie count AND the likely portion weight.
-  fromCatalog: boolean;
   // false when `grams` isn't a real weight — the source table gave this
   // row's totals with no quantity column at all (a supplement serving like
   // "1 scoop of whey" is almost always given this way), so `grams` is just
@@ -82,6 +75,18 @@ function detectColumnIndices(cells: string[]): ColumnIndices | null {
   };
 }
 
+// A serving-size word the AI sometimes writes bare, with no count number
+// in front of it ("...ตุ๋น ถ้วยเล็ก 144 kcal..." instead of "...ตุ๋น 1 ถ้วยเล็ก
+// 144 kcal..."). The "<count> <unit>" form already produces its own cell
+// naturally, since it starts with a digit; this list is only for catching
+// the bare form below, which would otherwise get swept into the dish name
+// and shift every column after it by one.
+const SERVING_UNIT_WORDS = new Set([
+  "ถ้วย", "ถ้วยเล็ก", "ถ้วยใหญ่", "จาน", "ชาม", "แก้ว", "กล่อง", "ซอง", "ชิ้น",
+  "ฟอง", "ลูก", "ผล", "คู่", "ที่", "มื้อ", "ห่อ", "แผ่น", "ก้อน", "ช้อน",
+  "ช้อนโต๊ะ", "ช้อนชา", "สกู๊ป", "scoop",
+]);
+
 // A single-space "name 250 ก. 350 kcal 28 ก. 48 ก. 6 ก." line — the
 // compact one-liner form Claude/ChatGPT often produces when asked to
 // summarize a meal instead of a table — has no delimiter at all to split
@@ -97,7 +102,12 @@ function tokenizeCompactLine(line: string): string[] {
     nameTokens.push(tokens[i]);
     i++;
   }
+  let impliedUnitCell: string | null = null;
+  if (nameTokens.length > 1 && SERVING_UNIT_WORDS.has(nameTokens[nameTokens.length - 1])) {
+    impliedUnitCell = nameTokens.pop()!;
+  }
   const cells = [nameTokens.join(" ")];
+  if (impliedUnitCell) cells.push(`1 ${impliedUnitCell}`);
   while (i < tokens.length) {
     let cell = tokens[i];
     i++;
@@ -161,50 +171,6 @@ function cellGrams(cell: string): number | null {
   const lo = parseFloat(m[1]);
   const hi = m[2] ? parseFloat(m[2]) : lo;
   return (lo + hi) / 2;
-}
-
-// Strips spaces/parentheses so "ซุปเนื้อตุ๋น (ถ้วยเล็ก)" and "ผัดกะเพราเนื้อสับ"
-// compare against "ซุปเนื้อตุ๋น" / "กะเพราเนื้อสับ" on their meaningful
-// characters only, and canonicalizes "กระเพรา" (an extremely common
-// alternate spelling — arguably more common in casual typing than the
-// dictionary form) to "กะเพรา" so it matches the catalog's spelling.
-function normalizeName(name: string): string {
-  return name
-    .replace(/[()（）]/g, "")
-    .replace(/\s+/g, "")
-    .replace(/กระเพรา/g, "กะเพรา")
-    .trim();
-}
-
-// Finds the catalog entry for the same dish, if any — exact match first,
-// then substring containment either direction (catches "กระเพราเนื้อสับ"
-// against the catalog's "ผัดกะเพราเนื้อสับ", which differs only by the
-// "ผัด" prefix a person often drops when typing quickly). Deliberately not
-// a fuzzy/typo-tolerant match: a wrong match here would silently replace a
-// correct AI estimate with the wrong dish's numbers, which is worse than
-// just falling back to the AI's own figure.
-//
-// The containment check needs a length-ratio guard too, or it fires on
-// names it was never meant to: a multi-item meal description like "มื้อเย็น:
-// แซลมอน + ข้าว + ไก่ลอกหนัง + ไข่ต้ม 1 ฟอง" contains the catalog's "ไข่ต้ม" as
-// a plain substring, which would otherwise replace the whole meal's AI
-// estimate with just boiled egg's numbers. Requiring the shorter name to
-// cover at least half the longer one keeps the intended near-miss cases
-// (a dropped "ผัด" prefix, a few extra characters) while rejecting a short
-// dish name that only incidentally appears inside a much longer sentence.
-function findCatalogMatch(name: string) {
-  const normalized = normalizeName(name);
-  if (!normalized) return null;
-  const exact = THAI_FOOD_CATALOG.find((f) => normalizeName(f.name) === normalized);
-  if (exact) return exact;
-  return (
-    THAI_FOOD_CATALOG.find((f) => {
-      const catNorm = normalizeName(f.name);
-      if (!catNorm.includes(normalized) && !normalized.includes(catNorm)) return false;
-      const lengthRatio = Math.min(catNorm.length, normalized.length) / Math.max(catNorm.length, normalized.length);
-      return lengthRatio >= 0.5;
-    }) ?? null
-  );
 }
 
 // \b doesn't work after "มล" — \b needs a transition between a \w and
@@ -273,47 +239,30 @@ export function parseMealText(text: string): ParsedMeal {
     }
 
     const hasQty = qty !== null && qty > 0;
-    const catalogMatch = findCatalogMatch(name);
-    // Only fall back to the catalog's own per-100g profile when the source
-    // didn't already give a real weight — a matched name is a firmer basis
-    // than the AI's raw totals-with-no-portion-size, but once the source
-    // gives its own explicit "N grams = X kcal/protein/carb/fat" for this
-    // exact meal (like a specific "ไม่มีหนัง" chicken rice), that pairing is
-    // more specific to what was actually eaten than a generic catalog
-    // average and must win, not get silently swapped out from under it.
-    if (catalogMatch && !hasQty) {
-      const grams = catalogMatch.typicalGrams;
-      const ratio = grams / 100;
-      items.push({
-        name,
-        grams,
-        calories: catalogMatch.caloriesPer100g * ratio,
-        proteinG: catalogMatch.proteinPer100g * ratio,
-        carbG: catalogMatch.carbPer100g * ratio,
-        fatG: catalogMatch.fatPer100g * ratio,
-        fromCatalog: true,
-        hasRealGrams: true,
-      });
-    } else {
-      // Either no catalog entry, or the source already gave its own real
-      // weight for this row — trust its own totals over a generic catalog
-      // average either way. With no catalog entry AND no quantity column,
-      // all we have is this row's absolute totals (typical for a
-      // supplement serving like "1 scoop of whey"), so `grams` here is
-      // just an arbitrary denominator for the per-100g storage math, not a
-      // real weight.
-      const grams = hasQty ? qty : 1;
-      items.push({
-        name,
-        grams,
-        calories: kcal,
-        proteinG: protein,
-        carbG: carb,
-        fatG: fat ?? 0,
-        fromCatalog: false,
-        hasRealGrams: hasQty,
-      });
-    }
+    // Always trust the row's own totals over any built-in catalog average
+    // — kcal/protein/carb are mandatory to reach this point, so the AI (or
+    // whatever pasted table this came from) already gave a complete,
+    // specific answer for this exact dish/portion, even when there's no
+    // separate weight column (e.g. "1 จาน" instead of a gram count). A
+    // gram-based food matched by name against the built-in Thai catalog
+    // used to silently replace these figures with a generic catalog
+    // serving instead — for a dish like "กระเพราเนื้อสับ 1 จาน 234 kcal..."
+    // that meant swapping a specific 234 kcal answer for a 300g catalog
+    // default's 525 kcal, with no clear indication it had happened beyond
+    // a small note easy to miss. With no quantity column at all, `grams`
+    // is just an arbitrary denominator for the per-100g storage math
+    // (typical for a supplement serving like "1 scoop of whey"), not a
+    // real weight.
+    const grams = hasQty ? qty : 1;
+    items.push({
+      name,
+      grams,
+      calories: kcal,
+      proteinG: protein,
+      carbG: carb,
+      fatG: fat ?? 0,
+      hasRealGrams: hasQty,
+    });
   }
 
   // Water is only searched for among lines that weren't already consumed as
