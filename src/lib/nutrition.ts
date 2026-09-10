@@ -32,6 +32,13 @@ const DEFAULT_RATE_KG_PER_WEEK = 0.5;
 // a floor, not a target; genuinely low-calorie diets need medical supervision.
 const MIN_SAFE_CALORIES = 1200;
 const PROTEIN_G_PER_KG = 1.8; // middle of the common 1.6-2.2 g/kg range for an active person
+// Once we know actual lean body mass (from a body-composition scan) rather
+// than guessing at it, protein needs scale with that instead of total
+// bodyweight — fat mass isn't metabolically demanding tissue. 2.2 g/kg LBM
+// is the middle of the commonly-cited 2.0-2.4 g/kg range for someone who
+// actually knows their body-fat%, slightly higher than the plain
+// weight-based default above since it's a firmer, more targeted number.
+const PROTEIN_G_PER_KG_LBM = 2.2;
 const FAT_SHARE_OF_CALORIES = 0.25;
 const WATER_ML_PER_KG = 33; // common baseline guideline (~30-35ml/kg)
 
@@ -53,6 +60,16 @@ export interface NutritionTargets {
   fatG: number;
   carbG: number;
   baseWaterMl: number;
+  // True when bmr/proteinG above came from a body-composition scan
+  // (Katch-McArdle + lean-body-mass) instead of the plain
+  // weight/height/age/sex formula — lets the UI explain why the numbers
+  // are computed differently without the caller needing to know why.
+  usedBodyComposition: boolean;
+}
+
+export interface BodyComposition {
+  weightKg: number;
+  bodyFatPercent: number;
 }
 
 interface NullableNutritionProfile {
@@ -88,8 +105,20 @@ export function computeBmr(p: Pick<NutritionProfile, "weightKg" | "heightCm" | "
   return p.sex === "MALE" ? base + 5 : base - 161;
 }
 
-export function computeTargets(p: NutritionProfile): NutritionTargets {
-  const bmr = computeBmr(p);
+// Katch-McArdle — needs an actual lean-body-mass figure rather than
+// weight/height/age/sex, so it's only usable once a body-composition scan
+// gives us one. More accurate than Mifflin-St Jeor for anyone whose build
+// differs meaningfully from population average (very lean or very high
+// body-fat), since it isn't guessing how much of total weight is
+// metabolically-active tissue.
+export function computeBmrKatchMcArdle(leanBodyMassKg: number): number {
+  return 370 + 21.6 * leanBodyMassKg;
+}
+
+export function computeTargets(p: NutritionProfile, bodyComposition?: BodyComposition | null): NutritionTargets {
+  const leanBodyMassKg = bodyComposition ? bodyComposition.weightKg * (1 - bodyComposition.bodyFatPercent / 100) : null;
+  const usedBodyComposition = leanBodyMassKg !== null;
+  const bmr = usedBodyComposition ? computeBmrKatchMcArdle(leanBodyMassKg) : computeBmr(p);
   const tdee = bmr * ACTIVITY_LEVEL_MULTIPLIER[p.activityLevel];
 
   const rate = p.goalRateKgPerWeek ?? DEFAULT_RATE_KG_PER_WEEK;
@@ -97,7 +126,7 @@ export function computeTargets(p: NutritionProfile): NutritionTargets {
   const rawTarget = p.goal === "LOSE" ? tdee - dailyDelta : p.goal === "GAIN" ? tdee + dailyDelta : tdee;
   const floorTargetCalories = Math.max(rawTarget, MIN_SAFE_CALORIES);
 
-  const proteinG = p.weightKg * PROTEIN_G_PER_KG;
+  const proteinG = usedBodyComposition ? leanBodyMassKg * PROTEIN_G_PER_KG_LBM : p.weightKg * PROTEIN_G_PER_KG;
   const proteinKcal = proteinG * 4;
   const fatKcal = floorTargetCalories * FAT_SHARE_OF_CALORIES;
   // Protein (a fixed g/kg floor, never cut) plus the fat share can together
@@ -118,6 +147,7 @@ export function computeTargets(p: NutritionProfile): NutritionTargets {
     fatG: Math.round(fatG),
     carbG: Math.round(carbG),
     baseWaterMl: Math.round(p.weightKg * WATER_ML_PER_KG),
+    usedBodyComposition,
   };
 }
 

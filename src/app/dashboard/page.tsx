@@ -5,6 +5,7 @@ import { getSessionUserId } from "@/lib/session";
 import { formatDistanceKm, formatDuration } from "@/lib/format";
 import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
+import { getLatestBodyComposition } from "@/lib/body-composition";
 import { ActivityFilters } from "./activity-filters";
 import { ActivityHeatmap, buildHeatmapDays, computeStreaks } from "./activity-heatmap";
 import { ActivityListView, type ActivityRow } from "./activity-list-view";
@@ -169,8 +170,9 @@ export default async function DashboardPage({
     goal: user?.nutritionGoal ?? "MAINTAIN",
     goalRateKgPerWeek: user?.goalRateKgPerWeek ?? null,
   };
+  const latestBodyComposition = isProfileComplete(nutritionProfile) ? await getLatestBodyComposition(userId) : null;
   const healthTargets = isProfileComplete(nutritionProfile)
-    ? applyActivityBonus(computeTargets(nutritionProfile), todayActivityAgg._sum.durationSec ?? 0)
+    ? applyActivityBonus(computeTargets(nutritionProfile, latestBodyComposition), todayActivityAgg._sum.durationSec ?? 0)
     : null;
   const todayFoodTotals = todayFoodLogs.reduce(
     (acc, l) => {

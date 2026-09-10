@@ -5,6 +5,7 @@ import { getSessionUserId } from "@/lib/session";
 import { loadShareFonts } from "@/lib/share-fonts";
 import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
+import { getLatestBodyComposition } from "@/lib/body-composition";
 import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
 import { activityTypeLabel, formatDistanceKm, formatDuration } from "@/lib/format";
 import { cardStyle, iconCircleStyle, rowCardStyle, titleStyle } from "@/lib/share-card-styles";
@@ -113,7 +114,8 @@ export async function GET(req: NextRequest) {
   let targetCalories: number | null = null;
   let targetWaterMl: number | null = null;
   if (isProfileComplete(profile)) {
-    const today = applyActivityBonus(computeTargets(profile), activityDurationSec);
+    const latestBodyComposition = await getLatestBodyComposition(userId);
+    const today = applyActivityBonus(computeTargets(profile, latestBodyComposition), activityDurationSec);
     targetCalories = today.targetCalories;
     targetWaterMl = today.waterMl;
   }

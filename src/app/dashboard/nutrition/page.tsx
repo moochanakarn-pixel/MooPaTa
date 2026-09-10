@@ -23,6 +23,7 @@ import { CalorieRing } from "./calorie-ring";
 import { NutritionPeriodComparison } from "./nutrition-period-comparison";
 import { ProgressPhotosCard } from "./progress-photos-card";
 import { LoggingStreakCard, type StreakWeekDay } from "./logging-streak-card";
+import { BodyCompositionCard, type BodyCompositionEntry } from "./body-composition-card";
 import { PHOTO_ANGLES } from "@/lib/progress-photo-types";
 
 const TREND_DAYS = 14;
@@ -158,8 +159,6 @@ export default async function NutritionPage() {
     );
   }
 
-  const baseTargets = computeTargets(profile);
-
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const sixtyDaysAgo = new Date(todayStart);
@@ -178,10 +177,15 @@ export default async function NutritionPage() {
   // from today-7 to today-13 depending on what day of the week it is.
   const foodQueryStart = trendStart < lastWeekStart ? trendStart : lastWeekStart;
 
-  const [weightRows, trendFoodLogs, trendActivities, twoWeekWaterLogs, foodStreakRows] = await Promise.all([
+  const [weightRows, bodyCompositionRows, trendFoodLogs, trendActivities, twoWeekWaterLogs, foodStreakRows] = await Promise.all([
     db.weightLog.findMany({
       where: { userId, loggedAt: { gte: sixtyDaysAgo } },
       orderBy: { loggedAt: "asc" },
+    }),
+    db.bodyCompositionLog.findMany({
+      where: { userId },
+      orderBy: { loggedAt: "desc" },
+      take: 6,
     }),
     db.foodLog.findMany({
       where: { userId, loggedAt: { gte: foodQueryStart } },
@@ -229,6 +233,22 @@ export default async function NutritionPage() {
     weightKg: w.weightKg,
     loggedAtMs: w.loggedAt.getTime(),
   }));
+  const bodyCompositionEntries: BodyCompositionEntry[] = bodyCompositionRows.map((b) => ({
+    id: b.id,
+    loggedAtMs: b.loggedAt.getTime(),
+    weightKg: b.weightKg,
+    bodyFatPercent: b.bodyFatPercent,
+    skeletalMuscleMassKg: b.skeletalMuscleMassKg,
+    visceralFatLevel: b.visceralFatLevel,
+    inbodyReportedBmr: b.inbodyReportedBmr,
+  }));
+  // bodyCompositionRows is already the most-recent-first list this page
+  // needs for the card, so derive the same "latest scan's body-fat%, if it
+  // has one" value getLatestBodyComposition(userId) would separately query
+  // for, instead of hitting the DB twice for the same row.
+  const latestScan = bodyCompositionRows[0];
+  const latestBodyComposition = latestScan && latestScan.bodyFatPercent !== null ? { weightKg: latestScan.weightKg, bodyFatPercent: latestScan.bodyFatPercent } : null;
+  const baseTargets = computeTargets(profile, latestBodyComposition);
 
   const caloriesByDay = new Map<string, number>();
   for (const log of trendFoodLogs) {
@@ -310,6 +330,8 @@ export default async function NutritionPage() {
 
       <WeightLogCard logs={weightLogs} />
 
+      <BodyCompositionCard entries={bodyCompositionEntries} />
+
       <ProgressPhotosCard
         photos={PHOTO_ANGLES.map((angle) => ({
           angle,
@@ -328,6 +350,9 @@ export default async function NutritionPage() {
             TDEE <span className="font-medium text-neutral-300">{targets.tdee.toLocaleString("th-TH")}</span> kcal
           </span>
         </div>
+        {targets.usedBodyComposition && (
+          <p className="mt-2 text-center text-[11px] text-violet-400">คำนวณจากผลตรวจ InBody ล่าสุด (Katch-McArdle)</p>
+        )}
 
         <div className="mt-5 space-y-2 border-t border-neutral-800 pt-4 text-xs">
           <div className="flex items-center justify-between">

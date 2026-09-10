@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendPushToUser } from "@/lib/push";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
+import { getLatestBodyComposition } from "@/lib/body-composition";
 
 // Water target for a user without a complete nutrition profile — same
 // ballpark as the 33ml/kg baseline in src/lib/nutrition.ts for an
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
       goalRateKgPerWeek: user.goalRateKgPerWeek,
     };
     const targetMl = isProfileComplete(profile)
-      ? applyActivityBonus(computeTargets(profile), todayActivityAgg._sum.durationSec ?? 0).waterMl
+      ? applyActivityBonus(computeTargets(profile, await getLatestBodyComposition(userId)), todayActivityAgg._sum.durationSec ?? 0).waterMl
       : DEFAULT_TARGET_ML;
 
     // Linear pacing across the user's own window: at the start they're

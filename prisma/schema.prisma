@@ -34,10 +34,10 @@ model User {
   // afternoon/evening checkpoints the feature launched with. "HH:mm",
   // 24-hour, in the server's local time (same clock the rest of the app's
   // "today" boundaries already use).
-  waterReminderStart        String   @default("09:00")
-  waterReminderEnd          String   @default("22:00")
-  waterReminderIntervalMin  Int      @default(60)
-  lastWaterReminderSentAt   DateTime?
+  waterReminderStart       String    @default("09:00")
+  waterReminderEnd         String    @default("22:00")
+  waterReminderIntervalMin Int       @default(60)
+  lastWaterReminderSentAt  DateTime?
 
   // Health-flag warnings (src/lib/health-flags.ts) — set by the user from
   // their own blood-test results, not diagnosed by the app. Purely
@@ -61,15 +61,16 @@ model User {
   sidePhotoPath  String? @db.VarChar(255)
   backPhotoPath  String? @db.VarChar(255)
 
-  connections       ProviderConnection[]
-  activities        Activity[]
-  foods             Food[]
-  foodLogs          FoodLog[]
-  waterLogs         WaterLog[]
-  supplements       Supplement[]
-  supplementLogs    SupplementLog[]
-  weightLogs        WeightLog[]
-  pushSubscriptions PushSubscription[]
+  connections         ProviderConnection[]
+  activities          Activity[]
+  foods               Food[]
+  foodLogs            FoodLog[]
+  waterLogs           WaterLog[]
+  supplements         Supplement[]
+  supplementLogs      SupplementLog[]
+  weightLogs          WeightLog[]
+  bodyCompositionLogs BodyCompositionLog[]
+  pushSubscriptions   PushSubscription[]
 }
 
 enum Provider {
@@ -108,21 +109,21 @@ enum NutritionGoal {
 // than per-serving) is what lets the same food be logged again later at a
 // different portion size without re-entering its nutrition facts.
 model Food {
-  id              String     @id @default(cuid())
-  name            String
-  caloriesPer100g Float
-  proteinPer100g  Float
-  carbPer100g     Float
-  fatPer100g      Float
+  id                   String     @id @default(cuid())
+  name                 String
+  caloriesPer100g      Float
+  proteinPer100g       Float
+  carbPer100g          Float
+  fatPer100g           Float
   // Optional — not every source has these (the built-in catalog doesn't),
   // so callers treat a missing value as "unknown" rather than zero.
-  sugarPer100g       Float?
-  sodiumMgPer100g    Float?
+  sugarPer100g         Float?
+  sodiumMgPer100g      Float?
   cholesterolMgPer100g Float?
-  fiberPer100g       Float?
-  barcode         String?
-  source          FoodSource @default(CUSTOM)
-  createdAt       DateTime   @default(now())
+  fiberPer100g         Float?
+  barcode              String?
+  source               FoodSource @default(CUSTOM)
+  createdAt            DateTime   @default(now())
   // A manual "โปรด" (favorite) star toggled from the personal library
   // (src/app/dashboard/food/library) — purely a display/sort affordance
   // for the user's own reference now; the food page's "เมนูที่กินบ่อย"
@@ -130,22 +131,22 @@ model Food {
   // (FoodLog count, computed server-side), not by this flag.
   // typicalGrams is the portion size a re-pick of this food prefills,
   // editable before saving.
-  isFavorite   Boolean @default(false)
-  typicalGrams Float   @default(100)
+  isFavorite           Boolean    @default(false)
+  typicalGrams         Float      @default(100)
   // What a "grams" value on this food actually counts — the default "ก."
   // means grams like every food before this field existed; anything else
   // (e.g. "ชิ้น", "ที่", "ถ้วย") means grams/typicalGrams/FoodLog.grams for
   // this food are really a piece/serving count, not a weight. Keeps the
   // per-100 math in src/lib/food.ts unchanged — it only ever cares about the
   // ratio to 100, never what the 100 units of "grams" mean.
-  unitLabel String @default("ก.")
+  unitLabel            String     @default("ก.")
   // Soft-delete — set when the user removes this food from their personal
   // library. Never hard-deleted: every FoodLog still points at this row
   // (see logs below) and computes its macros from it live, so actually
   // deleting the row would silently wipe that day's diary history along
   // with it. A non-null deletedAt just hides it from the library list and
   // from being picked/suggested again.
-  deletedAt DateTime?
+  deletedAt            DateTime?
 
   userId String
   user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -207,36 +208,36 @@ model ProviderConnection {
 // Normalized activity shape shared across all providers so the rest of the
 // app (dashboard, stats, future features) never has to branch on provider.
 model Activity {
-  id               String   @id @default(cuid())
-  provider         Provider
-  providerActId    String // original activity id from the source provider
-  type             String // e.g. Run, Ride, Walk, Hike, Swim
-  name             String?
-  startedAt        DateTime
-  durationSec      Int
-  distanceMeters   Float?
-  elevationGainM   Float?
-  elevHighM        Float?
-  elevLowM         Float?
-  avgHeartRate     Float?
-  maxHeartRate     Float?
-  avgSpeedMs       Float? // meters/second
-  maxSpeedMs       Float? // meters/second
-  avgCadence       Float?
-  avgWatts         Float?
-  kilojoules       Float?
-  sufferScore      Int?
-  calories         Float?
-  kudosCount       Int?
-  achievementCount Int?
-  prCount          Int?
-  commentCount     Int?
-  gearId           String?
-  timezone         String?
-  startLat         Float?
-  startLng         Float?
-  raw              Json // original provider payload, kept for anything not normalized above
-  createdAt        DateTime @default(now())
+  id                 String    @id @default(cuid())
+  provider           Provider
+  providerActId      String // original activity id from the source provider
+  type               String // e.g. Run, Ride, Walk, Hike, Swim
+  name               String?
+  startedAt          DateTime
+  durationSec        Int
+  distanceMeters     Float?
+  elevationGainM     Float?
+  elevHighM          Float?
+  elevLowM           Float?
+  avgHeartRate       Float?
+  maxHeartRate       Float?
+  avgSpeedMs         Float? // meters/second
+  maxSpeedMs         Float? // meters/second
+  avgCadence         Float?
+  avgWatts           Float?
+  kilojoules         Float?
+  sufferScore        Int?
+  calories           Float?
+  kudosCount         Int?
+  achievementCount   Int?
+  prCount            Int?
+  commentCount       Int?
+  gearId             String?
+  timezone           String?
+  startLat           Float?
+  startLng           Float?
+  raw                Json // original provider payload, kept for anything not normalized above
+  createdAt          DateTime  @default(now())
   // Set once the post-workout whey reminder has been sent for this activity
   // (src/app/api/cron/whey-reminder) — null means "not sent (or not
   // eligible) yet", not "no reminder wanted"; that's controlled separately
@@ -311,6 +312,38 @@ model WeightLog {
   id       String   @id @default(cuid())
   weightKg Float
   loggedAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loggedAt])
+}
+
+// One body-composition scan (InBody or similar bioelectrical-impedance
+// device) — a periodic measurement, not an everyday log. The most recent
+// entry is what src/lib/nutrition.ts uses to switch from the
+// population-average Mifflin-St Jeor BMR formula to the more accurate
+// Katch-McArdle one, which needs an actual lean-body-mass figure (derived
+// from weightKg + bodyFatPercent here) rather than guessing one from
+// weight/height/age/sex alone. Every field but weightKg is optional since
+// not everyone has (or enters) the full InBody printout, and the app must
+// keep working with the plain formula when this table is empty.
+model BodyCompositionLog {
+  id                   String   @id @default(cuid())
+  loggedAt             DateTime @default(now())
+  weightKg             Float
+  // 0-100. Needed (together with weightKg) to derive lean body mass for
+  // Katch-McArdle — a scan without this still gets recorded/shown, it just
+  // doesn't change which BMR formula gets used.
+  bodyFatPercent       Float?
+  skeletalMuscleMassKg Float?
+  visceralFatLevel     Int?
+  // InBody's own on-device BMR estimate, if the printout/export includes
+  // one — kept only for the user's own side-by-side comparison, never used
+  // in our own calculations (ours is always computed fresh from
+  // weightKg + bodyFatPercent above, so it stays consistent across users
+  // regardless of which InBody model or firmware produced a given scan).
+  inbodyReportedBmr    Int?
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

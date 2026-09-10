@@ -33,6 +33,7 @@
 | `ProviderConnection` | OAuth token ของ Strava (เข้ารหัส AES-256-GCM ด้วย `src/lib/crypto.ts`) |
 | `Activity` / `ActivityDetail` / `Exercise` | กิจกรรมออกกำลังกาย normalize จาก Strava (หรือ MANUAL) + รายละเอียดที่โหลดแบบ lazy (splits/streams/weather) + ท่าเวทสำหรับ activity แบบ manual |
 | `WaterLog` / `WeightLog` | บันทึกน้ำ/น้ำหนักรายครั้ง — log น้ำหนักใหม่จะอัปเดต `User.weightKg` ด้วย |
+| `BodyCompositionLog` | ผลตรวจ InBody/เครื่องวัดองค์ประกอบร่างกายแบบเป็นครั้ง ๆ (ไม่ใช่ทุกวัน) — เฉพาะ `weightKg` บังคับ ที่เหลือ optional ตาม field ที่เครื่องแต่ละรุ่นมี |
 | `PushSubscription` | Web Push subscription ต่ออุปกรณ์ (มีแถว = เปิดแจ้งเตือนสำหรับเครื่องนั้น) |
 | `Supplement` / `SupplementLog` | รายการอาหารเสริมที่ต้องกินประจำ + เช็คว่ากินไปหรือยันแต่ละวัน |
 
@@ -82,6 +83,19 @@
   โดยตรง คำนวณจาก `buildDayCounts`/`computeStreak` ใน `src/lib/streak.ts` (window 60 วันย้อนหลัง)
 - คำนวณเป้าหมาย/BMR/TDEE ทั้งหมดต้องมีโปรไฟล์ครบ (`isProfileComplete`) ไม่งั้นหน้านี้จะโชว์ CTA
   ให้ไปกรอกโปรไฟล์แทน
+- **องค์ประกอบร่างกาย (InBody)** — `BodyCompositionCard` (`src/app/dashboard/nutrition/body-composition-card.tsx`)
+  ให้กรอกผลตรวจ InBody เองแบบ manual form (weightKg บังคับ, %ไขมัน/มวลกล้ามเนื้อ/ไขมันช่องท้อง/BMR
+  ที่เครื่องรายงานเป็น optional) — ฟีเจอร์นี้ optional เต็มรูปแบบ: ใครไม่มีข้อมูลแอพทำงานปกติด้วยสูตร
+  Mifflin-St Jeor (น้ำหนัก/ส่วนสูง/อายุ/เพศ) เหมือนเดิม `src/lib/nutrition.ts`'s `computeTargets(profile,
+  bodyComposition?)` รับ body-composition เป็น optional argument ตัวที่สอง — ถ้ามีสแกนล่าสุดที่มี
+  `bodyFatPercent` จะสลับไปใช้สูตร Katch-McArdle (`computeBmrKatchMcArdle`, อิง lean body mass =
+  weightKg × (1 - bodyFat%/100)) แทน และคำนวณโปรตีนจาก lean body mass (2.2 g/kg) แทน total bodyweight
+  (1.8 g/kg) — ทุกจุดในแอพที่เรียก `computeTargets` (หน้าแรก/ไดอารี่/เชิงลึก/share card/cron
+  water-reminder) ต้องดึง body composition ล่าสุดผ่าน `getLatestBodyComposition(userId)`
+  (`src/lib/body-composition.ts`) มาส่งเข้าไปด้วยเสมอ ไม่งั้นตัวเลขจะไม่ตรงกันระหว่างหน้าต่าง ๆ
+  (หลักการเดียวกับที่ `applyActivityBonus`'s comment อธิบายไว้สำหรับ activity bonus) — ฟังก์ชันนี้คืน
+  `null` ถ้ายังไม่มีสแกน หรือสแกนล่าสุดไม่มี `bodyFatPercent` (แค่มี weightKg อย่างเดียวไม่พอคำนวณ lean
+  body mass ได้)
 
 ### 4. Bottom nav (`src/app/dashboard/bottom-nav.tsx`)
 4 แท็บ: หน้าแรก (`/dashboard`) / ไดอารี่ (`/dashboard/food`) / เชิงลึก (`/dashboard/nutrition`,

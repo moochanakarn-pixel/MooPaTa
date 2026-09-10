@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
+import { getLatestBodyComposition } from "@/lib/body-composition";
 import { localDateKey } from "@/lib/streak";
 import { DateStrip } from "./date-strip";
 import { FoodLogView, type DailyTargets, type PersonalFood, type TodayLogEntry } from "./food-log-view";
@@ -93,7 +94,8 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
       goalRateKgPerWeek: user.goalRateKgPerWeek,
     };
     if (isProfileComplete(profile)) {
-      const t = applyActivityBonus(computeTargets(profile), activityDurationViewDaySec);
+      const latestBodyComposition = await getLatestBodyComposition(userId);
+      const t = applyActivityBonus(computeTargets(profile, latestBodyComposition), activityDurationViewDaySec);
       targets = {
         targetCalories: t.targetCalories,
         proteinG: t.proteinG,
