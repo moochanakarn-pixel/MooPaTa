@@ -178,15 +178,34 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
   // directly, still can. Grouped here just to show the "รวมเมนูซ้ำ" banner;
   // the merge itself is done server-side against the user's full food list,
   // not this possibly search-filtered one.
-  const duplicateGroups = useMemo(() => {
-    const groups = new Map<string, LibraryFood[]>();
+  //
+  // Same-named foods only merge safely if their macro values also match —
+  // the server (see /api/food/merge-duplicates) refuses to merge ones that
+  // don't, since every log always computes its macros live from whichever
+  // Food row it points at, and repointing it at a row with different
+  // per-100 values would silently change what that log has always shown.
+  // Split the same way here so the banner tells the user which groups will
+  // actually merge and which need manual review instead.
+  const { mergeableGroups, conflictGroups } = useMemo(() => {
+    const byName = new Map<string, LibraryFood[]>();
     for (const f of foods) {
       const key = f.name.trim().toLowerCase();
-      const group = groups.get(key);
+      const group = byName.get(key);
       if (group) group.push(f);
-      else groups.set(key, [f]);
+      else byName.set(key, [f]);
     }
-    return [...groups.values()].filter((g) => g.length > 1);
+    const round = (n: number) => Math.round(n * 100) / 100;
+    const macroKey = (f: LibraryFood) => [f.unitLabel, round(f.caloriesPer100g), round(f.proteinPer100g), round(f.carbPer100g), round(f.fatPer100g)].join("|");
+
+    const mergeable: LibraryFood[][] = [];
+    const conflicts: LibraryFood[][] = [];
+    for (const group of byName.values()) {
+      if (group.length < 2) continue;
+      const macroKeys = new Set(group.map(macroKey));
+      if (macroKeys.size === 1) mergeable.push(group);
+      else conflicts.push(group);
+    }
+    return { mergeableGroups: mergeable, conflictGroups: conflicts };
   }, [foods]);
 
   async function mergeDuplicates() {
@@ -256,11 +275,11 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
         </p>
       )}
 
-      {duplicateGroups.length > 0 && (
+      {mergeableGroups.length > 0 && (
         <div className="mb-4 rounded-xl border border-amber-800/60 bg-amber-950/20 p-4">
           <p className="text-sm text-amber-200">
-            พบเมนูชื่อซ้ำกัน {duplicateGroups.length} กลุ่ม ({duplicateGroups.reduce((s, g) => s + g.length, 0)} รายการ):{" "}
-            {duplicateGroups.map((g) => `${g[0].name} (×${g.length})`).join(", ")}
+            พบเมนูชื่อซ้ำกัน {mergeableGroups.length} กลุ่ม ({mergeableGroups.reduce((s, g) => s + g.length, 0)} รายการ):{" "}
+            {mergeableGroups.map((g) => `${g[0].name} (×${g.length})`).join(", ")}
           </p>
           <p className="mt-1 text-xs text-amber-200/70">
             กดรวมแล้วแต่ละกลุ่มจะเหลือรายการเดียว (เก็บอันที่บันทึกไปแล้วเยอะสุดไว้) — ประวัติการกินทั้งหมดยังอยู่ครบ
@@ -274,6 +293,36 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
           >
             {merging ? "กำลังรวม..." : "รวมเมนูซ้ำทั้งหมด"}
           </button>
+        </div>
+      )}
+
+      {conflictGroups.length > 0 && (
+        <div className="mb-4 rounded-xl border border-rose-800/60 bg-rose-950/20 p-4">
+          <p className="text-sm text-rose-200">
+            พบเมนูชื่อซ้ำกัน {conflictGroups.length} กลุ่ม แต่ค่าโภชนาการไม่ตรงกัน — ระบบไม่รวมให้อัตโนมัติ
+          </p>
+          <p className="mt-1 text-xs text-rose-200/70">
+            เพราะประวัติการกินที่เคยบันทึกไว้จะเปลี่ยนค่าไปตามเมนูที่เหลือทันที ถ้าเป็นเมนูเดียวกันจริงๆ ให้แก้ไขให้ค่าตรงกันก่อนแล้วกดรวมอีกครั้ง
+            หรือถ้าจริงๆ เป็นคนละเมนู ลองเปลี่ยนชื่อให้ต่างกันแทน
+          </p>
+          <ul className="mt-2 space-y-2">
+            {conflictGroups.map((group) => (
+              <li key={group[0].name} className="rounded-lg bg-rose-950/30 p-2.5 text-xs text-rose-100/90">
+                <p className="mb-1 font-medium">{group[0].name}</p>
+                <ul className="space-y-0.5">
+                  {group.map((f) => {
+                    const ref = macrosForGrams(f, referenceQuantity(f.unitLabel));
+                    return (
+                      <li key={f.id} className="text-rose-200/80">
+                        {Math.round(ref.calories)} kcal · {ref.proteinG.toFixed(0)}p / {ref.carbG.toFixed(0)}c / {ref.fatG.toFixed(0)}f ต่อ{" "}
+                        {referenceQuantityLabel(f.unitLabel)} · บันทึกไปแล้ว {f.logCount} ครั้ง
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
