@@ -170,6 +170,7 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
   const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
   const [merging, setMerging] = useState(false);
   const [mergeError, setMergeError] = useState<string | null>(null);
+  const [showConflictDetails, setShowConflictDetails] = useState(false);
   const editingItemRef = useRef<HTMLLIElement | null>(null);
 
   // Foods sharing the exact same name (case-insensitive) — new entries
@@ -277,11 +278,11 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
 
       {mergeableGroups.length > 0 && (
         <div className="mb-4 rounded-xl border border-amber-800/60 bg-amber-950/20 p-4">
-          <p className="text-sm text-amber-200">
+          <p className="text-sm font-medium text-amber-400">
             พบเมนูชื่อซ้ำกัน {mergeableGroups.length} กลุ่ม ({mergeableGroups.reduce((s, g) => s + g.length, 0)} รายการ):{" "}
             {mergeableGroups.map((g) => `${g[0].name} (×${g.length})`).join(", ")}
           </p>
-          <p className="mt-1 text-xs text-amber-200/70">
+          <p className="mt-1 text-xs text-amber-400/80">
             กดรวมแล้วแต่ละกลุ่มจะเหลือรายการเดียว (เก็บอันที่บันทึกไปแล้วเยอะสุดไว้) — ประวัติการกินทั้งหมดยังอยู่ครบ
             แค่ชี้ไปที่เมนูเดียวกันแทน
           </p>
@@ -298,31 +299,40 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
 
       {conflictGroups.length > 0 && (
         <div className="mb-4 rounded-xl border border-rose-800/60 bg-rose-950/20 p-4">
-          <p className="text-sm text-rose-200">
-            พบเมนูชื่อซ้ำกัน {conflictGroups.length} กลุ่ม แต่ค่าโภชนาการไม่ตรงกัน — ระบบไม่รวมให้อัตโนมัติ
+          <p className="text-sm font-medium text-rose-400">
+            พบเมนูชื่อซ้ำกัน {conflictGroups.length} กลุ่ม แต่ค่าโภชนาการไม่ตรงกัน — ไม่รวมให้อัตโนมัติ:{" "}
+            {conflictGroups.map((g) => g[0].name).join(", ")}
           </p>
-          <p className="mt-1 text-xs text-rose-200/70">
-            เพราะประวัติการกินที่เคยบันทึกไว้จะเปลี่ยนค่าไปตามเมนูที่เหลือทันที ถ้าเป็นเมนูเดียวกันจริงๆ ให้แก้ไขให้ค่าตรงกันก่อนแล้วกดรวมอีกครั้ง
-            หรือถ้าจริงๆ เป็นคนละเมนู ลองเปลี่ยนชื่อให้ต่างกันแทน
+          <p className="mt-1 text-xs text-rose-400/80">
+            เพราะประวัติที่เคยบันทึกไว้จะเปลี่ยนค่าไปตามเมนูที่เหลือทันที — เลื่อนลงไปหาเมนูพวกนี้ในรายการด้านล่าง
+            แล้วแก้ไขให้ค่าตรงกันก่อนถึงจะรวมอีกครั้งได้ หรือถ้าจริงๆ เป็นคนละเมนู ลองเปลี่ยนชื่อให้ต่างกันแทน
           </p>
-          <ul className="mt-2 space-y-2">
-            {conflictGroups.map((group) => (
-              <li key={group[0].name} className="rounded-lg bg-rose-950/30 p-2.5 text-xs text-rose-100/90">
-                <p className="mb-1 font-medium">{group[0].name}</p>
-                <ul className="space-y-0.5">
-                  {group.map((f) => {
-                    const ref = macrosForGrams(f, referenceQuantity(f.unitLabel));
-                    return (
-                      <li key={f.id} className="text-rose-200/80">
-                        {Math.round(ref.calories)} kcal · {ref.proteinG.toFixed(0)}p / {ref.carbG.toFixed(0)}c / {ref.fatG.toFixed(0)}f ต่อ{" "}
-                        {referenceQuantityLabel(f.unitLabel)} · บันทึกไปแล้ว {f.logCount} ครั้ง
-                      </li>
-                    );
-                  })}
-                </ul>
-              </li>
-            ))}
-          </ul>
+          <button
+            onClick={() => setShowConflictDetails((v) => !v)}
+            className="mt-2 text-xs font-medium text-rose-400 underline underline-offset-2"
+          >
+            {showConflictDetails ? "ซ่อนรายละเอียด" : "ดูรายละเอียดแต่ละเมนู"}
+          </button>
+          {showConflictDetails && (
+            <ul className="mt-2 space-y-2">
+              {conflictGroups.map((group) => (
+                <li key={group[0].name} className="rounded-lg bg-rose-950/30 p-2.5 text-xs">
+                  <p className="mb-1 font-medium text-rose-400">{group[0].name}</p>
+                  <ul className="space-y-0.5">
+                    {group.map((f) => {
+                      const ref = macrosForGrams(f, referenceQuantity(f.unitLabel));
+                      return (
+                        <li key={f.id} className="text-rose-400/80">
+                          {Math.round(ref.calories)} kcal · {ref.proteinG.toFixed(0)}p / {ref.carbG.toFixed(0)}c / {ref.fatG.toFixed(0)}f ต่อ{" "}
+                          {referenceQuantityLabel(f.unitLabel)} · บันทึกไปแล้ว {f.logCount} ครั้ง
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
