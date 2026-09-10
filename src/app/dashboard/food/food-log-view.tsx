@@ -883,7 +883,8 @@ export function FoodLogView({
                     )}
                   </p>
                   <p className="mt-1 text-xs text-neutral-500">
-                    {Math.round(l.grams)} {l.unitLabel} · {Math.round(l.calories)} kcal
+                    {Math.round(l.grams)} {l.unitLabel} · {Math.round(l.calories)} kcal · {Math.round(l.proteinG)}p / {Math.round(l.carbG)}c /{" "}
+                    {Math.round(l.fatG)}f
                   </p>
                 </div>
                 <div className="flex flex-none items-center gap-2.5">
