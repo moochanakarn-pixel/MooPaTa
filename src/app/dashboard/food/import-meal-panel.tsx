@@ -30,11 +30,24 @@ const PLACEHOLDER = `ชื่อเมนู | ปริมาณ | แคล�
 // grams-less line's kcal as its grams column and shifted every macro over
 // by one (see the "|" separators below, immune to that since each cell
 // says what it is regardless of order or an AI occasionally skipping a
-// column).
+// column). The worked example at the end is a few-shot cue for AI apps
+// with weaker instruction-following than Claude/GPT-tier models — a bare
+// instruction leaves more room for those to drift on column count/order,
+// while a concrete filled-in table leaves nothing to guess. Uses the same
+// "| ... |" pipe styling as the header instruction above throughout, so
+// there's no mixed signal about whether the edge pipes matter (they
+// don't, to our parser, but keeping it consistent is one less thing for
+// the AI to have to reconcile).
 const AI_PROMPT_TEMPLATE = `ช่วยคำนวณแคลอรี่ โปรตีน คาร์บ และไขมัน ของมื้ออาหารนี้ให้หน่อย: [อธิบายอาหารที่กินตรงนี้ เช่น ข้าวกะเพราหมูสับ 1 จาน กับไข่ดาว 1 ฟอง]
 
 ตอบกลับมาเป็นตาราง markdown เท่านั้น ไม่ต้องมีคำอธิบายอื่นแทรก โดยมีแถวหัวตารางขึ้นต้นตามนี้เป๊ะๆ แล้วตามด้วยเมนูละหนึ่งแถว:
-| ชื่อเมนู | ปริมาณ | แคลอรี่ | โปรตีน | คาร์บ | ไขมัน |`;
+| ชื่อเมนู | ปริมาณ | แคลอรี่ | โปรตีน | คาร์บ | ไขมัน |
+
+ตัวอย่าง:
+| ชื่อเมนู | ปริมาณ | แคลอรี่ | โปรตีน | คาร์บ | ไขมัน |
+| บะหมี่ต้มยำหมูน้ำใส | 450 ก. | 405 kcal | 22 ก. | 47.5 ก. | 13.5 ก. |
+| ข้าวสวย | 180 ก. | 207 kcal | 3.3 ก. | 45 ก. | 0 ก. |
+| หมูผัดผักบุ้ง | 200 ก. | 225 kcal | 13.2 ก. | 11.5 ก. | 13.5 ก. |`;
 
 // A row the user is reviewing before it gets saved — same shape as a
 // parsed row, but with fields as editable strings and a keep/remove flag,
