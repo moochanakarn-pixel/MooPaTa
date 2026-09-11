@@ -37,7 +37,16 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
       include: { food: true },
     }),
     db.food.findMany({ where: { userId, deletedAt: null }, orderBy: { createdAt: "desc" }, take: 200 }),
-    db.waterLog.findMany({ where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } }, orderBy: { loggedAt: "asc" } }),
+    // Secondary sort by id (cuid, roughly creation-ordered) matters here:
+    // a backfilled day's entries all share the exact same loggedAt (noon on
+    // that date — see parseBackfillLoggedAt), so loggedAt alone leaves
+    // same-day rows in whatever arbitrary order MySQL happens to return
+    // them, and WaterLogCard's "undo last entry" button relies on this
+    // array's last element actually being the last one added.
+    db.waterLog.findMany({
+      where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } },
+      orderBy: [{ loggedAt: "asc" }, { id: "asc" }],
+    }),
     db.activity.aggregate({ where: { userId, startedAt: { gte: viewDayStart, lt: viewDayEnd } }, _sum: { durationSec: true } }),
     // How many times each food has actually been logged, all-time — the
     // basis for the "เมนูที่กินบ่อย" quick-pick list inside the add-food

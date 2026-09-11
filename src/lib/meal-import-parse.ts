@@ -123,7 +123,7 @@ function tokenizeCompactLine(line: string): string[] {
 // When no header row was found, each line is on its own to say what its
 // cells mean — and for the compact one-liner form, it already does: every
 // numeric cell carries whatever unit word followed it in the source text
-// (see tokenizeCompactLine). The "kcal"/"แคล..." tag pins exactly which
+// (see tokenizeCompactLine). The "kcal"/"แคลอรี่..." tag pins exactly which
 // cell is calories, instead of assuming it's always the cell right after
 // the name. That assumption (the old DEFAULT_COLUMNS-for-everything
 // behavior) silently corrupted any line with no separate grams/serving
@@ -133,8 +133,13 @@ function tokenizeCompactLine(line: string): string[] {
 // 20, and carb read fat's 0.9 — every field one column off. Falls back to
 // the original fixed layout when no cell carries a recognizable kcal tag
 // at all, so plain bare-number input still parses exactly as before.
+// Reuses matchHeaderField's own (deliberately fuller) kcal pattern rather
+// than a bare "แคล" prefix — a supplement line that also states a calcium
+// amount (a stray "แคลเซียม 200 mg" cell — see tokenizeCompactLine's
+// per-token cell splitting) would otherwise false-positive as the kcal
+// cell, corrupting the row the same way this function exists to prevent.
 function inferCompactColumns(cells: string[]): ColumnIndices {
-  const kcalIdx = cells.findIndex((c, i) => i > 0 && /kcal|แคล/i.test(c));
+  const kcalIdx = cells.findIndex((c, i) => i > 0 && /kcal|แคลอรี่|แคลอรี|พลังงาน/i.test(c));
   if (kcalIdx === -1) return DEFAULT_COLUMNS;
   return {
     grams: kcalIdx > 1 ? 1 : null,

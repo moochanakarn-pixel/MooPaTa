@@ -94,7 +94,13 @@ export function WaterLogCard({
   // needs, so a mis-tap (or logging the wrong amount) can be corrected
   // without showing every entry logged today as a growing row of pills,
   // which got unreadable fast once someone logged more than 3-4 times.
-  const lastEntry = todayLogs.length > 0 ? todayLogs.reduce((a, b) => (a.loggedAtMs >= b.loggedAtMs ? a : b)) : null;
+  // Relies on todayLogs already arriving in insertion order (the query
+  // orders by loggedAt then id — every entry on a backfilled day shares
+  // the exact same loggedAt, so id is what actually breaks the tie), so
+  // the last element IS the last one added — a manual max-by-timestamp
+  // reduce would silently pick an arbitrary tied entry instead on those
+  // days, since it can't distinguish same-loggedAt rows at all.
+  const lastEntry = todayLogs.length > 0 ? todayLogs[todayLogs.length - 1] : null;
 
   async function addWater(ml: number) {
     if (!Number.isFinite(ml) || ml <= 0) {
