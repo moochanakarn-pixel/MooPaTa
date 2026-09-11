@@ -120,6 +120,31 @@ function tokenizeCompactLine(line: string): string[] {
   return cells;
 }
 
+// When no header row was found, each line is on its own to say what its
+// cells mean — and for the compact one-liner form, it already does: every
+// numeric cell carries whatever unit word followed it in the source text
+// (see tokenizeCompactLine). The "kcal"/"แคล..." tag pins exactly which
+// cell is calories, instead of assuming it's always the cell right after
+// the name. That assumption (the old DEFAULT_COLUMNS-for-everything
+// behavior) silently corrupted any line with no separate grams/serving
+// cell before it — e.g. "มะละกอฮอลแลนด์ ครึ่งลูก 90 kcal 0.8 ก. 20 ก. 0.9
+// ก." has no "250 ก."-style weight cell, so the "90 kcal" cell landed in
+// the grams slot, kcal read the protein cell's 0.8, protein read carb's
+// 20, and carb read fat's 0.9 — every field one column off. Falls back to
+// the original fixed layout when no cell carries a recognizable kcal tag
+// at all, so plain bare-number input still parses exactly as before.
+function inferCompactColumns(cells: string[]): ColumnIndices {
+  const kcalIdx = cells.findIndex((c, i) => i > 0 && /kcal|แคล/i.test(c));
+  if (kcalIdx === -1) return DEFAULT_COLUMNS;
+  return {
+    grams: kcalIdx > 1 ? 1 : null,
+    kcal: kcalIdx,
+    protein: kcalIdx + 1,
+    carb: kcalIdx + 2,
+    fat: kcalIdx + 3,
+  };
+}
+
 // Splits one line into cells, trying the delimiter most likely for how it
 // was pasted: a literal markdown pipe table, a tab-separated copy (common
 // when copying a rendered HTML table), plain multi-space alignment, or —
@@ -210,9 +235,15 @@ export function parseMealText(text: string): ParsedMeal {
       }
     }
 
+    // Header-derived columns apply to every row of that table; without a
+    // header, each compact line pins its own layout via its cells' unit
+    // tags (see inferCompactColumns) since different rows can have or lack
+    // a grams cell independently of one another.
+    const rowColumns = sawHeader ? columns : inferCompactColumns(cells);
+
     // need at minimum: name + whichever columns are actually mandatory
     // (kcal/protein/carb always; grams/fat only when the header had them)
-    const minCells = Math.max(columns.kcal, columns.protein, columns.carb) + 1;
+    const minCells = Math.max(rowColumns.kcal, rowColumns.protein, rowColumns.carb) + 1;
     if (cells.length < minCells) {
       leftoverLines.push(line);
       continue;
@@ -227,11 +258,11 @@ export function parseMealText(text: string): ParsedMeal {
     // through as its own exact label.
     if (!name || HEADER_KEYWORDS.includes(name)) continue;
 
-    const qty = columns.grams !== null && cells[columns.grams] !== undefined ? cellGrams(cells[columns.grams]) : null;
-    const kcal = cellNumber(cells[columns.kcal]);
-    const protein = cellNumber(cells[columns.protein]);
-    const carb = cellNumber(cells[columns.carb]);
-    const fat = columns.fat !== null && cells[columns.fat] !== undefined ? cellNumber(cells[columns.fat]) : 0;
+    const qty = rowColumns.grams !== null && cells[rowColumns.grams] !== undefined ? cellGrams(cells[rowColumns.grams]) : null;
+    const kcal = cellNumber(cells[rowColumns.kcal]);
+    const protein = cellNumber(cells[rowColumns.protein]);
+    const carb = cellNumber(cells[rowColumns.carb]);
+    const fat = rowColumns.fat !== null && cells[rowColumns.fat] !== undefined ? cellNumber(cells[rowColumns.fat]) : 0;
 
     if (kcal === null || protein === null || carb === null) {
       leftoverLines.push(line);
