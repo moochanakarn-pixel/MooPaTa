@@ -13,23 +13,28 @@ const MEAL_TYPE_OPTIONS = ["", "BREAKFAST", "LUNCH", "DINNER", "SNACK"].map((val
 const INPUT_CLASS =
   "w-full rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1.5 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
 
-const PLACEHOLDER = `รูปแบบ: ชื่อเมนู | ปริมาณ | แคลอรี่ | โปรตีน | คาร์บ | ไขมัน
-
-ข้าวสวย  235 ก.  300 kcal  4.5 ก.  65 ก.  0.7 ก.
-กระเพราเนื้อสับ  135 ก.  230 kcal  20 ก.  6.5 ก.  15 ก.
+const PLACEHOLDER = `ชื่อเมนู | ปริมาณ | แคลอรี่ | โปรตีน | คาร์บ | ไขมัน
+ข้าวสวย | 235 ก. | 300 kcal | 4.5 ก. | 65 ก. | 0.7 ก.
+กระเพราเนื้อสับ | 135 ก. | 230 kcal | 20 ก. | 6.5 ก. | 15 ก.
 
 ดื่มน้ำ 550 มล.`;
 
 // A ready-made prompt the user can copy straight into Claude/ChatGPT — the
 // real first hurdle for someone new to this feature isn't reading the
 // parsed result, it's not knowing how to ask an AI for one in a format
-// this parser can actually read. Getting the AI's answer to already match
-// the expected shape (name, grams, kcal, protein, carb, fat — one line per
-// dish) also means less for the heuristic parser to have to guess at.
+// this parser can actually read. Asking for a markdown table with an
+// explicit header row (rather than the old bare "name grams kcal protein
+// carb fat" line) matters beyond readability: the app reads column
+// positions off the header's own labels (detectColumnIndices) instead of
+// guessing them from position — the exact guesswork that misread a
+// grams-less line's kcal as its grams column and shifted every macro over
+// by one (see the "|" separators below, immune to that since each cell
+// says what it is regardless of order or an AI occasionally skipping a
+// column).
 const AI_PROMPT_TEMPLATE = `ช่วยคำนวณแคลอรี่ โปรตีน คาร์บ และไขมัน ของมื้ออาหารนี้ให้หน่อย: [อธิบายอาหารที่กินตรงนี้ เช่น ข้าวกะเพราหมูสับ 1 จาน กับไข่ดาว 1 ฟอง]
 
-ตอบกลับมาเป็นตาราง ต่อเมนูหนึ่งบรรทัด ไม่ต้องมีคำอธิบายอื่นแทรก ในรูปแบบนี้:
-ชื่อเมนู ปริมาณ(กรัม) แคลอรี่(kcal) โปรตีน(กรัม) คาร์บ(กรัม) ไขมัน(กรัม)`;
+ตอบกลับมาเป็นตาราง markdown เท่านั้น ไม่ต้องมีคำอธิบายอื่นแทรก โดยมีแถวหัวตารางขึ้นต้นตามนี้เป๊ะๆ แล้วตามด้วยเมนูละหนึ่งแถว:
+| ชื่อเมนู | ปริมาณ | แคลอรี่ | โปรตีน | คาร์บ | ไขมัน |`;
 
 // A row the user is reviewing before it gets saved — same shape as a
 // parsed row, but with fields as editable strings and a keep/remove flag,
@@ -209,7 +214,8 @@ export function ImportMealPanel({
             className={`${INPUT_CLASS} resize-y font-mono text-xs`}
           />
           <p className="mt-2 text-xs text-neutral-600">
-            ต้องมีชื่อเมนู ปริมาณ แคลอรี่ โปรตีน คาร์บ และไขมัน ต่อบรรทัด — วางเป็นตารางหรือบรรทัดเดียวติดกันแบบตัวอย่างข้างบนก็ได้
+            ต้องมีชื่อเมนู ปริมาณ แคลอรี่ โปรตีน คาร์บ และไขมัน ต่อบรรทัด — ถ้า AI ตอบเป็นตารางมี header แบบตัวอย่างข้างบน
+            ระบบจะอ่านค่าถูกต้องแม่นยำที่สุด แต่ถ้าตอบมาเป็นข้อความรูปแบบอื่นก็ยังวางได้เหมือนเดิม
           </p>
           {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
           <button
