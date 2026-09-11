@@ -34,11 +34,14 @@ const MIN_SAFE_CALORIES = 1200;
 const PROTEIN_G_PER_KG = 1.8; // middle of the common 1.6-2.2 g/kg range for an active person
 // Once we know actual lean body mass (from a body-composition scan) rather
 // than guessing at it, protein needs scale with that instead of total
-// bodyweight — fat mass isn't metabolically demanding tissue. 2.2 g/kg LBM
-// is the middle of the commonly-cited 2.0-2.4 g/kg range for someone who
-// actually knows their body-fat%, slightly higher than the plain
-// weight-based default above since it's a firmer, more targeted number.
-const PROTEIN_G_PER_KG_LBM = 2.2;
+// bodyweight — fat mass isn't metabolically demanding tissue. 2.4 g/kg LBM
+// is the upper end of the commonly-cited 2.0-2.4 g/kg range for someone
+// who actually knows their body-fat% — higher than the plain
+// weight-based default above since it's a firmer, more targeted number,
+// and pushed to the top of that range (rather than its middle) so the
+// result lands closer to what sports-nutrition guidance treats as a
+// reasonable daily target rather than a conservative floor within it.
+const PROTEIN_G_PER_KG_LBM = 2.4;
 const FAT_SHARE_OF_CALORIES = 0.25;
 const WATER_ML_PER_KG = 33; // common baseline guideline (~30-35ml/kg)
 

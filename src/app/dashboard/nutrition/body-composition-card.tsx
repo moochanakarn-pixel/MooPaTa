@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export interface BodyCompositionEntry {
@@ -130,7 +131,10 @@ export function BodyCompositionCard({ entries }: { entries: BodyCompositionEntry
 
       {latest?.bodyFatPercent !== null && latest !== undefined && (
         <p className="mb-4 rounded-lg bg-violet-500/10 px-3 py-2 text-xs text-violet-400">
-          ✓ ใช้ผลตรวจล่าสุดคำนวณ BMR แบบ Katch-McArdle (อิงมวลกล้ามเนื้อจริง) แทนสูตรมาตรฐานแล้ว — แม่นยำกว่าเดิม
+          ✓ ใช้ผลตรวจล่าสุดคำนวณ BMR แบบ Katch-McArdle (อิงมวลกล้ามเนื้อจริง) และโปรตีนจากมวลไร้ไขมันแทนสูตรมาตรฐานแล้ว — แม่นยำกว่าเดิม{" "}
+          <Link href="/dashboard/knowledge" className="underline hover:text-violet-300">
+            ดูวิธีคำนวณ
+          </Link>
         </p>
       )}
 
