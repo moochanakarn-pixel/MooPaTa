@@ -157,9 +157,21 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
 ### 4. Share cards (Satori/`next/og`)
 - `src/app/api/share/{daily-summary,nutrition,period}/route.tsx` — สร้างรูปสรุปแชร์
 - สไตล์การ์ดร่วมกันอยู่ที่ `src/lib/share-card-styles.ts` (`cardStyle`, `rowCardStyle`, `titleStyle`,
-  `iconCircleStyle`)
+  `iconCircleStyle`) — ใช้ทั้ง period/nutrition (โทนเข้มเดิม navy/green) และ daily-summary
 - ข้อจำกัดของ Satori ที่เจอแล้ว: ไม่รองรับ `conic-gradient()`, `justify-content: space-evenly`
   (ใช้ `"space-around"` แทน), ตัวอักษร "ล" ท้ายคำที่โดดเดี่ยว render เพี้ยน (เลี่ยงด้วยการใช้คำเต็ม)
+- **การ์ดสรุปผลประจำวัน** (`/dashboard/summary`, `daily-summary/route.tsx`) มีธีมของตัวเอง แยกจาก
+  period/nutrition — พื้นหลัง gradient ส้ม/น้ำตาลอุ่นแทนโทนเข้ม navy/green เดิม, หัวการ์ดโชว์
+  avatar+ชื่อผู้ใช้จริง (`avatarPath` self-upload อ่านไฟล์แล้ว embed เป็น data URI เพราะ
+  `/api/avatar` เป็น route ที่ auth-gated next/og ดึง URL ตรงไม่ได้ ส่วน `avatarUrl` จาก Google
+  ดึงตรงได้เลยเพราะเป็น URL public) แทนโลโก้ "M" เฉย ๆ, ตัวเลขแคลอรี่ใหญ่ขึ้น (76px)
+  — เพิ่ม 2 หัวข้อใหม่ที่เลือกโชว์ได้ (เหมือนหัวข้ออื่นในหน้า configurator):
+  - `goal` — ความคืบหน้าเป้าหมายระยะทางเดือนนี้ (`User.monthlyGoalKm` เทียบผลรวม
+    `distanceMeters` ตั้งแต่ต้นเดือนถึงวันที่เลือก) โชว์แค่ถ้าตั้งเป้าไว้
+  - `heatmap` — จุดสี่เหลี่ยม 7 อัน แทนความสม่ำเสมอบันทึกอาหาร 7 วันล่าสุด **นับถอยหลังจากวันที่เลือก
+    ในหน้า configurator ไม่ใช่จาก "วันนี้" เสมอไป** (`buildWeekDots` แยกจาก `buildDayCounts` ใน
+    `src/lib/streak.ts` เพราะอันนั้น anchor ที่ "วันนี้" เสมอ ใช้กับ streak card/heatmap ในหน้า
+    เชิงลึกที่เป็นปัจจุบันเท่านั้น — การ์ดนี้เลือกดูวันในอดีตได้ด้วยจาก date picker)
 
 ### 5. อื่น ๆ
 - Activity pages: `/dashboard` (list), `/dashboard/activity/[id]` (detail), `/dashboard/log-activity`

@@ -9,13 +9,14 @@ import { getLatestBodyComposition } from "@/lib/body-composition";
 import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
 import { activityTypeLabel, formatDistanceKm, formatDuration } from "@/lib/format";
 import { cardStyle, iconCircleStyle, rowCardStyle, titleStyle } from "@/lib/share-card-styles";
+import { contentTypeForAvatarPath, readAvatarFile } from "@/lib/avatar-storage";
 
-const CAL_RING_SIZE = 260;
+const CAL_RING_SIZE = 272;
 const CAL_RING_STROKE = 22;
 const CAL_RING_RADIUS = (CAL_RING_SIZE - CAL_RING_STROKE) / 2;
 const CAL_RING_CIRCUMFERENCE = 2 * Math.PI * CAL_RING_RADIUS;
 
-const ALL_FIELDS = ["cal", "macro", "water", "exercise", "streak", "weight"] as const;
+const ALL_FIELDS = ["cal", "macro", "water", "exercise", "goal", "streak", "heatmap", "weight"] as const;
 type FieldId = (typeof ALL_FIELDS)[number];
 
 function isFieldId(v: string): v is FieldId {
@@ -34,14 +35,35 @@ function parseDateParam(v: string | null): Date | null {
   return date;
 }
 
+// 7 booleans (oldest to newest, ending at `endDate`) — any food logged that
+// day or not. Deliberately separate from buildDayCounts (src/lib/streak.ts):
+// that one always ends at "today" (shared with the streak card/heatmap
+// which are always current), but this card can render a past day (the
+// summary page's date picker), so the 7-day window has to end at whatever
+// day was requested instead.
+function buildWeekDots(dates: Date[], endDate: Date): boolean[] {
+  const loggedDays = new Set(dates.map((d) => localDateKey(d)));
+  const dots: boolean[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(endDate);
+    d.setDate(d.getDate() - i);
+    dots.push(loggedDays.has(localDateKey(d)));
+  }
+  return dots;
+}
+
 // A downloadable, story-ratio (1080x1920) daily summary card — replaces
-// the old CSV export from the dashboard. Same dark gradient + next/og
-// renderer as the existing period/nutrition share cards (see
-// src/app/api/share/period/route.tsx), just built for one specific day
-// and with the set of blocks + their order chosen by the caller instead
-// of fixed. Blocks with genuinely no data for the day (no activity logged,
-// no weight logged) are silently skipped rather than showing an empty
-// prompt in what's meant to be a shareable image.
+// the old CSV export from the dashboard. Same next/og renderer as the
+// existing period/nutrition share cards (see src/app/api/share/period/route.tsx),
+// just built for one specific day and with the set of blocks + their order
+// chosen by the caller instead of fixed. This card's own gradient (warm
+// orange/brown, matching the app's brand color) and header (user's own
+// avatar/name instead of just the app wordmark) are specific to this route
+// — the period/nutrition cards keep their original dark navy/green look
+// unless asked to match separately. Blocks with genuinely no data for the
+// day (no activity logged, no weight logged, no monthly goal set) are
+// silently skipped rather than showing an empty prompt in what's meant to
+// be a shareable image.
 export async function GET(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) {
@@ -75,7 +97,13 @@ export async function GET(req: NextRequest) {
   }
 
   const needStreak = fields.includes("streak");
-  const [foodLogs, waterAgg, activities, weightLogs, streakFoodLogs] = await Promise.all([
+  const needGoal = fields.includes("goal") && !!user.monthlyGoalKm;
+  const needHeatmap = fields.includes("heatmap");
+  const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+  const weekStart = new Date(dayStart);
+  weekStart.setDate(weekStart.getDate() - 6);
+
+  const [foodLogs, waterAgg, activities, weightLogs, streakFoodLogs, monthDistanceAgg, weekFoodLogs] = await Promise.all([
     db.foodLog.findMany({ where: { userId, loggedAt: { gte: dayStart, lte: dayEnd } }, include: { food: true } }),
     db.waterLog.aggregate({ where: { userId, loggedAt: { gte: dayStart, lte: dayEnd } }, _sum: { ml: true } }),
     db.activity.findMany({ where: { userId, startedAt: { gte: dayStart, lte: dayEnd } }, orderBy: { startedAt: "asc" } }),
@@ -85,6 +113,12 @@ export async function GET(req: NextRequest) {
           where: { userId, loggedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
           select: { loggedAt: true },
         })
+      : Promise.resolve([]),
+    needGoal
+      ? db.activity.aggregate({ where: { userId, startedAt: { gte: monthStart, lte: dayEnd } }, _sum: { distanceMeters: true } })
+      : Promise.resolve({ _sum: { distanceMeters: null } }),
+    needHeatmap
+      ? db.foodLog.findMany({ where: { userId, loggedAt: { gte: weekStart, lte: dayEnd } }, select: { loggedAt: true } })
       : Promise.resolve([]),
   ]);
 
@@ -131,6 +165,24 @@ export async function GET(req: NextRequest) {
 
   const [latestWeight, prevWeight] = weightLogs;
   const weightDelta = latestWeight && prevWeight ? latestWeight.weightKg - prevWeight.weightKg : null;
+
+  const monthDistanceM = monthDistanceAgg._sum.distanceMeters ?? 0;
+  const goalPct = user.monthlyGoalKm ? Math.max(0, Math.min(100, (monthDistanceM / 1000 / user.monthlyGoalKm) * 100)) : 0;
+  const weekDots = needHeatmap ? buildWeekDots(weekFoodLogs.map((l) => l.loggedAt), date) : [];
+
+  // Self-uploaded avatar (avatarPath) takes priority for display over
+  // avatarUrl everywhere else in the app (see dashboard header) — same
+  // rule here. It's a private file (only ever served through the
+  // auth-gated GET /api/avatar route), so next/og can't just fetch it by
+  // URL like it does for a Google avatarUrl; read the bytes directly and
+  // embed as a data URI instead.
+  let avatarSrc: string | null = null;
+  if (user.avatarPath) {
+    const buf = await readAvatarFile(user.avatarPath);
+    if (buf) avatarSrc = `data:${contentTypeForAvatarPath(user.avatarPath)};base64,${buf.toString("base64")}`;
+  } else if (user.avatarUrl) {
+    avatarSrc = user.avatarUrl;
+  }
 
   const dateLabel =
     (isToday ? "วันนี้ · " : "") +
@@ -199,7 +251,7 @@ export async function GET(req: NextRequest) {
                   justifyContent: "center",
                 }}
               >
-                <span style={{ fontSize: 62, fontWeight: 700, color: "white" }}>{Math.round(macros.calories).toLocaleString("th-TH")}</span>
+                <span style={{ fontSize: 76, fontWeight: 700, color: "white" }}>{Math.round(macros.calories).toLocaleString("th-TH")}</span>
                 <span style={{ fontSize: 26, color: "#a3a3a3" }}>kcal</span>
               </div>
             </div>
@@ -288,6 +340,43 @@ export async function GET(req: NextRequest) {
         </div>
       ),
     },
+    goal: {
+      show: needGoal,
+      node: (
+        <div key="goal" style={cardStyle}>
+          <span style={titleStyle}>เป้าหมายระยะทางเดือนนี้</span>
+          <div style={{ display: "flex", height: 24, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden", marginTop: 22 }}>
+            <div style={{ display: "flex", width: `${goalPct}%`, background: "linear-gradient(90deg, #fc4c02, #ff8a3d)" }} />
+          </div>
+          <div style={{ display: "flex", marginTop: 18, alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontSize: 34, fontWeight: 700, color: "white" }}>{formatDistanceKm(monthDistanceM, user.unitSystem)}</span>
+            <span style={{ fontSize: 24, color: "#9c9c97" }}>/ {formatDistanceKm((user.monthlyGoalKm ?? 0) * 1000, user.unitSystem)}</span>
+          </div>
+        </div>
+      ),
+    },
+    heatmap: {
+      show: needHeatmap,
+      node: (
+        <div key="heatmap" style={cardStyle}>
+          <span style={titleStyle}>ความสม่ำเสมอ 7 วันล่าสุด</span>
+          <div style={{ display: "flex", gap: 14, marginTop: 24 }}>
+            {weekDots.map((logged, i) => (
+              <div
+                key={i}
+                style={{
+                  display: "flex",
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  background: logged ? "#fc4c02" : "rgba(255,255,255,0.08)",
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      ),
+    },
     streak: {
       show: streak !== null && streak > 0,
       node: (
@@ -334,31 +423,35 @@ export async function GET(req: NextRequest) {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          background: "linear-gradient(160deg, #0b0f19 0%, #14170f 55%, #0e1c08 100%)",
+          background: "linear-gradient(160deg, #1a0a04 0%, #2e1206 45%, #1c0e05 100%)",
           padding: 64,
           fontFamily: "Noto Sans Thai",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 16,
-              background: "linear-gradient(135deg, #fc4c02, #ff8a3d)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 30,
-              fontWeight: 700,
-              color: "white",
-            }}
-          >
-            M
-          </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: "white" }}>MooPaTa</span>
-            <span style={{ fontSize: 20, color: "#a3a3a3" }}>{dateLabel}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          {avatarSrc ? (
+            <img src={avatarSrc} width={80} height={80} style={{ borderRadius: 22 }} />
+          ) : (
+            <div
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 22,
+                background: "linear-gradient(135deg, #fc4c02, #ff8a3d)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 36,
+                fontWeight: 700,
+                color: "white",
+              }}
+            >
+              {(user.name ?? "?").charAt(0)}
+            </div>
+          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 38, fontWeight: 700, color: "white" }}>สวัสดี, {user.name ?? "นักวิ่ง"}</span>
+            <span style={{ fontSize: 22, color: "#c9a68f" }}>MooPaTa · {dateLabel}</span>
           </div>
         </div>
 
