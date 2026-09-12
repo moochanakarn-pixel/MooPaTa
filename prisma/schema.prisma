@@ -246,7 +246,7 @@ model ProviderConnection {
   refreshTokenEnc   String    @db.Text
   expiresAt         DateTime
   scope             String?
-  lastReconciledAt  DateTime? // last time we scanned full history for deletions (throttled, see sync-strava.ts)
+  lastReconciledAt  DateTime? // legacy: last full-history deletion scan from the now-removed Strava sync (see CLAUDE.md) — unused by any current code, kept so historical STRAVA rows don't need a migration
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
