@@ -47,11 +47,14 @@ export async function GET(req: NextRequest) {
     },
   });
 
+  // Only fill name/avatarUrl from Google on first connect (account
+  // creation) — an existing user may have set a custom name/avatar since
+  // (src/app/api/settings/profile, src/app/api/avatar), and overwriting
+  // those on every subsequent login would silently revert that choice
+  // back to whatever Google reports, contradicting the override this
+  // feature is meant to allow.
   const user = existing
-    ? await db.user.update({
-        where: { id: existing.userId },
-        data: { name: profile.name, avatarUrl: profile.avatarUrl },
-      })
+    ? await db.user.findUniqueOrThrow({ where: { id: existing.userId } })
     : await db.user.create({
         data: { name: profile.name, avatarUrl: profile.avatarUrl },
       });

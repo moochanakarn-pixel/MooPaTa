@@ -27,11 +27,17 @@ export async function POST(req: NextRequest) {
   const user = await db.user.findUnique({ where: { email } });
   if (!user || !user.passwordHash) return genericFailure();
 
-  if (user.lockedUntil && user.lockedUntil > new Date()) {
-    return NextResponse.json({ error: "account_locked" }, { status: 423 });
+  const isLocked = Boolean(user.lockedUntil && user.lockedUntil > new Date());
+  const valid = await verifyPassword(password, user.passwordHash);
+
+  if (isLocked) {
+    // Only reveal the lock to whoever already knows the correct password —
+    // anyone else (wrong password, or an email with no real account
+    // reaching this far at all) gets the same genericFailure() as always,
+    // so lock state can never be used to confirm an email has an account.
+    return valid ? NextResponse.json({ error: "account_locked" }, { status: 423 }) : genericFailure();
   }
 
-  const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) {
     const failedLoginCount = user.failedLoginCount + 1;
     await db.user.update({

@@ -34,15 +34,20 @@ const FIELD_MATCHERS: { key: Exclude<keyof ParsedActivity, "type" | "exercises">
   { key: "calories", test: (l) => /แคลอรี่|แคลอรี|calor/i.test(l) },
 ];
 
-// "HH:MM:SS" or "HH:MM" duration text (Huawei/Apple Health's own format) ->
-// total minutes, rounded — falls back to a plain leading number (already
-// "in minutes") when there's no colon.
+// "HH:MM:SS" duration text (Huawei/Apple Health's own format) -> total
+// minutes, rounded. Requires all three groups — a bare two-group "45:30"
+// is genuinely ambiguous (a hint under an hour is just as often written
+// as "MM:SS" with no leading "0:" as it is "H:MM"), and guessing hours
+// there previously turned a 45-minute workout into 2730 minutes. Falls
+// back to firstNumber for anything else, which reads a bare "45:30" as
+// plain 45 (a safe minutes-ish approximation) rather than misreading it
+// as hours.
 function parseDurationToMinutes(line: string): number | null {
-  const timeMatch = line.match(/(\d+):(\d{1,2})(?::(\d{1,2}))?/);
+  const timeMatch = line.match(/(\d+):(\d{1,2}):(\d{1,2})/);
   if (timeMatch) {
     const h = Number(timeMatch[1]);
     const m = Number(timeMatch[2]);
-    const s = timeMatch[3] ? Number(timeMatch[3]) : 0;
+    const s = Number(timeMatch[3]);
     return Math.round(h * 60 + m + s / 60);
   }
   return firstNumber(line);
