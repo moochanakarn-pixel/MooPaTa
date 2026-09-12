@@ -11,8 +11,8 @@ import { activityTypeLabel, formatDistanceKm, formatDuration } from "@/lib/forma
 import { cardStyle, iconCircleStyle, rowCardStyle, titleStyle } from "@/lib/share-card-styles";
 import { contentTypeForAvatarPath, readAvatarFile } from "@/lib/avatar-storage";
 
-const CAL_RING_SIZE = 272;
-const CAL_RING_STROKE = 22;
+const CAL_RING_SIZE = 320;
+const CAL_RING_STROKE = 26;
 const CAL_RING_RADIUS = (CAL_RING_SIZE - CAL_RING_STROKE) / 2;
 const CAL_RING_CIRCUMFERENCE = 2 * Math.PI * CAL_RING_RADIUS;
 
@@ -244,14 +244,19 @@ export async function GET(req: NextRequest) {
               <div
                 style={{
                   position: "absolute",
-                  inset: 0,
+                  top: 0,
+                  left: 0,
+                  width: CAL_RING_SIZE,
+                  height: CAL_RING_SIZE,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <span style={{ fontSize: 76, fontWeight: 700, color: "white" }}>{Math.round(macros.calories).toLocaleString("th-TH")}</span>
+                <span style={{ fontSize: 66, fontWeight: 700, color: "white", textAlign: "center" }}>
+                  {Math.round(macros.calories).toLocaleString("th-TH")}
+                </span>
                 <span style={{ fontSize: 26, color: "#a3a3a3" }}>kcal</span>
               </div>
             </div>
