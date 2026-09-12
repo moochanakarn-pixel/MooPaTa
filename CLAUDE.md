@@ -134,13 +134,19 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
   Mifflin-St Jeor (น้ำหนัก/ส่วนสูง/อายุ/เพศ) เหมือนเดิม `src/lib/nutrition.ts`'s `computeTargets(profile,
   bodyComposition?)` รับ body-composition เป็น optional argument ตัวที่สอง — ถ้ามีสแกนล่าสุดที่มี
   `bodyFatPercent` จะสลับไปใช้สูตร Katch-McArdle (`computeBmrKatchMcArdle`, อิง lean body mass =
-  weightKg × (1 - bodyFat%/100)) แทน และคำนวณโปรตีนจาก lean body mass (2.2 g/kg) แทน total bodyweight
-  (1.8 g/kg) — ทุกจุดในแอพที่เรียก `computeTargets` (หน้าแรก/ไดอารี่/เชิงลึก/share card/cron
-  water-reminder) ต้องดึง body composition ล่าสุดผ่าน `getLatestBodyComposition(userId)`
-  (`src/lib/body-composition.ts`) มาส่งเข้าไปด้วยเสมอ ไม่งั้นตัวเลขจะไม่ตรงกันระหว่างหน้าต่าง ๆ
-  (หลักการเดียวกับที่ `applyActivityBonus`'s comment อธิบายไว้สำหรับ activity bonus) — ฟังก์ชันนี้คืน
-  `null` ถ้ายังไม่มีสแกน หรือสแกนล่าสุดไม่มี `bodyFatPercent` (แค่มี weightKg อย่างเดียวไม่พอคำนวณ lean
-  body mass ได้)
+  weightKg × (1 - bodyFat%/100)) แทน และคำนวณโปรตีนจาก lean body mass (2.4 g/kg, `PROTEIN_G_PER_KG_LBM`
+  — ปลายบนของช่วง 2.0-2.4 g/kg ที่แนะนำกัน) แทน total bodyweight (1.8 g/kg) — ทุกจุดในแอพที่เรียก
+  `computeTargets` (หน้าแรก/ไดอารี่/เชิงลึก/share card/cron water-reminder) ต้องดึง body composition
+  ล่าสุดผ่าน `getLatestBodyComposition(userId)` (`src/lib/body-composition.ts`) มาส่งเข้าไปด้วยเสมอ
+  ไม่งั้นตัวเลขจะไม่ตรงกันระหว่างหน้าต่าง ๆ (หลักการเดียวกับที่ `applyActivityBonus`'s comment อธิบายไว้
+  สำหรับ activity bonus) — ฟังก์ชันนี้คืน `null` ถ้ายังไม่มีสแกน หรือสแกนล่าสุดไม่มี `bodyFatPercent`
+  (แค่มี weightKg อย่างเดียวไม่พอคำนวณ lean body mass ได้)
+- **นำเข้าผลตรวจ InBody จาก AI** — `BodyCompositionCard` มีโหมด "นำเข้าจาก AI" คู่กับ "กรอกเอง"
+  (แถบ tab ในฟอร์มเดียวกัน) แพทเทิลเดียวกับ "นำเข้าจาก AI" ของอาหาร (`ImportMealPanel`) — ไม่เรียก
+  vision/OCR API ใด ๆ เลย แค่ให้ผู้ใช้คัดลอก prompt สำเร็จรูปไปถาม Claude/ChatGPT เอง (แนบรูป InBody
+  เข้าไปในแชทเอง) แล้ววางคำตอบ 5 บรรทัด "label: value" กลับมาให้ `parseBodyCompositionText`
+  (`src/lib/body-composition-import-parse.ts`) อ่านแทนเข้าไปเติมฟิลด์ฟอร์มเดิม (ไม่ได้บันทึกตรง —
+  ผู้ใช้ยังต้องกดกด "บันทึกผลตรวจ" อีกทีหลังตรวจดูค่าที่เติมมาให้)
 
 ### 3. Bottom nav (`src/app/dashboard/bottom-nav.tsx`)
 4 แท็บ: หน้าแรก (`/dashboard`) / ไดอารี่ (`/dashboard/food`) / เชิงลึก (`/dashboard/nutrition`,

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { parseBodyCompositionText } from "@/lib/body-composition-import-parse";
 
 export interface BodyCompositionEntry {
   id: string;
@@ -16,6 +17,30 @@ export interface BodyCompositionEntry {
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1.5 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
+
+// A ready-made prompt for pasting an InBody photo into an external AI chat
+// (Claude, ChatGPT — the same "attach a photo, ask it a question" people
+// already do) — same zero-API-cost pattern as food's "นำเข้าจาก AI"
+// (src/app/dashboard/food/import-meal-panel.tsx): MooPaTa never calls a
+// vision/OCR API itself, it just tells the user how to ask one they
+// already have access to, then parses the plain-text answer back
+// (src/lib/body-composition-import-parse.ts). Asking for exactly 5 fixed
+// "label: value" lines — rather than a table like the food prompt — is
+// simpler here because one InBody scan always has the same handful of
+// fields, no variable-length row list to align columns for.
+const AI_PROMPT_TEMPLATE = `อ่านค่าจากรูปผลตรวจ InBody ที่แนบมาให้หน่อย แล้วตอบกลับมาแค่ 5 บรรทัดนี้เป๊ะๆ ไม่ต้องมีคำอธิบายอื่นแทรก (ถ้าค่าไหนไม่มีในรูปให้ใส่ "-" แทนตัวเลข):
+น้ำหนัก: [ค่า]
+% ไขมัน: [ค่า]
+มวลกล้ามเนื้อโครงร่าง: [ค่า]
+ไขมันในช่องท้อง: [ค่า]
+BMR: [ค่า]
+
+ตัวอย่าง:
+น้ำหนัก: 70.1
+% ไขมัน: 19.3
+มวลกล้ามเนื้อโครงร่าง: 32.1
+ไขมันในช่องท้อง: 5
+BMR: 1592`;
 
 // Body-composition scans (InBody or similar) are periodic, not everyday —
 // unlike the water card (see WaterLogCard), a growing list of past entries
@@ -35,6 +60,45 @@ export function BodyCompositionCard({ entries }: { entries: BodyCompositionEntry
   const [inbodyReportedBmr, setInbodyReportedBmr] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [mode, setMode] = useState<"manual" | "import">("manual");
+  const [pasteText, setPasteText] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
+
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(AI_PROMPT_TEMPLATE);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setImportNotice("คัดลอกไม่สำเร็จ ลองกดค้างที่ข้อความด้านล่างเพื่อคัดลอกเองแทน");
+    }
+  }
+
+  function applyParsedText() {
+    const parsed = parseBodyCompositionText(pasteText);
+    if (parsed.weightKg !== null) setWeightKg(String(parsed.weightKg));
+    if (parsed.bodyFatPercent !== null) setBodyFatPercent(String(parsed.bodyFatPercent));
+    if (parsed.skeletalMuscleMassKg !== null) setSkeletalMuscleMassKg(String(parsed.skeletalMuscleMassKg));
+    if (parsed.visceralFatLevel !== null) setVisceralFatLevel(String(parsed.visceralFatLevel));
+    if (parsed.inbodyReportedBmr !== null) setInbodyReportedBmr(String(parsed.inbodyReportedBmr));
+
+    const missing = [
+      parsed.weightKg === null && "น้ำหนัก",
+      parsed.bodyFatPercent === null && "% ไขมัน",
+      parsed.skeletalMuscleMassKg === null && "มวลกล้ามเนื้อ",
+      parsed.visceralFatLevel === null && "ไขมันช่องท้อง",
+      parsed.inbodyReportedBmr === null && "BMR",
+    ].filter(Boolean) as string[];
+
+    if (parsed.weightKg === null) {
+      setImportNotice('อ่านค่าไม่ได้เลย ลองวางข้อความใหม่ หรือดูว่าตรงกับตัวอย่างมั้ย');
+      return;
+    }
+    setImportNotice(missing.length > 0 ? `อ่านไม่ได้: ${missing.join(", ")} — กรอกเองเพิ่มด้านล่างได้` : null);
+    setMode("manual");
+  }
 
   const latest = entries[0] as BodyCompositionEntry | undefined;
   const recent = entries.slice(0, 6);
@@ -65,6 +129,9 @@ export function BodyCompositionCard({ entries }: { entries: BodyCompositionEntry
       setSkeletalMuscleMassKg("");
       setVisceralFatLevel("");
       setInbodyReportedBmr("");
+      setPasteText("");
+      setImportNotice(null);
+      setMode("manual");
       setShowForm(false);
       router.refresh();
     } else {
@@ -140,62 +207,123 @@ export function BodyCompositionCard({ entries }: { entries: BodyCompositionEntry
 
       {showForm && (
         <div className="mb-2 space-y-2 rounded-xl border border-neutral-800 bg-neutral-900/60 p-3">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-[10px] text-neutral-500">น้ำหนัก (กก.) *</label>
-              <input type="number" min="1" step="0.1" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className={INPUT_CLASS} />
-            </div>
-            <div>
-              <label className="mb-1 block text-[10px] text-neutral-500">% ไขมัน (ไม่บังคับ)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={bodyFatPercent}
-                onChange={(e) => setBodyFatPercent(e.target.value)}
-                className={INPUT_CLASS}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-[10px] text-neutral-500">มวลกล้ามเนื้อโครงร่าง (กก.)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={skeletalMuscleMassKg}
-                onChange={(e) => setSkeletalMuscleMassKg(e.target.value)}
-                className={INPUT_CLASS}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-[10px] text-neutral-500">ไขมันในช่องท้อง (ระดับ)</label>
-              <input
-                type="number"
-                min="0"
-                value={visceralFatLevel}
-                onChange={(e) => setVisceralFatLevel(e.target.value)}
-                className={INPUT_CLASS}
-              />
-            </div>
+          <div className="flex gap-1.5 text-xs">
+            <button
+              onClick={() => setMode("manual")}
+              className={`rounded-md px-2.5 py-1 font-medium transition ${
+                mode === "manual" ? "bg-violet-600 text-white" : "text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
+              กรอกเอง
+            </button>
+            <button
+              onClick={() => setMode("import")}
+              className={`rounded-md px-2.5 py-1 font-medium transition ${
+                mode === "import" ? "bg-violet-600 text-white" : "text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
+              นำเข้าจาก AI
+            </button>
           </div>
-          <div>
-            <label className="mb-1 block text-[10px] text-neutral-500">BMR ที่ InBody คำนวณให้ (ถ้ามี — ไว้เทียบเฉยๆ ไม่ได้ใช้คำนวณจริง)</label>
-            <input
-              type="number"
-              min="0"
-              value={inbodyReportedBmr}
-              onChange={(e) => setInbodyReportedBmr(e.target.value)}
-              className={`${INPUT_CLASS} w-32`}
-            />
-          </div>
-          {error && <p className="text-xs text-red-400">{error}</p>}
-          <button
-            onClick={save}
-            disabled={saving || !weightKg}
-            className="rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-violet-500 disabled:opacity-50"
-          >
-            {saving ? "กำลังบันทึก..." : "บันทึกผลตรวจ"}
-          </button>
+
+          {mode === "import" ? (
+            <div className="space-y-2">
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
+                <p className="text-xs text-neutral-400">
+                  1. คัดลอกคำสั่งนี้ไปวางถาม AI (Claude, ChatGPT) แล้วแนบรูปผลตรวจ InBody เข้าไปด้วย
+                </p>
+                <button
+                  type="button"
+                  onClick={copyPrompt}
+                  className="mt-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800"
+                >
+                  {copied ? "คัดลอกแล้ว ✓" : "คัดลอกคำสั่งสำหรับถาม AI"}
+                </button>
+                <p className="mt-2 text-xs text-neutral-400">2. คัดลอกคำตอบที่ได้มาวางในช่องด้านล่างนี้</p>
+              </div>
+              <textarea
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                placeholder={`น้ำหนัก: 70.1\n% ไขมัน: 19.3\nมวลกล้ามเนื้อโครงร่าง: 32.1\nไขมันในช่องท้อง: 5\nBMR: 1592`}
+                rows={6}
+                className={`${INPUT_CLASS} resize-y font-mono text-xs`}
+              />
+              {importNotice && <p className="text-xs text-amber-400">{importNotice}</p>}
+              <button
+                onClick={applyParsedText}
+                disabled={!pasteText.trim()}
+                className="rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-violet-500 disabled:opacity-50"
+              >
+                แปลงข้อมูล
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="mb-1 block text-[10px] text-neutral-500">น้ำหนัก (กก.) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.1"
+                    value={weightKg}
+                    onChange={(e) => setWeightKg(e.target.value)}
+                    className={INPUT_CLASS}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] text-neutral-500">% ไขมัน (ไม่บังคับ)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={bodyFatPercent}
+                    onChange={(e) => setBodyFatPercent(e.target.value)}
+                    className={INPUT_CLASS}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] text-neutral-500">มวลกล้ามเนื้อโครงร่าง (กก.)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={skeletalMuscleMassKg}
+                    onChange={(e) => setSkeletalMuscleMassKg(e.target.value)}
+                    className={INPUT_CLASS}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-[10px] text-neutral-500">ไขมันในช่องท้อง (ระดับ)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={visceralFatLevel}
+                    onChange={(e) => setVisceralFatLevel(e.target.value)}
+                    className={INPUT_CLASS}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] text-neutral-500">BMR ที่ InBody คำนวณให้ (ถ้ามี — ไว้เทียบเฉยๆ ไม่ได้ใช้คำนวณจริง)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={inbodyReportedBmr}
+                  onChange={(e) => setInbodyReportedBmr(e.target.value)}
+                  className={`${INPUT_CLASS} w-32`}
+                />
+              </div>
+              {error && <p className="text-xs text-red-400">{error}</p>}
+              <button
+                onClick={save}
+                disabled={saving || !weightKg}
+                className="rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-violet-500 disabled:opacity-50"
+              >
+                {saving ? "กำลังบันทึก..." : "บันทึกผลตรวจ"}
+              </button>
+            </>
+          )}
         </div>
       )}
 
