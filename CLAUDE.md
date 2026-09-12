@@ -84,13 +84,19 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
   รูปส่วนตัว เก็บไฟล์แบบเดียวกับ progress photos ที่ `src/lib/avatar-storage.ts`, field `User.avatarPath`)
   หน้าตั้งค่ามีฟอร์มให้แก้ทั้งสองอย่าง — `avatarPath` (ถ้ามี) จะโชว์ก่อน `avatarUrl` เสมอในหน้าแรก
   ใช้ได้กับบัญชี Google ด้วย (override ชื่อ/รูปที่ Google ให้มาได้ถ้าอยากเปลี่ยน)
-- **บัญชีแยกกันเพราะ login คนละทาง** — Google connect/callback ทำ find-or-create by
-  `providerAccountId` เสมอ ไม่สนใจ session ที่ล็อกอินอยู่ตอนนั้น เผลอกด Sign in with Google ระหว่าง
-  ที่ login ด้วยอีเมลอยู่จะได้บัญชีคนละใบ — `scripts/list-accounts-2026-09-13.mjs` (ดูว่าบัญชีไหน
-  เป็นบัญชีไหน) + `scripts/merge-accounts-2026-09-13.mjs` (ย้ายข้อมูลทั้งหมดจากบัญชีหนึ่งไปอีกบัญชี)
-  + `scripts/identify-google-connections-2026-09-13.mjs` (ถอดรหัส token ถามอีเมลจริงจาก Google
+- **บัญชีแยกกันเพราะ login คนละทาง (กด "Sign in with Google" ตรง ๆ)** — ปุ่ม Google ที่หน้าแรกยังทำ
+  find-or-create by `providerAccountId` เสมอเหมือนเดิม ไม่สนใจ session ที่ล็อกอินอยู่ตอนนั้น (ตั้งใจ
+  ให้เป็นทาง "เข้าสู่ระบบ" ไม่ใช่ทาง "เชื่อมบัญชี") เผลอกดตอน login ด้วยอีเมลอยู่จะได้บัญชีคนละใบ
+  เหมือนเดิม — `scripts/list-accounts-2026-09-13.mjs` (ดูว่าบัญชีไหนเป็นบัญชีไหน) +
+  `scripts/merge-accounts-2026-09-13.mjs` (ย้ายข้อมูลทั้งหมดจากบัญชีหนึ่งไปอีกบัญชี) +
+  `scripts/identify-google-connections-2026-09-13.mjs` (ถอดรหัส token ถามอีเมลจริงจาก Google
   เพราะ DB ไม่เก็บอีเมลของ OAuth ไว้) + `scripts/split-google-connection-2026-09-13.mjs` (แยก
-  connection ที่ merge ผิดคนออกกลับเป็นบัญชีใหม่) ใช้แก้เคสนี้ได้
+  connection ที่ merge ผิดคนออกกลับเป็นบัญชีใหม่) ใช้แก้เคสนี้ได้ — **ทางที่ตั้งใจเชื่อมบัญชีตอนนี้คือ
+  ปุ่ม "เชื่อมบัญชี Google" ในหน้าตั้งค่า** (`/api/auth/google/connect?link=1`) ซึ่งเก็บ userId ของ
+  session ปัจจุบันไว้ใน cookie ชั่วคราว (`google_oauth_link_user`) แล้วให้ callback แนบ
+  `ProviderConnection` เข้ากับ user นั้นแทนที่จะ find-or-create ใหม่ — ถ้า Google identity นั้นเชื่อม
+  กับบัญชีอื่นอยู่แล้วจะปฏิเสธ (ไม่ reassign ให้อัตโนมัติ ต้องใช้สคริปต์ merge ด้านบนแทนถ้าต้องการรวม
+  จริง ๆ)
 
 ### 1. ระบบอาหาร/ไดอารี่ (`/dashboard/food` = ไดอารี่, `/dashboard/food/library` = คลังอาหารส่วนตัว)
 - **หน่วยอาหาร (unit system)** — `src/lib/food.ts`: `Food.unitLabel` เป็น `"ก."` (default) แปลว่า

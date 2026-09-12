@@ -9,11 +9,26 @@ import { HealthFlagsForm } from "./health-flags-form";
 import { SetPasswordForm } from "./set-password-form";
 import { ProfileForm } from "./profile-form";
 
-export default async function SettingsPage() {
+const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
+  denied: "คุณปฏิเสธการเชื่อมต่อที่หน้ายินยอมของ Google",
+  invalid_state: "เซสชันเชื่อมต่อหมดอายุ ลองกดใหม่อีกครั้ง",
+  no_profile: "ดึงข้อมูลโปรไฟล์จาก Google ไม่สำเร็จ",
+  session_changed: "เซสชันเปลี่ยนไประหว่างเชื่อมต่อ ลองใหม่อีกครั้ง",
+  linked_elsewhere: "บัญชี Google นี้เชื่อมกับบัญชี MooPaTa อื่นอยู่แล้ว ติดต่อผู้ดูแลถ้าต้องการรวมบัญชี",
+};
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: { googleLinked?: string; googleError?: string };
+}) {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
-  const user = await db.user.findUnique({ where: { id: userId } });
+  const [user, googleConnection] = await Promise.all([
+    db.user.findUnique({ where: { id: userId } }),
+    db.providerConnection.findFirst({ where: { userId, provider: "GOOGLE" } }),
+  ]);
 
   const build = getBuildInfo();
 
@@ -150,6 +165,49 @@ export default async function SettingsPage() {
           ตั้งรหัสผ่านไว้เผื่อเข้าสู่ระบบด้วยอีเมลแทนการกด &quot;เข้าสู่ระบบด้วย Google&quot; ทุกครั้ง
         </p>
         <SetPasswordForm currentEmail={user?.email ?? null} verified={Boolean(user?.emailVerifiedAt)} />
+      </section>
+
+      <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+        <div className="mb-3 flex items-center gap-3">
+          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-neutral-500/10 text-neutral-300">
+            <svg viewBox="0 0 24 24" className="h-4 w-4">
+              <path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.47c-.28 1.5-1.13 2.77-2.4 3.62v3h3.89c2.28-2.1 3.56-5.2 3.56-8.81Z" />
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.94-2.92l-3.89-3c-1.08.72-2.45 1.15-4.05 1.15-3.11 0-5.75-2.1-6.69-4.92H1.29v3.09C3.26 21.3 7.31 24 12 24Z" />
+              <path fill="#FBBC05" d="M5.31 14.31A7.2 7.2 0 0 1 4.93 12c0-.8.14-1.58.38-2.31V6.6H1.29A11.98 11.98 0 0 0 0 12c0 1.94.46 3.77 1.29 5.4l4.02-3.09Z" />
+              <path fill="#EA4335" d="M12 4.77c1.76 0 3.34.6 4.58 1.79l3.44-3.44C17.94 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.6l4.02 3.09C6.25 6.87 8.89 4.77 12 4.77Z" />
+            </svg>
+          </div>
+          <h2 className="font-medium">เชื่อมบัญชี Google</h2>
+        </div>
+
+        {searchParams.googleLinked && (
+          <p className="mb-4 rounded-lg border border-lime-900/50 bg-lime-950/30 px-3 py-2 text-sm text-lime-300">
+            เชื่อมบัญชี Google เรียบร้อยแล้ว
+          </p>
+        )}
+        {searchParams.googleError && (
+          <p className="mb-4 rounded-lg border border-red-900/50 bg-red-950/50 px-3 py-2 text-sm text-red-300">
+            {GOOGLE_ERROR_MESSAGES[searchParams.googleError] ?? `เชื่อมต่อไม่สำเร็จ (${searchParams.googleError})`}
+          </p>
+        )}
+
+        {googleConnection ? (
+          <p className="text-sm text-neutral-500">
+            เชื่อมบัญชี Google ไว้แล้ว — เข้าสู่ระบบด้วยปุ่ม &quot;เข้าสู่ระบบด้วย Google&quot; ที่หน้าแรกได้เลย
+          </p>
+        ) : (
+          <>
+            <p className="mb-4 text-sm text-neutral-500">
+              เชื่อมบัญชี Google เข้ากับบัญชีนี้ เพื่อเข้าสู่ระบบด้วยปุ่ม Google ได้โดยไม่ต้องสร้างบัญชีใหม่
+            </p>
+            <a
+              href="/api/auth/google/connect?link=1"
+              className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm font-medium text-neutral-200 transition hover:bg-neutral-800"
+            >
+              เชื่อมบัญชี Google
+            </a>
+          </>
+        )}
       </section>
 
       <section className="rounded-2xl border border-red-950/60 bg-red-950/10 p-5">
