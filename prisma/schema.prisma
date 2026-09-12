@@ -100,6 +100,7 @@ model User {
 
 enum Provider {
   STRAVA
+  GOOGLE
   MANUAL // hand-logged activity, e.g. football/badminton — Strava doesn't track these
 }
 

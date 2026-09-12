@@ -14,9 +14,13 @@
   ดู `src/lib/session.ts`) — **`SESSION_SECRET` ใน `.env` มีเครื่องหมาย `"` ครอบอยู่** ถ้าจะ decode
   ค่า hex เองนอก Next.js (เช่น สคริปต์ทดสอบ) ต้อง strip quote ออกก่อน ไม่งั้น `Buffer.from(hex,"hex")`
   จะได้ length ผิดและ verify token ไม่ผ่าน
-- Login มี 2 ทาง: "Login with Strava" (OAuth2, เชื่อมครั้งแรก = สร้างบัญชี) **หรือ** อีเมล+รหัสผ่าน
-  ของตัวเอง (`User.email`/`passwordHash`, ดู "ระบบ login" ด้านล่าง) — สองทางนี้ผูกกับ `userId`
-  เดียวกันได้ (คนที่มีบัญชี Strava อยู่แล้วเพิ่มอีเมล+รหัสผ่านทีหลังได้จากหน้าตั้งค่า)
+- Login มี 3 ทาง: "Login with Strava" (OAuth2, เชื่อมครั้งแรก = สร้างบัญชี), "Sign in with Google"
+  (OAuth2 อีกตัว ผ่าน `ProviderConnection` เดียวกัน แค่ `provider: GOOGLE`), หรืออีเมล+รหัสผ่านของ
+  ตัวเอง (`User.email`/`passwordHash`) — ดู "ระบบ login" ด้านล่าง Strava/อีเมลสองทางผูกกับ `userId`
+  เดียวกันได้ (คนที่มีบัญชี Strava อยู่แล้วเพิ่มอีเมล+รหัสผ่านทีหลังได้จากหน้าตั้งค่า) แต่ Google
+  ยังไม่รองรับการ "เชื่อมเพิ่ม" แบบนั้น — กด Sign in with Google ตอน login ด้วยอีเมลอยู่จะสลับ/สร้าง
+  บัญชีใหม่ตาม Google identity แทนที่จะผูกเข้าบัญชีที่ล็อกอินอยู่ (ข้อจำกัดเดิมที่ Strava connect ก็มี
+  อยู่แล้วเหมือนกัน ไม่ใช่เรื่องใหม่)
 - Deploy: VPS ของผู้ใช้เอง — local dev/test ใช้ Linux + MariaDB (`service mariadb start/stop`),
   production รันบน **Windows Server** ผ่าน `nssm` เป็น Windows service ชื่อ `MooPaTa` ที่
   `D:\Projectphp\MooPaTa` (ดู `DEPLOY-WINDOWS.md`; `DEPLOY.md` คือฉบับ Linux/Nginx เดิม)
@@ -63,6 +67,11 @@
   พอตั้ง `RESEND_API_KEY`/`EMAIL_FROM` (ต้องเป็นโดเมนที่ verify กับ Resend แล้ว) จริงเมื่อไหร่
   จะส่งอีเมลจริงทันทีและ `devToken` จะหายไปจาก response เอง ไม่ต้องแก้โค้ด
 - ต้องมี env vars: `RESEND_API_KEY`, `EMAIL_FROM`, `APP_BASE_URL` (ตัวหลังมีอยู่แล้วจาก Strava callback)
+- **Google Sign-In** (`src/lib/providers/google.ts`, `src/app/api/auth/google/connect|callback`) —
+  หน้าตาเหมือน Strava OAuth ทุกอย่าง (redirect → callback → find-or-create `User` by
+  `providerAccountId` → `createSession`) ใช้ตาราง `ProviderConnection` ร่วมกับ Strava เลย แค่
+  `provider: GOOGLE` ไม่มีตารางใหม่ — ขอ profile จาก Google userinfo endpoint (ไม่ได้ decode/verify
+  id_token JWT เอง) ต้องมี `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI`
 - **ชื่อ/รูปโปรไฟล์สำหรับบัญชีอีเมล** — `User.name`/`avatarUrl` เดิมมาจาก Strava athlete profile
   อัตโนมัติเท่านั้น บัญชีอีเมล+รหัสผ่านเลยไม่มีทั้งคู่ (โชว์ "นักวิ่ง"/ตัวอักษร "?" แทน) — เพิ่ม
   `src/app/api/settings/profile` (POST, ตั้งชื่อ) กับ `src/app/api/avatar` (POST/GET/DELETE, อัปโหลด/โชว์/ลบ

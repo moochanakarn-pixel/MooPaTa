@@ -69,6 +69,12 @@ Fill in `.env` (same values as the Linux guide):
   ```
 - `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` — from strava.com/settings/api
 - `STRAVA_REDIRECT_URI="https://moopata.mcnkth.com/api/auth/strava/callback"`
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — from an OAuth 2.0 Client ID created in Google Cloud
+  Console (APIs & Services → Credentials). Add
+  `https://moopata.mcnkth.com/api/auth/google/callback` as an Authorized redirect URI on that
+  client. Only needs the basic `email`/`profile`/`openid` scopes, so the OAuth consent screen
+  doesn't require Google's manual review.
+- `GOOGLE_REDIRECT_URI="https://moopata.mcnkth.com/api/auth/google/callback"`
 - `VAPID_PUBLIC_KEY` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (same value, both vars) / `VAPID_PRIVATE_KEY` — needed for the
   water-reminder push notifications. Generate once with:
   ```powershell
