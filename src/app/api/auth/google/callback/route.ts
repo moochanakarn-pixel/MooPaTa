@@ -7,14 +7,14 @@ import { createSession } from "@/lib/session";
 
 const STATE_COOKIE = "google_oauth_state";
 
-// Same find-or-create-by-providerAccountId shape as
-// src/app/api/auth/strava/callback/route.ts — a Google `sub` maps to at
-// most one User, reused across repeat logins rather than creating a new
-// account each time. Note: this always starts a fresh login (or creates a
-// new account) — it does not link Google to whatever session might
-// already be active, same as the existing Strava connect flow today. So
-// signing in with Google while already logged in via email switches to
-// (or creates) the Google-linked account rather than merging the two.
+// Find-or-create by providerAccountId — a Google `sub` maps to at most one
+// User, reused across repeat logins rather than creating a new account each
+// time. Note: this always starts a fresh login (or creates a new account) —
+// it does not link Google to whatever session might already be active. So
+// signing in with Google while already logged in via email switches to (or
+// creates) the Google-linked account rather than merging the two — see
+// scripts/merge-accounts-2026-09-13.mjs for fixing an account that's split
+// across two provider logins like this.
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const error = url.searchParams.get("error");

@@ -13,13 +13,12 @@ import {
   formatSpeedKmh,
 } from "@/lib/format";
 import { extractStravaPolyline } from "@/lib/polyline";
-import type { StravaBestEffort, StravaLap, StravaSplit } from "@/lib/providers/strava";
+import type { StravaBestEffort, StravaLap, StravaSplit } from "@/lib/activity-detail-types";
 import type { StreamPoint } from "@/lib/streams";
 import type { ActivityWeather } from "@/lib/weather";
 import { ActivityIcon } from "../../activity-icon";
 import { ComparisonCard, PersonalRecordBadges } from "./comparison";
 import { DetailPanel } from "./detail-panel";
-import { LoadDetailButton } from "./load-detail-button";
 import { RouteSketch } from "./route-sketch";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -212,24 +211,20 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
         </div>
       )}
 
-      {activity.provider === "STRAVA" && (
+      {detail && (
         <div className="mt-8">
           <h2 className="mb-4 font-medium">รายละเอียดเพิ่มเติม</h2>
-          {detail ? (
-            <DetailPanel
-              streams={(detail.streams as unknown as StreamPoint[]) ?? []}
-              splits={(detail.splits as unknown as StravaSplit[]) ?? []}
-              bestEfforts={(detail.bestEfforts as unknown as StravaBestEffort[]) ?? []}
-              laps={(detail.laps as unknown as StravaLap[]) ?? []}
-              weather={(detail.weather as unknown as ActivityWeather) ?? null}
-              deviceName={detail.deviceName}
-              unit={unit}
-              isRun={isRun}
-              hrMax={hrAgg._max.maxHeartRate}
-            />
-          ) : (
-            <LoadDetailButton activityId={activity.id} />
-          )}
+          <DetailPanel
+            streams={(detail.streams as unknown as StreamPoint[]) ?? []}
+            splits={(detail.splits as unknown as StravaSplit[]) ?? []}
+            bestEfforts={(detail.bestEfforts as unknown as StravaBestEffort[]) ?? []}
+            laps={(detail.laps as unknown as StravaLap[]) ?? []}
+            weather={(detail.weather as unknown as ActivityWeather) ?? null}
+            deviceName={detail.deviceName}
+            unit={unit}
+            isRun={isRun}
+            hrMax={hrAgg._max.maxHeartRate}
+          />
         </div>
       )}
 

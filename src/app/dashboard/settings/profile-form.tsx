@@ -6,11 +6,10 @@ import { useRouter } from "next/navigation";
 const INPUT_CLASS =
   "w-full rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1.5 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
 
-// Only a Strava-linked account ever gets a name/avatar automatically
-// (from the athlete profile on connect, see the Strava callback route) —
-// an email/password account has neither, and had no way to set them at
-// all until this. Uploaded photo takes priority over the Strava one for
-// display (see the dashboard header) once set.
+// A Google-linked account gets a name/avatar automatically from its
+// profile on connect — an email/password account has neither, and had no
+// way to set them at all until this. Uploaded photo takes priority over
+// the Google one for display (see the dashboard header) once set.
 export function ProfileForm({ initialName, hasCustomAvatar }: { initialName: string | null; hasCustomAvatar: boolean }) {
   const router = useRouter();
   const [name, setName] = useState(initialName ?? "");

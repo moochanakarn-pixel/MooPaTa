@@ -14,13 +14,13 @@
   ดู `src/lib/session.ts`) — **`SESSION_SECRET` ใน `.env` มีเครื่องหมาย `"` ครอบอยู่** ถ้าจะ decode
   ค่า hex เองนอก Next.js (เช่น สคริปต์ทดสอบ) ต้อง strip quote ออกก่อน ไม่งั้น `Buffer.from(hex,"hex")`
   จะได้ length ผิดและ verify token ไม่ผ่าน
-- Login มี 3 ทาง: "Login with Strava" (OAuth2, เชื่อมครั้งแรก = สร้างบัญชี), "Sign in with Google"
-  (OAuth2 อีกตัว ผ่าน `ProviderConnection` เดียวกัน แค่ `provider: GOOGLE`), หรืออีเมล+รหัสผ่านของ
-  ตัวเอง (`User.email`/`passwordHash`) — ดู "ระบบ login" ด้านล่าง Strava/อีเมลสองทางผูกกับ `userId`
-  เดียวกันได้ (คนที่มีบัญชี Strava อยู่แล้วเพิ่มอีเมล+รหัสผ่านทีหลังได้จากหน้าตั้งค่า) แต่ Google
-  ยังไม่รองรับการ "เชื่อมเพิ่ม" แบบนั้น — กด Sign in with Google ตอน login ด้วยอีเมลอยู่จะสลับ/สร้าง
-  บัญชีใหม่ตาม Google identity แทนที่จะผูกเข้าบัญชีที่ล็อกอินอยู่ (ข้อจำกัดเดิมที่ Strava connect ก็มี
-  อยู่แล้วเหมือนกัน ไม่ใช่เรื่องใหม่)
+- Login มี 2 ทาง: "Sign in with Google" (OAuth2 ผ่าน `ProviderConnection`, `provider: GOOGLE`)
+  หรืออีเมล+รหัสผ่านของตัวเอง (`User.email`/`passwordHash`) — ดู "ระบบ login" ด้านล่าง ทั้งสองทาง
+  ผูกกับ `userId` เดียวกันได้ (เพิ่มอีเมล+รหัสผ่านทีหลังจากหน้าตั้งค่าได้ ไม่ว่าจะเริ่มบัญชีด้วยวิธีไหน)
+  แต่ Google ยังไม่รองรับการ "เชื่อมเพิ่ม" แบบนั้น — กด Sign in with Google ตอน login ด้วยอีเมลอยู่จะ
+  สลับ/สร้างบัญชีใหม่ตาม Google identity แทนที่จะผูกเข้าบัญชีที่ล็อกอินอยู่ (ถ้าเผลอสร้างบัญชีซ้ำแบบนี้
+  ใช้ `scripts/list-accounts-2026-09-13.mjs` + `merge-accounts-2026-09-13.mjs` รวมกลับเป็นบัญชีเดียว) —
+  **Strava sync ถูกลบออกจากแอพทั้งหมดแล้ว** (ดู "### 0. ระบบ login" ด้านล่าง) เหลือแค่ 2 ทางนี้
 - Deploy: VPS ของผู้ใช้เอง — local dev/test ใช้ Linux + MariaDB (`service mariadb start/stop`),
   production รันบน **Windows Server** ผ่าน `nssm` เป็น Windows service ชื่อ `MooPaTa` ที่
   `D:\Projectphp\MooPaTa` (ดู `DEPLOY-WINDOWS.md`; `DEPLOY.md` คือฉบับ Linux/Nginx เดิม)
@@ -35,8 +35,8 @@
 | `User` | โปรไฟล์ + เป้าหมายโภชนาการ + ตั้งค่าแจ้งเตือนต่าง ๆ ทั้งหมดอยู่ในตารางเดียว (ไม่มี email; auth ผูกกับ `ProviderConnection`) |
 | `Food` | เทมเพลตอาหารของผู้ใช้แต่ละคน (per-100g macros) — มา ได้จากแคตตาล็อกในตัว/บาร์โค้ด(ปิดใช้แล้ว)/label/พิมพ์เอง ดู "ระบบอาหาร/ไดอารี่" ด้านล่าง |
 | `FoodLog` | หนึ่งรายการที่กินจริง (อ้าง `Food` + grams + เวลา + มื้อ) — ไม่เคยถูกลบทิ้งเวลาลบอาหารออกจากคลัง |
-| `ProviderConnection` | OAuth token ของ Strava (เข้ารหัส AES-256-GCM ด้วย `src/lib/crypto.ts`) |
-| `Activity` / `ActivityDetail` / `Exercise` | กิจกรรมออกกำลังกาย normalize จาก Strava (หรือ MANUAL) + รายละเอียดที่โหลดแบบ lazy (splits/streams/weather) + ท่าเวทสำหรับ activity แบบ manual |
+| `ProviderConnection` | OAuth token ของ Google sign-in (เข้ารหัส AES-256-GCM ด้วย `src/lib/crypto.ts`) — แถว `provider: STRAVA` เก่ายังอยู่ในข้อมูลของบัญชีที่เคยเชื่อมไว้ แต่ไม่มีการเชื่อมใหม่/sync ใหม่แล้ว |
+| `Activity` / `ActivityDetail` / `Exercise` | กิจกรรมออกกำลังกาย — ของเก่า normalize มาจาก Strava (`provider: STRAVA`, เก็บไว้เฉย ๆ ไม่ sync ต่อแล้ว), ของใหม่ทั้งหมดเป็น `provider: MANUAL` ที่ผู้ใช้พิมพ์เอง + รายละเอียดเก่าที่เคยโหลดแบบ lazy จาก Strava (splits/streams/weather, เฉพาะ activity เก่า) + ท่าเวทสำหรับ activity แบบ manual |
 | `WaterLog` / `WeightLog` | บันทึกน้ำ/น้ำหนักรายครั้ง — log น้ำหนักใหม่จะอัปเดต `User.weightKg` ด้วย |
 | `BodyCompositionLog` | ผลตรวจ InBody/เครื่องวัดองค์ประกอบร่างกายแบบเป็นครั้ง ๆ (ไม่ใช่ทุกวัน) — เฉพาะ `weightKg` บังคับ ที่เหลือ optional ตาม field ที่เครื่องแต่ละรุ่นมี |
 | `PushSubscription` | Web Push subscription ต่ออุปกรณ์ (มีแถว = เปิดแจ้งเตือนสำหรับเครื่องนั้น) |
@@ -45,14 +45,20 @@
 
 ## ฟีเจอร์หลัก แยกตามส่วน
 
-### 0. ระบบ login (Strava OAuth + อีเมล/รหัสผ่าน)
-เดิมมีแค่ "Login with Strava" ทางเดียว — เพิ่มอีเมล+รหัสผ่านเป็นทางเลือกเพราะ Strava API
-จำกัดจำนวนนักกีฬาที่เชื่อมต่อได้ต่อแอพ (เริ่มต้น 1, self-upgrade ฟรีได้ถึง 10, เกินนั้นต้องผ่านการรีวิว)
-และตั้งแต่กลางปี 2026 ต้องมี Strava subscription ถึงจะใช้ API ได้ต่อ — auth สองทางนี้แค่ต่างวิธี
-ไปสู่ `createSession(userId)` เดียวกัน (`src/lib/session.ts` ไม่เปลี่ยน) engine คำนวณโภชนาการ
+### 0. ระบบ login (Google OAuth + อีเมล/รหัสผ่าน) — Strava sync ถูกลบออกแล้ว
+เดิมมีแค่ "Login with Strava" ทางเดียว แต่ Strava API จำกัดจำนวนนักกีฬาที่เชื่อมต่อได้ต่อแอพ
+(เริ่มต้น 1, self-upgrade ฟรีได้ถึง 10, เกินนั้นต้องผ่านการรีวิว) และตั้งแต่กลางปี 2026 ต้องมี
+Strava subscription ถึงจะใช้ API ได้ต่อ — เลยเพิ่มอีเมล+รหัสผ่านและ Google sign-in เป็นทางเลือกก่อน
+แล้วภายหลัง**ตัด Strava sync ออกจากแอพทั้งหมด** (OAuth connect/callback, `/api/sync/strava`,
+`/api/cron/sync`, ปุ่มซิงค์, ปุ่มยกเลิกการเชื่อมต่อในหน้าตั้งค่า — ลบไฟล์และ route ทั้งหมดแล้ว
+ไม่ใช่แค่ซ่อน UI) เพราะเจ้าของแอพเลิกจ่าย Strava subscription — **กิจกรรมเก่าที่เคย sync มาจาก
+Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบและแสดงผลได้ปกติทุกหน้า** (รวมถึง
+`ActivityDetail` ที่เคยโหลด splits/streams/weather ไว้แล้ว — เก็บ type ไว้ที่
+`src/lib/activity-detail-types.ts`) แค่ไม่มีทาง sync ใหม่/เชื่อมต่อใหม่อีกต่อไป กิจกรรมทั้งหมด
+นับจากนี้บันทึกเองที่ `/dashboard/log-activity` (`provider: MANUAL`) — auth ทุกทางไปสู่
+`createSession(userId)` เดียวกัน (`src/lib/session.ts`) engine คำนวณโภชนาการ
 (`computeTargets`/`applyActivityBonus` ใน `src/lib/nutrition.ts`) ไม่เคยพึ่งข้อมูลจาก Strava
-โดยตรงอยู่แล้ว (ใช้แค่ผลรวม `durationSec` ของ Activity ไม่ว่าจะมาจาก Strava หรือบันทึกเอง) เลย
-ไม่กระทบอะไรเลย
+โดยตรงอยู่แล้ว (ใช้แค่ผลรวม `durationSec` ของ Activity ไม่ว่าจะมาจากไหน) เลยไม่กระทบอะไรเลย
 - `src/app/api/auth/signup` — สร้าง `User` (ยังไม่ล็อกอิน) + ส่งอีเมลยืนยันผ่าน Resend
   (`src/lib/email.ts`) — ไม่ login จนกว่าจะกดลิงก์ยืนยัน
 - `src/app/api/auth/verify-email` (GET, ปลายทางของลิงก์ในอีเมล) — ยืนยัน + login ให้เลย
@@ -60,39 +66,33 @@
   เก็บนับที่ `User.failedLoginCount`/`lockedUntil`)
 - `src/app/api/auth/forgot-password` + `reset-password` — ตอบกลับข้อความเดียวกันเสมอไม่ว่าอีเมลจะมี
   บัญชีจริงหรือไม่ (กันการเดาว่าอีเมลไหนมีบัญชี)
-- `src/app/api/settings/set-password` — ให้ผู้ใช้ Strava เดิมเพิ่มอีเมล+รหัสผ่านเข้าบัญชีเดิมได้
+- `src/app/api/settings/set-password` — ให้ผู้ใช้ Google/บัญชีเดิมเพิ่มอีเมล+รหัสผ่านเข้าบัญชีเดิมได้
   (ไม่ใช่สร้างบัญชีใหม่) ต้องยืนยันอีเมลก่อนถึงจะ login ด้วยได้ เหมือน signup ปกติ
 - **RESEND_API_KEY ไม่ตั้งไว้ = ไม่ crash** — `src/lib/email.ts` แค่ log ลิงก์ลง console แทนการส่งจริง
   แล้ว API response จะมี `devToken` แนบมาด้วย (เอาไว้ทดสอบ flow ได้โดยไม่ต้องมี Resend account จริง)
   พอตั้ง `RESEND_API_KEY`/`EMAIL_FROM` (ต้องเป็นโดเมนที่ verify กับ Resend แล้ว) จริงเมื่อไหร่
   จะส่งอีเมลจริงทันทีและ `devToken` จะหายไปจาก response เอง ไม่ต้องแก้โค้ด
-- ต้องมี env vars: `RESEND_API_KEY`, `EMAIL_FROM`, `APP_BASE_URL` (ตัวหลังมีอยู่แล้วจาก Strava callback)
+- ต้องมี env vars: `RESEND_API_KEY`, `EMAIL_FROM`, `APP_BASE_URL`
 - **Google Sign-In** (`src/lib/providers/google.ts`, `src/app/api/auth/google/connect|callback`) —
-  หน้าตาเหมือน Strava OAuth ทุกอย่าง (redirect → callback → find-or-create `User` by
-  `providerAccountId` → `createSession`) ใช้ตาราง `ProviderConnection` ร่วมกับ Strava เลย แค่
-  `provider: GOOGLE` ไม่มีตารางใหม่ — ขอ profile จาก Google userinfo endpoint (ไม่ได้ decode/verify
-  id_token JWT เอง) ต้องมี `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI`
-- **ชื่อ/รูปโปรไฟล์สำหรับบัญชีอีเมล** — `User.name`/`avatarUrl` เดิมมาจาก Strava athlete profile
-  อัตโนมัติเท่านั้น บัญชีอีเมล+รหัสผ่านเลยไม่มีทั้งคู่ (โชว์ "นักวิ่ง"/ตัวอักษร "?" แทน) — เพิ่ม
+  redirect → callback → find-or-create `User` by `providerAccountId` → `createSession`, ใช้ตาราง
+  `ProviderConnection` (`provider: GOOGLE`) — ขอ profile จาก Google userinfo endpoint (ไม่ได้
+  decode/verify id_token JWT เอง) ต้องมี `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI`
+  — นี่คือทาง OAuth เดียวที่เหลืออยู่ในแอพ
+- **ชื่อ/รูปโปรไฟล์สำหรับบัญชีอีเมล** — `User.name`/`avatarUrl` มาจาก Google profile อัตโนมัติตอน
+  connect เท่านั้น บัญชีอีเมล+รหัสผ่านเลยไม่มีทั้งคู่ (โชว์ "นักวิ่ง"/ตัวอักษร "?" แทน) — เพิ่ม
   `src/app/api/settings/profile` (POST, ตั้งชื่อ) กับ `src/app/api/avatar` (POST/GET/DELETE, อัปโหลด/โชว์/ลบ
   รูปส่วนตัว เก็บไฟล์แบบเดียวกับ progress photos ที่ `src/lib/avatar-storage.ts`, field `User.avatarPath`)
   หน้าตั้งค่ามีฟอร์มให้แก้ทั้งสองอย่าง — `avatarPath` (ถ้ามี) จะโชว์ก่อน `avatarUrl` เสมอในหน้าแรก
-  ใช้ได้กับบัญชี Strava ด้วย (override ชื่อ/รูปที่ Strava ให้มาได้ถ้าอยากเปลี่ยน)
-- **onboarding checklist "ซิงค์กิจกรรมจาก Strava"** (`src/app/dashboard/page.tsx`'s `onboardingSteps`)
-  เดิม href ชี้กลับ `/dashboard` เฉยๆ (ใช้ได้ตอนทุกบัญชีมี Strava เชื่อมอยู่แล้วแน่นอน กดแล้วแค่เลื่อนไป
-  เจอปุ่มซิงค์จริงในหน้าเดียวกัน) — พอมีบัญชีอีเมลที่ไม่เคยเชื่อม Strava เลย ปุ่มนี้กลายเป็นกดแล้วไม่มีอะไร
-  เกิดขึ้นจริง (SyncButton ก็ไม่โชว์ให้กดในหน้านั้นด้วยซ้ำถ้าไม่มี connection) — แก้ให้ href ชี้ไป
-  `/api/auth/strava/connect` แทนถ้ายังไม่มี `connection`
+  ใช้ได้กับบัญชี Google ด้วย (override ชื่อ/รูปที่ Google ให้มาได้ถ้าอยากเปลี่ยน)
+- **บัญชีแยกกันเพราะ login คนละทาง** — Google connect/callback ทำ find-or-create by
+  `providerAccountId` เสมอ ไม่สนใจ session ที่ล็อกอินอยู่ตอนนั้น เผลอกด Sign in with Google ระหว่าง
+  ที่ login ด้วยอีเมลอยู่จะได้บัญชีคนละใบ — `scripts/list-accounts-2026-09-13.mjs` (ดูว่าบัญชีไหน
+  เป็นบัญชีไหน) + `scripts/merge-accounts-2026-09-13.mjs` (ย้ายข้อมูลทั้งหมดจากบัญชีหนึ่งไปอีกบัญชี)
+  + `scripts/identify-google-connections-2026-09-13.mjs` (ถอดรหัส token ถามอีเมลจริงจาก Google
+  เพราะ DB ไม่เก็บอีเมลของ OAuth ไว้) + `scripts/split-google-connection-2026-09-13.mjs` (แยก
+  connection ที่ merge ผิดคนออกกลับเป็นบัญชีใหม่) ใช้แก้เคสนี้ได้
 
-### 1. Strava sync (ของเดิมตั้งแต่ต้นโปรเจกต์)
-- `src/lib/providers/strava.ts` — OAuth2 + REST client
-- `src/lib/sync-strava.ts` — ดึง activity ใหม่มา upsert, throttle การสแกนหาอะไรที่ถูกลบฝั่ง Strava
-- `src/app/api/auth/strava/connect|callback`, `src/app/api/sync/strava`, `src/app/api/cron/sync`
-  (auth ด้วย `CRON_SECRET` แทน session เพราะ cron ไม่มี browser)
-- หน้าที่เกี่ยวข้อง: `/dashboard` (list), `/dashboard/activity/[id]` (detail + streams/splits),
-  `/dashboard/records`, `/dashboard/compare`, `/dashboard/achievements`, `/dashboard/summary`
-
-### 2. ระบบอาหาร/ไดอารี่ (`/dashboard/food` = ไดอารี่, `/dashboard/food/library` = คลังอาหารส่วนตัว)
+### 1. ระบบอาหาร/ไดอารี่ (`/dashboard/food` = ไดอารี่, `/dashboard/food/library` = คลังอาหารส่วนตัว)
 - **หน่วยอาหาร (unit system)** — `src/lib/food.ts`: `Food.unitLabel` เป็น `"ก."` (default) แปลว่า
   เป็นอาหารแบบชั่งน้ำหนัก, ค่าอื่น (เช่น `"ชิ้น"`, `"ถ้วย"`) แปลว่านับเป็นหน่วย/ชิ้น — การคำนวณ per-100
   ทั้งหมด (`macrosForGrams`, `per100gFromTotal`) เป็น ratio ล้วน ๆ ไม่สนว่าหน่วยคืออะไร
@@ -116,7 +116,7 @@
 - **"โปรด" (★)** — `Food.isFavorite` เป็นแค่ toggle ที่คลังอาหารสำหรับผู้ใช้ดูเองเฉยๆ **ไม่ได้มีผลกับ
   คำแนะนำเมนูในไดอารี่แล้ว** (อันนั้นใช้ `logCount` ล้วน ๆ) — เผื่อสับสนถ้าเจอ field นี้ในโค้ด
 
-### 3. เชิงลึก / โภชนาการ (`/dashboard/nutrition` — bottom-nav label คือ "เชิงลึก")
+### 2. เชิงลึก / โภชนาการ (`/dashboard/nutrition` — bottom-nav label คือ "เชิงลึก")
 รวมสถิติ/เป้าหมายระยะยาวที่ไม่ใช่การบันทึกรายวัน:
 - BMI gauge, กราฟน้ำหนัก (`WeightLogCard`), รูปถ่ายความคืบหน้า (`ProgressPhotosCard`)
 - แคลอรี่วันนี้เทียบเป้า (BMR/TDEE จาก `src/lib/nutrition.ts`), แมโครที่ควรได้ต่อวัน
@@ -142,20 +142,24 @@
   `null` ถ้ายังไม่มีสแกน หรือสแกนล่าสุดไม่มี `bodyFatPercent` (แค่มี weightKg อย่างเดียวไม่พอคำนวณ lean
   body mass ได้)
 
-### 4. Bottom nav (`src/app/dashboard/bottom-nav.tsx`)
+### 3. Bottom nav (`src/app/dashboard/bottom-nav.tsx`)
 4 แท็บ: หน้าแรก (`/dashboard`) / ไดอารี่ (`/dashboard/food`) / เชิงลึก (`/dashboard/nutrition`,
 ครอบคลุม `/dashboard/knowledge` ด้วย) / บัญชี (`/dashboard/settings`) + ปุ่ม [+] กลางเปิด sheet
 ทางลัด (เพิ่มอาหาร/บันทึกกิจกรรม/อาหารเสริม/บันทึกน้ำหนัก) หน้าที่ไม่มีแท็บของตัวเอง (records, compare,
 achievements, activity detail) เข้าถึงผ่านลิงก์จากหน้าแรกเท่านั้น
 
-### 5. Share cards (Satori/`next/og`)
+### 4. Share cards (Satori/`next/og`)
 - `src/app/api/share/{daily-summary,nutrition,period}/route.tsx` — สร้างรูปสรุปแชร์
 - สไตล์การ์ดร่วมกันอยู่ที่ `src/lib/share-card-styles.ts` (`cardStyle`, `rowCardStyle`, `titleStyle`,
   `iconCircleStyle`)
 - ข้อจำกัดของ Satori ที่เจอแล้ว: ไม่รองรับ `conic-gradient()`, `justify-content: space-evenly`
   (ใช้ `"space-around"` แทน), ตัวอักษร "ล" ท้ายคำที่โดดเดี่ยว render เพี้ยน (เลี่ยงด้วยการใช้คำเต็ม)
 
-### 6. อื่น ๆ
+### 5. อื่น ๆ
+- Activity pages: `/dashboard` (list), `/dashboard/activity/[id]` (detail), `/dashboard/log-activity`
+  (บันทึกเอง), `/dashboard/records`, `/dashboard/compare`, `/dashboard/achievements`,
+  `/dashboard/summary` — ทำงานเหมือนกันไม่ว่า `Activity.provider` จะเป็น `STRAVA` (ของเก่า) หรือ
+  `MANUAL` (ของใหม่ทั้งหมด นับจากตัด Strava sync ออก) เพราะ query/stat ทุกจุดไม่แยก provider
 - Water/Weight logging: `src/app/api/water|weight/log*`, การ์ดอยู่ทั้งในไดอารี่ (น้ำ) และเชิงลึก
   (น้ำหนัก)
 - Supplements: `/dashboard/supplements`, checklist รายวันจาก `SupplementLog`

@@ -17,8 +17,8 @@ const WINDOW_MAX_MS = 60 * 60_000;
 // query before its end time ever enters the 30-60 minute window.
 const LOOKBACK_MS = 6 * 60 * 60_000;
 
-// Cron-secret-protected, same shared-secret pattern as /api/cron/sync and
-// /api/cron/water-reminder — meant to be polled every 10-15 minutes. Each
+// Cron-secret-protected, same shared-secret pattern as /api/cron/water-reminder
+// — meant to be polled every 10-15 minutes. Each
 // user opts in separately from the water reminder (User.wheyReminderEnabled)
 // since not everyone who wants water nudges also wants a post-workout whey
 // nudge, or vice versa; both still need at least one PushSubscription row

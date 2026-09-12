@@ -15,7 +15,6 @@ import { HealthSummary } from "./health-summary";
 import { MonthHighlights } from "./month-highlights";
 import { OnboardingCard, type OnboardingStep } from "./onboarding-card";
 import { PeriodComparison } from "./period-comparison";
-import { SyncButton } from "./sync-button";
 import { TrendChart, type WeekBucket } from "./trend-chart";
 import { TypeBreakdown } from "./type-breakdown";
 
@@ -82,7 +81,6 @@ export default async function DashboardPage({
 
   const [
     user,
-    connection,
     activityTypes,
     activities,
     stats,
@@ -100,7 +98,6 @@ export default async function DashboardPage({
     totalWaterLogCount,
   ] = await Promise.all([
       db.user.findUnique({ where: { id: userId } }),
-      db.providerConnection.findFirst({ where: { userId, provider: "STRAVA" } }),
       db.activity.findMany({ where: { userId }, select: { type: true }, distinct: ["type"] }),
       db.activity.findMany({
         where: { userId, ...activityFilter },
@@ -192,13 +189,7 @@ export default async function DashboardPage({
 
   const onboardingSteps: OnboardingStep[] = [
     { key: "profile", label: "กรอกโปรไฟล์โภชนาการ", done: isProfileComplete(nutritionProfile), href: "/dashboard/settings" },
-    // Only nudges someone who's ALREADY connected to Strava to go sync —
-    // never invites a new connection from here. Strava's API now caps (and
-    // may soon lose entirely) how many new athletes this app can connect,
-    // so every new-connection entry point (this one, the landing page
-    // button) is intentionally gone; only an already-linked account still
-    // sees this step, same as it always could from the real sync button.
-    ...(connection ? [{ key: "activity", label: "ซิงค์กิจกรรมจาก Strava", done: stats._count._all > 0, href: "/dashboard" }] : []),
+    { key: "activity", label: "บันทึกกิจกรรมแรก", done: stats._count._all > 0, href: "/dashboard/log-activity" },
     { key: "food", label: "บันทึกอาหารมื้อแรก", done: totalFoodLogCount > 0, href: "/dashboard/food" },
     { key: "water", label: "บันทึกน้ำครั้งแรก", done: totalWaterLogCount > 0, href: "/dashboard/food" },
   ];
@@ -274,23 +265,16 @@ export default async function DashboardPage({
           )}
           <div>
             <h1 className="text-lg font-bold leading-tight">สวัสดี, {user?.name ?? "นักวิ่ง"}</h1>
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-neutral-500">
-              <span className="flex items-center gap-1.5">
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${connection ? "bg-emerald-500" : "bg-neutral-600"}`}
-                />
-                {connection ? "เชื่อมต่อ Strava แล้ว" : "ยังไม่ได้เชื่อมต่อ Strava"}
-              </span>
-              {streaks.current > 0 && (
+            {streaks.current > 0 && (
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-neutral-500">
                 <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-medium text-orange-300">
                   🔥 ติดต่อกัน {streaks.current} วัน
                 </span>
-              )}
-            </p>
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {connection && <SyncButton />}
           <Link href="/dashboard/summary" className="text-sm text-neutral-500 transition hover:text-neutral-300" title="สรุปผลประจำวัน">
             สรุปผล
           </Link>
@@ -436,9 +420,16 @@ export default async function DashboardPage({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/mascot-face.png" alt="" className="h-16 w-16 object-contain" />
           <p className="text-neutral-500">
-            {stats._count._all === 0
-              ? 'ยังไม่มีข้อมูลกิจกรรม ลองกด "ซิงค์ข้อมูลจาก Strava" ด้านบน'
-              : "ไม่พบกิจกรรมที่ตรงกับตัวกรองนี้"}
+            {stats._count._all === 0 ? (
+              <>
+                ยังไม่มีข้อมูลกิจกรรม ลองกด{" "}
+                <Link href="/dashboard/log-activity" className="text-[#fc4c02] hover:underline">
+                  บันทึกกิจกรรมแรก
+                </Link>
+              </>
+            ) : (
+              "ไม่พบกิจกรรมที่ตรงกับตัวกรองนี้"
+            )}
           </p>
         </div>
       ) : (

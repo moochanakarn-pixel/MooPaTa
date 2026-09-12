@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { decryptToken } from "@/lib/crypto";
-import { deauthorizeStrava } from "@/lib/providers/strava";
 import { deleteProgressPhotoFile } from "@/lib/progress-photo-storage";
 import { destroySession, getSessionUserId } from "@/lib/session";
 
-// Permanently deletes the account: revokes Strava, then deletes the User row
-// (ProviderConnection and Activity cascade via the schema's onDelete rules).
+// Permanently deletes the account (ProviderConnection and Activity cascade
+// via the schema's onDelete rules).
 export async function POST() {
   const userId = await getSessionUserId();
   if (!userId) {
@@ -17,17 +15,6 @@ export async function POST() {
     where: { id: userId },
     select: { frontPhotoPath: true, sidePhotoPath: true, backPhotoPath: true },
   });
-
-  const connection = await db.providerConnection.findFirst({
-    where: { userId, provider: "STRAVA" },
-  });
-  if (connection) {
-    try {
-      await deauthorizeStrava(decryptToken(connection.accessTokenEnc));
-    } catch {
-      // Best-effort — proceed with local deletion regardless.
-    }
-  }
 
   await db.user.delete({ where: { id: userId } });
   destroySession();

@@ -8,11 +8,8 @@ type Mode = "login" | "signup" | "forgot";
 const INPUT_CLASS =
   "w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
 
-// The fallback login path alongside "เชื่อมต่อกับ Strava" above it on the
-// landing page — Strava stays the primary/first option, this is for
-// anyone who can't or doesn't want to connect Strava (no account yet
-// because of Strava's athlete-connection cap, doesn't want to pay for a
-// Strava subscription just to use MooPaTa, etc).
+// The fallback login path alongside "เข้าสู่ระบบด้วย Google" above it on
+// the landing page, for anyone who'd rather not use a Google account.
 export function EmailAuthForm() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");

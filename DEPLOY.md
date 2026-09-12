@@ -6,7 +6,7 @@ Assumes Ubuntu/Debian with root or sudo access. Replace `yourdomain.com` and
 ## 1. Point a domain at the VPS
 
 Add an A record for `yourdomain.com` (or a subdomain like `moopata.yourdomain.com`)
-pointing at the VPS's public IP. Strava's OAuth callback needs a real HTTPS
+pointing at the VPS's public IP. Google's OAuth callback needs a real HTTPS
 domain — it will not work against a bare IP or `localhost`.
 
 **If the domain is on Cloudflare**, two things matter or step 6 (Certbot) breaks:
@@ -62,15 +62,12 @@ Fill in `.env` for production:
 - `DATABASE_URL="mysql://moopata:CHANGE_ME@localhost:3306/moopata"`
 - `APP_BASE_URL="https://yourdomain.com"` (real HTTPS domain, no trailing slash)
 - `TOKEN_ENCRYPTION_KEY` / `SESSION_SECRET` — new values, `openssl rand -hex 32` each (don't reuse the ones from local dev)
-- `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` — same as local dev, or a separate Strava API app if you want dev/prod isolated
-- `STRAVA_REDIRECT_URI="https://yourdomain.com/api/auth/strava/callback"`
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` — from an OAuth 2.0 Client ID
+  created in Google Cloud Console (APIs & Services → Credentials)
 - `CRON_SECRET` — new value, `openssl rand -hex 32`
 - `VAPID_PUBLIC_KEY` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (same value, both vars) / `VAPID_PRIVATE_KEY` — for the water-reminder
   push notifications. Generate once with `npx web-push generate-vapid-keys`.
   `VAPID_SUBJECT` is a `mailto:` address push services may use to contact you about the key.
-
-Then in the Strava API app settings (strava.com/settings/api), set
-**Authorization Callback Domain** to `yourdomain.com` (no `https://`, no path).
 
 ## 5. Build and run with PM2
 
@@ -112,25 +109,7 @@ sudo certbot --nginx -d yourdomain.com
 
 Certbot rewrites the Nginx config for HTTPS and sets up auto-renewal.
 
-## 7. Auto-sync via crontab
-
-`/api/cron/sync` re-syncs every connected user's Strava activities. Trigger
-it periodically with a crontab entry (as the `moopata` user):
-
-```bash
-crontab -e
-```
-
-Add (every 30 minutes here — adjust to taste, mind Strava's 200 req/15min limit
-if you end up with many users):
-
-```
-*/30 * * * * curl -s -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" https://yourdomain.com/api/cron/sync >> /home/moopata/cron-sync.log 2>&1
-```
-
-Use the same value you put in `.env` as `CRON_SECRET`.
-
-## 7b. Water-reminder push notifications
+## 7. Water-reminder push notifications
 
 One crontab entry, polling `/api/cron/water-reminder` every 15 minutes. Each
 user has their own configurable window and frequency (set via the toggle on
@@ -142,12 +121,12 @@ since their last reminder; only users who've turned reminders on get a push:
 */15 * * * * curl -s -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" "https://yourdomain.com/api/cron/water-reminder" >> /home/moopata/cron-water.log 2>&1
 ```
 
-## 7c. Post-workout whey reminder
+## 7b. Post-workout whey reminder
 
 Another crontab entry, polling `/api/cron/whey-reminder` every 15 minutes.
-Fires 30-60 minutes after a logged activity ends (Strava or manual) for
-users who've turned it on (toggle on the supplements page) — a separate
-opt-in from the water reminder above:
+Fires 30-60 minutes after a logged activity ends for users who've turned
+it on (toggle on the supplements page) — a separate opt-in from the water
+reminder above:
 
 ```
 */15 * * * * curl -s -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" "https://yourdomain.com/api/cron/whey-reminder" >> /home/moopata/cron-whey.log 2>&1
@@ -167,11 +146,11 @@ pm2 restart moopata
 
 ## Troubleshooting
 
-- **Strava redirects back with `error=invalid_state`**: `APP_BASE_URL` / `STRAVA_REDIRECT_URI`
-  don't match what's configured in the Strava API app, or you're mixing http/https.
+- **Google redirects back with `error=invalid_state`**: `APP_BASE_URL` / `GOOGLE_REDIRECT_URI`
+  don't match what's configured in the Google Cloud Console OAuth client, or you're mixing http/https.
 - **502 from Nginx**: check `pm2 logs moopata` — usually a missing/wrong env var.
-- **Cron sync doing nothing**: check `cat /home/moopata/cron-sync.log`; a 401 means
-  `CRON_SECRET` doesn't match between the crontab command and `.env`.
+- **Cron reminder doing nothing**: check `cat /home/moopata/cron-water.log` (or `cron-whey.log`);
+  a 401 means `CRON_SECRET` doesn't match between the crontab command and `.env`.
 - **Cloudflare shows "too many redirects"**: SSL/TLS mode is on **Flexible** —
   switch it to **Full** (see step 1).
 - **"Today" starts/ends at the wrong time, or water/whey reminders fire at the

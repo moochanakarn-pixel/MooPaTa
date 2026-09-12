@@ -5,8 +5,8 @@ import { buildGoogleAuthorizeUrl } from "@/lib/providers/google";
 
 const STATE_COOKIE = "google_oauth_state";
 
-// Kicks off "Sign in with Google" — same CSRF-state-cookie + redirect
-// pattern as src/app/api/auth/strava/connect/route.ts, own cookie name.
+// Kicks off "Sign in with Google": stash a random CSRF state in a
+// short-lived cookie, then redirect the user to Google's consent screen.
 export async function GET() {
   const state = randomBytes(16).toString("hex");
 

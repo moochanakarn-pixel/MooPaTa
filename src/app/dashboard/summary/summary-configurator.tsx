@@ -12,7 +12,7 @@ const DEFAULT_FIELDS: FieldOption[] = [
   { id: "cal", label: "แคลอรี่", enabled: true },
   { id: "macro", label: "แมโคร (โปรตีน / คาร์บ / ไขมัน)", enabled: true },
   { id: "water", label: "น้ำดื่ม", enabled: true },
-  { id: "exercise", label: "ออกกำลังกาย (จาก Strava) — ถ้ามีบันทึกวันนั้น", enabled: true },
+  { id: "exercise", label: "ออกกำลังกาย — ถ้ามีบันทึกวันนั้น", enabled: true },
   { id: "streak", label: "สตรีคบันทึกต่อเนื่อง — ถ้ายังต่อเนื่องอยู่", enabled: true },
   { id: "weight", label: "น้ำหนักตัว — ถ้าเคยบันทึกไว้", enabled: true },
 ];

@@ -67,8 +67,6 @@ Fill in `.env` (same values as the Linux guide):
   ```powershell
   -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Max 256) })
   ```
-- `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` — from strava.com/settings/api
-- `STRAVA_REDIRECT_URI="https://moopata.mcnkth.com/api/auth/strava/callback"`
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — from an OAuth 2.0 Client ID created in Google Cloud
   Console (APIs & Services → Credentials). Add
   `https://moopata.mcnkth.com/api/auth/google/callback` as an Authorized redirect URI on that
@@ -88,9 +86,6 @@ Fill in `.env` (same values as the Linux guide):
   this set to actually receive their links.
 - `EMAIL_FROM="MooPaTa <noreply@yourdomain.com>"` — the domain must be verified in your Resend
   account first.
-
-Then in the Strava API app settings, set **Authorization Callback Domain**
-to `moopata.mcnkth.com`.
 
 ## 4. Build the app
 
@@ -157,15 +152,20 @@ reaches the VPS directly. Once `https://moopata.mcnkth.com` loads with a
 valid padlock, switch SSL/TLS mode to **Full (strict)** and, if wanted,
 flip the DNS record back to **Proxied** (orange cloud).
 
-## 9. Auto-sync — Windows Task Scheduler (crontab equivalent)
+## 9. Strava auto-sync — removed
+
+Strava sync (OAuth connect, `/api/sync/strava`, `/api/cron/sync`) was
+removed entirely — see CLAUDE.md. If you still have the old `MooPaTaSync`
+scheduled task from before this change, remove it (it now points at a
+route that no longer exists):
 
 ```powershell
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument '-Command "Invoke-RestMethod -Method Post -Uri https://moopata.mcnkth.com/api/cron/sync -Headers @{Authorization=''Bearer YOUR_CRON_SECRET''}"'
-$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 30) -RepetitionDuration ([TimeSpan]::MaxValue)
-Register-ScheduledTask -TaskName "MooPaTaSync" -Action $action -Trigger $trigger -RunLevel Highest
+Unregister-ScheduledTask -TaskName "MooPaTaSync" -Confirm:$false
 ```
 
-Use the same value as `CRON_SECRET` in `.env`.
+Historical Strava-synced activities are unaffected and keep displaying —
+only the connect flow and the periodic re-sync are gone. Activities are
+logged manually going forward (`/dashboard/log-activity`).
 
 ## 9b. Water reminder — one scheduled task, polling frequently
 
@@ -197,9 +197,8 @@ Unregister-ScheduledTask -TaskName "MooPaTaWaterReminderEvening" -Confirm:$false
 ## 9c. Post-workout whey reminder — one more scheduled task
 
 Polls `/api/cron/whey-reminder` every 15 minutes. Fires 30-60 minutes after
-a logged activity ends (Strava or manual) for users who've turned it on
-(toggle on the supplements page) — a separate opt-in from the water
-reminder above:
+a logged activity ends for users who've turned it on (toggle on the
+supplements page) — a separate opt-in from the water reminder above:
 
 ```powershell
 $secret = "YOUR_CRON_SECRET"

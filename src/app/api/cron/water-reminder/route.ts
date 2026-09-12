@@ -14,8 +14,8 @@ function toMinutesOfDay(hhmm: string): number {
   return h * 60 + m;
 }
 
-// Cron-secret-protected, same shared-secret pattern as /api/cron/sync (see
-// that file's comment) — meant to be polled frequently (every 5-15 minutes)
+// Cron-secret-protected (CRON_SECRET as a Bearer token, since a cron job has
+// no browser session) — meant to be polled frequently (every 5-15 minutes)
 // by a single scheduled task rather than fired at fixed times of day. Each
 // user has their own configurable window (waterReminderStart/End) and
 // frequency (waterReminderIntervalMin, see prisma/schema.prisma), so this

@@ -263,7 +263,6 @@ export async function GET(req: NextRequest) {
         <div key="exercise" style={cardStyle}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={titleStyle}>ออกกำลังกาย</span>
-            <span style={badgeStyle}>ซิงก์จาก Strava</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 22, marginTop: 22 }}>
             {activities.slice(0, 4).map((a, i) => (
@@ -411,15 +410,6 @@ export async function GET(req: NextRequest) {
     },
   });
 }
-
-const badgeStyle: React.CSSProperties = {
-  fontSize: 22,
-  fontWeight: 700,
-  color: "#fc4c02",
-  background: "rgba(252,76,2,0.16)",
-  padding: "8px 20px",
-  borderRadius: 999,
-};
 
 function WaterIcon() {
   return (

@@ -11,7 +11,7 @@ const fontSans = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: "MooPaTa",
-  description: "รวมข้อมูลการออกกำลังกายจาก Strava ไว้ที่เดียว",
+  description: "บันทึกกิจกรรมออกกำลังกาย อาหาร น้ำ น้ำหนัก ไว้ที่เดียว",
   icons: { icon: "/icon-32.png", apple: "/icon-180.png" },
   appleWebApp: {
     capable: true,

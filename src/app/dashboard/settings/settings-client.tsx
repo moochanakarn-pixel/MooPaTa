@@ -85,39 +85,12 @@ export function GoalInput({ initialGoalKm, unit }: { initialGoalKm: number | nul
   );
 }
 
-export function DisconnectStravaButton() {
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
-
-  async function handleClick() {
-    if (!confirm("ยกเลิกการเชื่อมต่อ Strava? ข้อมูลเก่าที่ซิงค์ไว้แล้วจะยังอยู่ แต่จะไม่มีการซิงค์ใหม่อีก")) return;
-    setPending(true);
-    const res = await fetch("/api/settings/disconnect-strava", { method: "POST" });
-    setPending(false);
-    if (res.ok) router.refresh();
-  }
-
-  return (
-    <button
-      onClick={handleClick}
-      disabled={pending}
-      className="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 transition hover:border-neutral-600 hover:text-white disabled:opacity-50"
-    >
-      {pending ? "กำลังยกเลิก..." : "ยกเลิกการเชื่อมต่อ Strava"}
-    </button>
-  );
-}
-
 export function DeleteAccountButton() {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
   async function handleClick() {
-    if (
-      !confirm(
-        "ลบบัญชีถาวร? ข้อมูล activity ทั้งหมดของคุณใน MooPaTa จะถูกลบและกู้คืนไม่ได้ (การเชื่อมต่อ Strava จะถูกยกเลิกด้วย)"
-      )
-    )
+    if (!confirm("ลบบัญชีถาวร? ข้อมูล activity ทั้งหมดของคุณใน MooPaTa จะถูกลบและกู้คืนไม่ได้"))
       return;
     setPending(true);
     const res = await fetch("/api/settings/delete-account", { method: "POST" });

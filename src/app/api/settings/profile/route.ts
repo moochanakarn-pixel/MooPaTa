@@ -4,10 +4,10 @@ import { getSessionUserId } from "@/lib/session";
 
 const MAX_NAME_LENGTH = 60;
 
-// Only ever auto-filled from Strava's athlete profile on connect — an
-// email/password account (see "ระบบ login") has nothing to inherit a
+// Auto-filled from Google's profile on connect for a Google-linked account
+// — an email/password account (see "ระบบ login") has nothing to inherit a
 // name from, so this is the only way for one to ever set it. Works for a
-// Strava-linked account too, as a manual override.
+// Google-linked account too, as a manual override.
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) {

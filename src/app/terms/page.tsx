@@ -15,7 +15,7 @@ export default function TermsPage() {
         <section>
           <h2 className="mb-2 font-semibold text-white">เกี่ยวกับบริการ</h2>
           <p>
-            MooPaTa เป็นโปรเจกต์ส่วนบุคคลที่รวมข้อมูลการออกกำลังกายจาก Strava มาแสดงผลในที่เดียว
+            MooPaTa เป็นโปรเจกต์ส่วนบุคคลสำหรับบันทึกกิจกรรมออกกำลังกาย อาหาร น้ำ น้ำหนัก และอาหารเสริมไว้ในที่เดียว
             ให้บริการ &quot;ตามสภาพ&quot; (as-is) ไม่มีการรับประกันความถูกต้อง ความต่อเนื่อง หรือความพร้อมใช้งานของบริการ
           </p>
         </section>
@@ -23,8 +23,7 @@ export default function TermsPage() {
         <section>
           <h2 className="mb-2 font-semibold text-white">ความรับผิดชอบของผู้ใช้</h2>
           <ul className="list-disc space-y-1 pl-5">
-            <li>คุณต้องมีบัญชี Strava ของตัวเองและยินยอมให้ MooPaTa เข้าถึงข้อมูลผ่าน Strava OAuth</li>
-            <li>การใช้งานต้องเป็นไปตาม Strava API Agreement ของ Strava เอง</li>
+            <li>คุณต้องมีบัญชีของตัวเอง (Google หรืออีเมล+รหัสผ่าน) และรับผิดชอบความปลอดภัยของบัญชีนั้น</li>
             <li>ห้ามใช้แอพนี้ในทางที่ผิดกฎหมายหรือละเมิดสิทธิ์ผู้อื่น</li>
           </ul>
         </section>

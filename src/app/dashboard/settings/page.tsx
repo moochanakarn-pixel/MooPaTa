@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getBuildInfo } from "@/lib/build-info";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
-import { DeleteAccountButton, DisconnectStravaButton, GoalInput, UnitToggle } from "./settings-client";
+import { DeleteAccountButton, GoalInput, UnitToggle } from "./settings-client";
 import { NutritionProfileForm } from "./nutrition-profile-form";
 import { HealthFlagsForm } from "./health-flags-form";
 import { SetPasswordForm } from "./set-password-form";
@@ -13,10 +13,7 @@ export default async function SettingsPage() {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
-  const [user, connection] = await Promise.all([
-    db.user.findUnique({ where: { id: userId } }),
-    db.providerConnection.findFirst({ where: { userId, provider: "STRAVA" } }),
-  ]);
+  const user = await db.user.findUnique({ where: { id: userId } });
 
   const build = getBuildInfo();
 
@@ -136,35 +133,6 @@ export default async function SettingsPage() {
 
       <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <div className="mb-3 flex items-center gap-3">
-          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
-            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-              <path
-                d="M9 15 15 9m-5-3 1.5-1.5a3.5 3.5 0 0 1 5 5L15 11m-6 2-1.5 1.5a3.5 3.5 0 0 0 5 5L14 18"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-          <h2 className="flex items-center gap-2 font-medium">
-            การเชื่อมต่อ
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${connection ? "bg-emerald-500" : "bg-neutral-600"}`}
-              title={connection ? "เชื่อมต่ออยู่" : "ยังไม่ได้เชื่อมต่อ"}
-            />
-          </h2>
-        </div>
-        <p className="mb-4 text-sm text-neutral-500">
-          {connection
-            ? "Strava เชื่อมต่ออยู่ ยกเลิกได้ทุกเมื่อ ข้อมูลเก่าจะยังอยู่แต่จะไม่ซิงค์ต่อ"
-            : "ยังไม่ได้เชื่อมต่อ Strava"}
-        </p>
-        {connection && <DisconnectStravaButton />}
-      </section>
-
-      <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-        <div className="mb-3 flex items-center gap-3">
           <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-neutral-500/10 text-neutral-300">
             <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
               <path
@@ -176,10 +144,10 @@ export default async function SettingsPage() {
               />
             </svg>
           </div>
-          <h2 className="font-medium">เข้าสู่ระบบสำรอง (อีเมล+รหัสผ่าน)</h2>
+          <h2 className="font-medium">เข้าสู่ระบบด้วยอีเมล+รหัสผ่าน</h2>
         </div>
         <p className="mb-4 text-sm text-neutral-500">
-          ตั้งไว้เผื่อเข้าแอพได้แม้ Strava จะมีปัญหา หรือไม่อยากพึ่ง Strava อย่างเดียว — ไม่กระทบการเชื่อมต่อ Strava ที่มีอยู่
+          ตั้งรหัสผ่านไว้เผื่อเข้าสู่ระบบด้วยอีเมลแทนการกด &quot;เข้าสู่ระบบด้วย Google&quot; ทุกครั้ง
         </p>
         <SetPasswordForm currentEmail={user?.email ?? null} verified={Boolean(user?.emailVerifiedAt)} />
       </section>

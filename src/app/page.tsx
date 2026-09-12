@@ -15,8 +15,8 @@ export default async function HomePage({
     {
       icon: ["M4 4v10a5 5 0 0 0 5 5h7M14 4l5 5-5 5"],
       color: "#fc4c02",
-      title: "ซิงค์อัตโนมัติ",
-      desc: "เชื่อม Strava ครั้งเดียว ซิงค์ให้เองทุก 30 นาที",
+      title: "บันทึกกิจกรรมเอง",
+      desc: "พิมพ์ระยะทาง เวลา หัวใจ ท่าเวทเอง ไม่ต้องพึ่งแอพนอก",
     },
     {
       icon: [
@@ -67,7 +67,7 @@ export default async function HomePage({
         <div className="space-y-2">
           <h1 className="text-5xl font-extrabold tracking-tight text-white">MooPaTa</h1>
           <p className="text-balance text-sm font-medium text-orange-50/90">
-            รวมข้อมูลออกกำลังกายจาก Strava พร้อมบันทึกอาหาร น้ำ น้ำหนัก ไว้ที่เดียว
+            บันทึกกิจกรรม อาหาร น้ำ น้ำหนัก ไว้ที่เดียว ครบจบในแอพเดียว
           </p>
         </div>
       </div>
@@ -104,13 +104,6 @@ export default async function HomePage({
         )}
 
         <div className="flex w-full flex-col gap-3">
-          {/* "เชื่อมต่อกับ Strava" intentionally removed from here — Strava's
-              API now caps (and may soon lose entirely) how many new
-              athletes this app can connect, so this page no longer invites
-              a brand-new Strava connection. Someone already connected is
-              completely unaffected: their session, sync, and the
-              /api/auth/strava/connect route itself are all untouched, this
-              is just no longer advertised as an entry point. */}
           <a
             href="/api/auth/google/connect"
             className="flex items-center justify-center gap-2.5 rounded-xl border border-neutral-700 bg-white px-6 py-3.5 font-semibold text-neutral-800 shadow-lg shadow-black/10 transition hover:bg-neutral-100 active:scale-[0.98]"

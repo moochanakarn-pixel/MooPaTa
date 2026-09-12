@@ -1,5 +1,5 @@
 import { formatDistanceKm, formatDuration, formatPace, type UnitSystem } from "@/lib/format";
-import type { StravaBestEffort, StravaLap, StravaSplit } from "@/lib/providers/strava";
+import type { StravaBestEffort, StravaLap, StravaSplit } from "@/lib/activity-detail-types";
 import type { StreamPoint } from "@/lib/streams";
 import type { ActivityWeather } from "@/lib/weather";
 import { weatherIcon, weatherLabel } from "@/lib/weather";
