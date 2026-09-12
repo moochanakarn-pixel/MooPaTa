@@ -13,7 +13,15 @@ datasource db {
 model User {
   id            String     @id @default(cuid())
   name          String?
-  avatarUrl     String?    @db.VarChar(512)
+  avatarUrl     String?    @db.VarChar(512) // set from Strava's athlete profile on connect — never set by an email/password signup
+  // A self-uploaded profile picture (src/app/api/avatar) — takes priority
+  // over avatarUrl for display when present. Exists because an
+  // email/password account (see "ระบบ login" — no Strava connection at
+  // all) has no name/avatarUrl to inherit from anywhere, unlike a
+  // Strava-linked one which gets both automatically on every connect.
+  // Same private-relative-path convention as frontPhotoPath etc. below —
+  // only ever served back through the auth-gated GET /api/avatar route.
+  avatarPath    String?    @db.VarChar(255)
   unitSystem    UnitSystem @default(METRIC)
   monthlyGoalKm Float? // distance goal for the current calendar month, always stored in km
   createdAt     DateTime   @default(now())

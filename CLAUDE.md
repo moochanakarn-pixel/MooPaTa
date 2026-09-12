@@ -63,6 +63,17 @@
   พอตั้ง `RESEND_API_KEY`/`EMAIL_FROM` (ต้องเป็นโดเมนที่ verify กับ Resend แล้ว) จริงเมื่อไหร่
   จะส่งอีเมลจริงทันทีและ `devToken` จะหายไปจาก response เอง ไม่ต้องแก้โค้ด
 - ต้องมี env vars: `RESEND_API_KEY`, `EMAIL_FROM`, `APP_BASE_URL` (ตัวหลังมีอยู่แล้วจาก Strava callback)
+- **ชื่อ/รูปโปรไฟล์สำหรับบัญชีอีเมล** — `User.name`/`avatarUrl` เดิมมาจาก Strava athlete profile
+  อัตโนมัติเท่านั้น บัญชีอีเมล+รหัสผ่านเลยไม่มีทั้งคู่ (โชว์ "นักวิ่ง"/ตัวอักษร "?" แทน) — เพิ่ม
+  `src/app/api/settings/profile` (POST, ตั้งชื่อ) กับ `src/app/api/avatar` (POST/GET/DELETE, อัปโหลด/โชว์/ลบ
+  รูปส่วนตัว เก็บไฟล์แบบเดียวกับ progress photos ที่ `src/lib/avatar-storage.ts`, field `User.avatarPath`)
+  หน้าตั้งค่ามีฟอร์มให้แก้ทั้งสองอย่าง — `avatarPath` (ถ้ามี) จะโชว์ก่อน `avatarUrl` เสมอในหน้าแรก
+  ใช้ได้กับบัญชี Strava ด้วย (override ชื่อ/รูปที่ Strava ให้มาได้ถ้าอยากเปลี่ยน)
+- **onboarding checklist "ซิงค์กิจกรรมจาก Strava"** (`src/app/dashboard/page.tsx`'s `onboardingSteps`)
+  เดิม href ชี้กลับ `/dashboard` เฉยๆ (ใช้ได้ตอนทุกบัญชีมี Strava เชื่อมอยู่แล้วแน่นอน กดแล้วแค่เลื่อนไป
+  เจอปุ่มซิงค์จริงในหน้าเดียวกัน) — พอมีบัญชีอีเมลที่ไม่เคยเชื่อม Strava เลย ปุ่มนี้กลายเป็นกดแล้วไม่มีอะไร
+  เกิดขึ้นจริง (SyncButton ก็ไม่โชว์ให้กดในหน้านั้นด้วยซ้ำถ้าไม่มี connection) — แก้ให้ href ชี้ไป
+  `/api/auth/strava/connect` แทนถ้ายังไม่มี `connection`
 
 ### 1. Strava sync (ของเดิมตั้งแต่ต้นโปรเจกต์)
 - `src/lib/providers/strava.ts` — OAuth2 + REST client

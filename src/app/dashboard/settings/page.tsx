@@ -7,6 +7,7 @@ import { DeleteAccountButton, DisconnectStravaButton, GoalInput, UnitToggle } fr
 import { NutritionProfileForm } from "./nutrition-profile-form";
 import { HealthFlagsForm } from "./health-flags-form";
 import { SetPasswordForm } from "./set-password-form";
+import { ProfileForm } from "./profile-form";
 
 export default async function SettingsPage() {
   const userId = await getSessionUserId();
@@ -32,6 +33,11 @@ export default async function SettingsPage() {
       </Link>
 
       <h1 className="mb-8 text-xl font-bold">ตั้งค่า</h1>
+
+      <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+        <h2 className="mb-4 font-medium">โปรไฟล์</h2>
+        <ProfileForm initialName={user?.name ?? null} hasCustomAvatar={Boolean(user?.avatarPath)} />
+      </section>
 
       <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <div className="mb-3 flex items-center gap-3">

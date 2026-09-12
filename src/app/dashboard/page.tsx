@@ -192,7 +192,14 @@ export default async function DashboardPage({
 
   const onboardingSteps: OnboardingStep[] = [
     { key: "profile", label: "กรอกโปรไฟล์โภชนาการ", done: isProfileComplete(nutritionProfile), href: "/dashboard/settings" },
-    { key: "activity", label: "ซิงค์กิจกรรมจาก Strava", done: stats._count._all > 0, href: "/dashboard" },
+    // Before email/password login existed, every account got here via
+    // Strava, so pointing this at "/dashboard" itself (where the real
+    // sync button lives once connected) was a reasonable nudge. An
+    // email-signup account can reach this checklist with no Strava
+    // connection at all, though — for them "/dashboard" is a dead click
+    // (SyncButton only renders when `connection` exists, see below), so
+    // send those straight to the connect flow instead.
+    { key: "activity", label: "ซิงค์กิจกรรมจาก Strava", done: stats._count._all > 0, href: connection ? "/dashboard" : "/api/auth/strava/connect" },
     { key: "food", label: "บันทึกอาหารมื้อแรก", done: totalFoodLogCount > 0, href: "/dashboard/food" },
     { key: "water", label: "บันทึกน้ำครั้งแรก", done: totalWaterLogCount > 0, href: "/dashboard/food" },
   ];
@@ -254,10 +261,10 @@ export default async function DashboardPage({
         <div className="pointer-events-none absolute inset-0 bg-glow-orange" style={{ "--x": "15%", "--y": "0%" } as React.CSSProperties} />
         <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          {user?.avatarUrl ? (
+          {user?.avatarPath || user?.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={user.avatarUrl}
+              src={user.avatarPath ? "/api/avatar" : user.avatarUrl!}
               alt=""
               className="h-11 w-11 rounded-full ring-2 ring-[#fc4c02]/40"
             />
