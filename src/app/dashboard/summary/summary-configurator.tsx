@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface FieldOption {
   id: string;
@@ -43,6 +43,27 @@ export function SummaryConfigurator() {
     const params = new URLSearchParams({ date, fields: enabled.join(",") });
     return `/api/share/daily-summary?${params.toString()}`;
   }, [date, fields]);
+
+  // Re-rendering the card (a real Satori/next-og image generation, not
+  // free) on every single toggle click or drag-over event would mean
+  // several regenerations per second while someone's still deciding what
+  // to include — debounce so it only fires once they've paused.
+  const [previewHref, setPreviewHref] = useState(href);
+  const [previewLoading, setPreviewLoading] = useState(true);
+  useEffect(() => {
+    // Without this guard, the debounce timer below still fires once on
+    // mount (href already equals the initial previewHref) and resets
+    // previewLoading to true — but since the <img>'s src/key isn't
+    // actually changing, the browser never re-fires `onLoad` to clear it,
+    // leaving the "กำลังโหลดตัวอย่าง..." overlay stuck forever over an
+    // image that already finished loading underneath it.
+    if (href === previewHref) return;
+    const t = setTimeout(() => {
+      setPreviewLoading(true);
+      setPreviewHref(href);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [href, previewHref]);
 
   function toggle(id: string) {
     setFields((prev) => prev.map((f) => (f.id === id ? { ...f, enabled: !f.enabled } : f)));
@@ -137,6 +158,40 @@ export function SummaryConfigurator() {
           ))}
         </ul>
       </div>
+
+      {anyEnabled && (
+        <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+          <h2 className="mb-3 font-medium">ตัวอย่าง</h2>
+          <div className="relative mx-auto aspect-[9/16] w-full max-w-[220px] overflow-hidden rounded-xl bg-neutral-900">
+            {previewLoading && (
+              <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500">
+                กำลังโหลดตัวอย่าง...
+              </div>
+            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              key={previewHref}
+              src={previewHref}
+              alt="ตัวอย่างการ์ดสรุปผล"
+              className={`h-full w-full object-cover transition-opacity ${previewLoading ? "opacity-0" : "opacity-100"}`}
+              // The image tag is already in the server-rendered HTML, so the
+              // browser can start (and finish, if cached) loading it before
+              // React finishes hydrating and attaches onLoad — a `load`
+              // event that fires before any listener exists is simply
+              // missed, which left this stuck on "กำลังโหลดตัวอย่าง..."
+              // forever the first time this page render was tested. The ref
+              // callback runs during commit and catches that already-done
+              // case via `.complete`; onLoad still handles the normal case
+              // where it hasn't finished yet by the time this attaches.
+              ref={(el) => {
+                if (el?.complete) setPreviewLoading(false);
+              }}
+              onLoad={() => setPreviewLoading(false)}
+              onError={() => setPreviewLoading(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {anyEnabled ? (
         <a
