@@ -14,8 +14,9 @@
   ดู `src/lib/session.ts`) — **`SESSION_SECRET` ใน `.env` มีเครื่องหมาย `"` ครอบอยู่** ถ้าจะ decode
   ค่า hex เองนอก Next.js (เช่น สคริปต์ทดสอบ) ต้อง strip quote ออกก่อน ไม่งั้น `Buffer.from(hex,"hex")`
   จะได้ length ผิดและ verify token ไม่ผ่าน
-- Login ผ่าน "Login with Strava" (OAuth2) เท่านั้น ไม่มีระบบสมัครสมาชิกแยก — เชื่อม Strava ครั้งแรก
-  คือการสร้างบัญชี (`User` ไม่มี field `email`)
+- Login มี 2 ทาง: "Login with Strava" (OAuth2, เชื่อมครั้งแรก = สร้างบัญชี) **หรือ** อีเมล+รหัสผ่าน
+  ของตัวเอง (`User.email`/`passwordHash`, ดู "ระบบ login" ด้านล่าง) — สองทางนี้ผูกกับ `userId`
+  เดียวกันได้ (คนที่มีบัญชี Strava อยู่แล้วเพิ่มอีเมล+รหัสผ่านทีหลังได้จากหน้าตั้งค่า)
 - Deploy: VPS ของผู้ใช้เอง — local dev/test ใช้ Linux + MariaDB (`service mariadb start/stop`),
   production รันบน **Windows Server** ผ่าน `nssm` เป็น Windows service ชื่อ `MooPaTa` ที่
   `D:\Projectphp\MooPaTa` (ดู `DEPLOY-WINDOWS.md`; `DEPLOY.md` คือฉบับ Linux/Nginx เดิม)
@@ -36,8 +37,32 @@
 | `BodyCompositionLog` | ผลตรวจ InBody/เครื่องวัดองค์ประกอบร่างกายแบบเป็นครั้ง ๆ (ไม่ใช่ทุกวัน) — เฉพาะ `weightKg` บังคับ ที่เหลือ optional ตาม field ที่เครื่องแต่ละรุ่นมี |
 | `PushSubscription` | Web Push subscription ต่ออุปกรณ์ (มีแถว = เปิดแจ้งเตือนสำหรับเครื่องนั้น) |
 | `Supplement` / `SupplementLog` | รายการอาหารเสริมที่ต้องกินประจำ + เช็คว่ากินไปหรือยันแต่ละวัน |
+| `AuthToken` | ลิงก์ยืนยันอีเมล/รีเซ็ตรหัสผ่านแบบใช้ครั้งเดียว เก็บแค่ hash ของ token ไม่เก็บตัวจริง (ดู "ระบบ login" ด้านล่าง) |
 
 ## ฟีเจอร์หลัก แยกตามส่วน
+
+### 0. ระบบ login (Strava OAuth + อีเมล/รหัสผ่าน)
+เดิมมีแค่ "Login with Strava" ทางเดียว — เพิ่มอีเมล+รหัสผ่านเป็นทางเลือกเพราะ Strava API
+จำกัดจำนวนนักกีฬาที่เชื่อมต่อได้ต่อแอพ (เริ่มต้น 1, self-upgrade ฟรีได้ถึง 10, เกินนั้นต้องผ่านการรีวิว)
+และตั้งแต่กลางปี 2026 ต้องมี Strava subscription ถึงจะใช้ API ได้ต่อ — auth สองทางนี้แค่ต่างวิธี
+ไปสู่ `createSession(userId)` เดียวกัน (`src/lib/session.ts` ไม่เปลี่ยน) engine คำนวณโภชนาการ
+(`computeTargets`/`applyActivityBonus` ใน `src/lib/nutrition.ts`) ไม่เคยพึ่งข้อมูลจาก Strava
+โดยตรงอยู่แล้ว (ใช้แค่ผลรวม `durationSec` ของ Activity ไม่ว่าจะมาจาก Strava หรือบันทึกเอง) เลย
+ไม่กระทบอะไรเลย
+- `src/app/api/auth/signup` — สร้าง `User` (ยังไม่ล็อกอิน) + ส่งอีเมลยืนยันผ่าน Resend
+  (`src/lib/email.ts`) — ไม่ login จนกว่าจะกดลิงก์ยืนยัน
+- `src/app/api/auth/verify-email` (GET, ปลายทางของลิงก์ในอีเมล) — ยืนยัน + login ให้เลย
+- `src/app/api/auth/login` — ปฏิเสธถ้ายังไม่ยืนยันอีเมล หรือ login ผิดเกิน 8 ครั้งติด (ล็อก 15 นาที,
+  เก็บนับที่ `User.failedLoginCount`/`lockedUntil`)
+- `src/app/api/auth/forgot-password` + `reset-password` — ตอบกลับข้อความเดียวกันเสมอไม่ว่าอีเมลจะมี
+  บัญชีจริงหรือไม่ (กันการเดาว่าอีเมลไหนมีบัญชี)
+- `src/app/api/settings/set-password` — ให้ผู้ใช้ Strava เดิมเพิ่มอีเมล+รหัสผ่านเข้าบัญชีเดิมได้
+  (ไม่ใช่สร้างบัญชีใหม่) ต้องยืนยันอีเมลก่อนถึงจะ login ด้วยได้ เหมือน signup ปกติ
+- **RESEND_API_KEY ไม่ตั้งไว้ = ไม่ crash** — `src/lib/email.ts` แค่ log ลิงก์ลง console แทนการส่งจริง
+  แล้ว API response จะมี `devToken` แนบมาด้วย (เอาไว้ทดสอบ flow ได้โดยไม่ต้องมี Resend account จริง)
+  พอตั้ง `RESEND_API_KEY`/`EMAIL_FROM` (ต้องเป็นโดเมนที่ verify กับ Resend แล้ว) จริงเมื่อไหร่
+  จะส่งอีเมลจริงทันทีและ `devToken` จะหายไปจาก response เอง ไม่ต้องแก้โค้ด
+- ต้องมี env vars: `RESEND_API_KEY`, `EMAIL_FROM`, `APP_BASE_URL` (ตัวหลังมีอยู่แล้วจาก Strava callback)
 
 ### 1. Strava sync (ของเดิมตั้งแต่ต้นโปรเจกต์)
 - `src/lib/providers/strava.ts` — OAuth2 + REST client

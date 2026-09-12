@@ -75,6 +75,13 @@ Fill in `.env` (same values as the Linux guide):
   npx web-push generate-vapid-keys
   ```
   `VAPID_SUBJECT` can stay `mailto:` + whatever email you want push services to be able to reach you at.
+- `RESEND_API_KEY` — from resend.com (free tier: 100 emails/day, 3,000/month, no card) — needed for
+  email/password login's verification + password-reset emails. Optional: if left unset, the app
+  doesn't crash, it just logs the verification/reset link to the server console instead of emailing
+  it (and echoes it back as `devToken` in the API response) — fine for testing, but real users need
+  this set to actually receive their links.
+- `EMAIL_FROM="MooPaTa <noreply@yourdomain.com>"` — the domain must be verified in your Resend
+  account first.
 
 Then in the Strava API app settings, set **Authorization Callback Domain**
 to `moopata.mcnkth.com`.

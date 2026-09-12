@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
+import { EmailAuthForm } from "./email-auth-form";
 
 export default async function HomePage({
   searchParams,
@@ -113,6 +114,14 @@ export default async function HomePage({
             </svg>
           </a>
         </div>
+
+        <div className="flex w-full items-center gap-3 text-xs text-neutral-600">
+          <div className="h-px flex-1 bg-neutral-800" />
+          หรือ
+          <div className="h-px flex-1 bg-neutral-800" />
+        </div>
+
+        <EmailAuthForm />
       </div>
 
       <div className="relative z-10 flex flex-col items-center gap-2 pb-8 text-xs text-neutral-600">

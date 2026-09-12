@@ -6,6 +6,7 @@ import { getSessionUserId } from "@/lib/session";
 import { DeleteAccountButton, DisconnectStravaButton, GoalInput, UnitToggle } from "./settings-client";
 import { NutritionProfileForm } from "./nutrition-profile-form";
 import { HealthFlagsForm } from "./health-flags-form";
+import { SetPasswordForm } from "./set-password-form";
 
 export default async function SettingsPage() {
   const userId = await getSessionUserId();
@@ -154,6 +155,27 @@ export default async function SettingsPage() {
             : "ยังไม่ได้เชื่อมต่อ Strava"}
         </p>
         {connection && <DisconnectStravaButton />}
+      </section>
+
+      <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+        <div className="mb-3 flex items-center gap-3">
+          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-neutral-500/10 text-neutral-300">
+            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+              <path
+                d="M4 6h12v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6Zm0 0 6 5 6-5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <h2 className="font-medium">เข้าสู่ระบบสำรอง (อีเมล+รหัสผ่าน)</h2>
+        </div>
+        <p className="mb-4 text-sm text-neutral-500">
+          ตั้งไว้เผื่อเข้าแอพได้แม้ Strava จะมีปัญหา หรือไม่อยากพึ่ง Strava อย่างเดียว — ไม่กระทบการเชื่อมต่อ Strava ที่มีอยู่
+        </p>
+        <SetPasswordForm currentEmail={user?.email ?? null} verified={Boolean(user?.emailVerifiedAt)} />
       </section>
 
       <section className="rounded-2xl border border-red-950/60 bg-red-950/10 p-5">

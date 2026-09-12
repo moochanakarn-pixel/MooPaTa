@@ -8,8 +8,8 @@ datasource db {
 }
 
 // A person using MooPaTa. Identity is established by whichever provider
-// they connect first (currently Strava); more providers can link to the
-// same user later.
+// they connect first (currently Strava, or email+password); more
+// providers can link to the same user later.
 model User {
   id            String     @id @default(cuid())
   name          String?
@@ -17,6 +17,22 @@ model User {
   unitSystem    UnitSystem @default(METRIC)
   monthlyGoalKm Float? // distance goal for the current calendar month, always stored in km
   createdAt     DateTime   @default(now())
+
+  // Email+password login — optional, alongside (not instead of) Strava.
+  // A Strava-only user has all of these null; a fresh email signup has
+  // email+passwordHash but only gets emailVerifiedAt once they click the
+  // link Resend sends (src/lib/email.ts) — login is refused until then
+  // (see /api/auth/login), same gate whether the account started as an
+  // email signup or an existing Strava user added a password from
+  // Settings. failedLoginCount/lockedUntil are a simple brute-force guard
+  // (password login, unlike Strava OAuth, is guessable) — reset on
+  // success, incremented on mismatch, mirrors the atomic-claim style
+  // src/app/api/cron/water-reminder/route.ts already uses.
+  email            String?   @unique
+  passwordHash     String?   @db.Text
+  emailVerifiedAt  DateTime?
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
 
   // Nutrition profile — all optional since most users won't fill this in
   // right away; src/lib/nutrition.ts treats an incomplete profile as "can't
@@ -71,11 +87,37 @@ model User {
   weightLogs          WeightLog[]
   bodyCompositionLogs BodyCompositionLog[]
   pushSubscriptions   PushSubscription[]
+  authTokens          AuthToken[]
 }
 
 enum Provider {
   STRAVA
   MANUAL // hand-logged activity, e.g. football/badminton — Strava doesn't track these
+}
+
+enum AuthTokenType {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
+// A one-time-use link token emailed to a user (via Resend, see
+// src/lib/email.ts) — for confirming a new email/password signup (or one
+// added later from Settings) or for a password-reset request. Only the
+// SHA-256 hash of the actual token is ever stored (src/lib/auth-tokens.ts)
+// so a DB leak alone can never produce a usable link, same principle as
+// SESSION_SECRET never being stored in plaintext anywhere reversible.
+model AuthToken {
+  id        String        @id @default(cuid())
+  type      AuthTokenType
+  tokenHash String        @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
 }
 
 enum UnitSystem {
