@@ -192,14 +192,13 @@ export default async function DashboardPage({
 
   const onboardingSteps: OnboardingStep[] = [
     { key: "profile", label: "กรอกโปรไฟล์โภชนาการ", done: isProfileComplete(nutritionProfile), href: "/dashboard/settings" },
-    // Before email/password login existed, every account got here via
-    // Strava, so pointing this at "/dashboard" itself (where the real
-    // sync button lives once connected) was a reasonable nudge. An
-    // email-signup account can reach this checklist with no Strava
-    // connection at all, though — for them "/dashboard" is a dead click
-    // (SyncButton only renders when `connection` exists, see below), so
-    // send those straight to the connect flow instead.
-    { key: "activity", label: "ซิงค์กิจกรรมจาก Strava", done: stats._count._all > 0, href: connection ? "/dashboard" : "/api/auth/strava/connect" },
+    // Only nudges someone who's ALREADY connected to Strava to go sync —
+    // never invites a new connection from here. Strava's API now caps (and
+    // may soon lose entirely) how many new athletes this app can connect,
+    // so every new-connection entry point (this one, the landing page
+    // button) is intentionally gone; only an already-linked account still
+    // sees this step, same as it always could from the real sync button.
+    ...(connection ? [{ key: "activity", label: "ซิงค์กิจกรรมจาก Strava", done: stats._count._all > 0, href: "/dashboard" }] : []),
     { key: "food", label: "บันทึกอาหารมื้อแรก", done: totalFoodLogCount > 0, href: "/dashboard/food" },
     { key: "water", label: "บันทึกน้ำครั้งแรก", done: totalWaterLogCount > 0, href: "/dashboard/food" },
   ];

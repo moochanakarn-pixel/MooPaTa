@@ -104,15 +104,13 @@ export default async function HomePage({
         )}
 
         <div className="flex w-full flex-col gap-3">
-          <a
-            href="/api/auth/strava/connect"
-            className="group flex items-center justify-center gap-2 rounded-xl bg-[#fc4c02] px-6 py-3.5 font-semibold text-white shadow-lg shadow-orange-950/30 transition hover:bg-[#e04402] hover:shadow-orange-950/50 active:scale-[0.98]"
-          >
-            เชื่อมต่อกับ Strava
-            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 transition group-hover:translate-x-0.5">
-              <path d="M7 4l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </a>
+          {/* "เชื่อมต่อกับ Strava" intentionally removed from here — Strava's
+              API now caps (and may soon lose entirely) how many new
+              athletes this app can connect, so this page no longer invites
+              a brand-new Strava connection. Someone already connected is
+              completely unaffected: their session, sync, and the
+              /api/auth/strava/connect route itself are all untouched, this
+              is just no longer advertised as an entry point. */}
           <a
             href="/api/auth/google/connect"
             className="flex items-center justify-center gap-2.5 rounded-xl border border-neutral-700 bg-white px-6 py-3.5 font-semibold text-neutral-800 shadow-lg shadow-black/10 transition hover:bg-neutral-100 active:scale-[0.98]"
