@@ -25,7 +25,20 @@ export async function POST(req: NextRequest) {
   const passwordHash = await hashPassword(newPassword);
   await db.user.update({
     where: { id: userId },
-    data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
+    data: {
+      passwordHash,
+      failedLoginCount: 0,
+      lockedUntil: null,
+      // Clicking a password-reset link sent to this exact address is at
+      // least as strong a proof of ownership as the signup verification
+      // link — without this, an account whose original verification
+      // email never arrived (e.g. Resend wasn't configured yet at signup
+      // time) stays permanently unverified even after a successful
+      // reset, so /api/auth/login's own emailVerifiedAt gate would keep
+      // rejecting every normal login afterward and force going through
+      // "forgot password" every single time.
+      emailVerifiedAt: new Date(),
+    },
   });
   await createSession(userId);
 
