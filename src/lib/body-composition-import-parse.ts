@@ -15,9 +15,18 @@ export interface ParsedBodyComposition {
   inbodyReportedBmr: number | null;
 }
 
+// "[\d,]*" (rather than plain "\d*") lets the integer part carry thousands
+// commas — "1,850" — without truncating at the first comma; parseFloat
+// itself stops at the first non-numeric character, so "1,850" fed to it
+// directly reads as just 1. BMR in particular is almost always in the
+// 1,200-2,500 range and commonly written with a thousands comma, so this
+// silently turned a normal BMR reading into 1 (see the same fix in
+// meal-import-parse.ts's cellNumber, which hit this for a comma-thousands
+// calorie figure). Comma is stripped only after the regex has already
+// captured the whole number.
 function firstNumber(line: string): number | null {
-  const m = line.match(/(\d+(?:\.\d+)?)/);
-  return m ? parseFloat(m[1]) : null;
+  const m = line.match(/(\d[\d,]*(?:\.\d+)?)/);
+  return m ? parseFloat(m[1].replace(/,/g, "")) : null;
 }
 
 // Checked in this order per line — visceral/muscle/bmr first because their
