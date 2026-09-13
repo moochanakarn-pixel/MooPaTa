@@ -98,7 +98,7 @@ export function MacroPreferencesForm({ initial }: { initial: MacroPreferencesIni
           className="w-full accent-[#fc4c02]"
         />
         <div className="flex justify-between text-[10px] text-neutral-600">
-          <span>เน้นคาร์บ/ไขมันมากกว่า</span>
+          <span>เน้นคาร์บมากกว่า</span>
           <span>เน้นกล้ามเนื้อมากกว่า</span>
         </div>
       </div>
