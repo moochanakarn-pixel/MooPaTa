@@ -177,12 +177,18 @@ function splitCells(line: string): string[] {
 
 // A cell's number, taking the midpoint of a "220-250" range (Claude/GPT
 // nutrition estimates are almost always given as a range) or the number
-// itself, ignoring a leading "~" and any trailing unit text.
+// itself, ignoring a leading "~" and any trailing unit text. "[\d,]*"
+// (rather than plain "\d*") lets the integer part carry thousands
+// commas — "1,130" — without truncating at the first comma; parseFloat
+// itself stops at the first non-numeric character, so "1,130" fed to it
+// directly reads as just 1, silently turning a 1,130 kcal dish into 1
+// kcal. Comma is stripped before parseFloat only after the regex has
+// already captured the whole number.
 function cellNumber(cell: string): number | null {
-  const m = cell.match(/(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?/);
+  const m = cell.match(/(\d[\d,]*(?:\.\d+)?)(?:\s*-\s*(\d[\d,]*(?:\.\d+)?))?/);
   if (!m) return null;
-  const lo = parseFloat(m[1]);
-  const hi = m[2] ? parseFloat(m[2]) : lo;
+  const lo = parseFloat(m[1].replace(/,/g, ""));
+  const hi = m[2] ? parseFloat(m[2].replace(/,/g, "")) : lo;
   return (lo + hi) / 2;
 }
 
@@ -194,12 +200,12 @@ function cellNumber(cell: string): number | null {
 // as if no quantity column existed at all for that row.
 const GRAM_UNIT_PATTERN = /^(ก\.?|กรัม|g\.?|grams?)$/i;
 function cellGrams(cell: string): number | null {
-  const m = cell.match(/^(\d+(?:\.\d+)?)(?:\s*-\s*(\d+(?:\.\d+)?))?\s*(.*)$/);
+  const m = cell.match(/^(\d[\d,]*(?:\.\d+)?)(?:\s*-\s*(\d[\d,]*(?:\.\d+)?))?\s*(.*)$/);
   if (!m) return null;
   const unit = m[3].trim();
   if (unit && !GRAM_UNIT_PATTERN.test(unit)) return null;
-  const lo = parseFloat(m[1]);
-  const hi = m[2] ? parseFloat(m[2]) : lo;
+  const lo = parseFloat(m[1].replace(/,/g, ""));
+  const hi = m[2] ? parseFloat(m[2].replace(/,/g, "")) : lo;
   return (lo + hi) / 2;
 }
 
