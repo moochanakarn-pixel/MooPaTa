@@ -21,7 +21,7 @@ import { WeightLogCard, type WeightLogEntry } from "./weight-log-card";
 import { CalorieTrendChart, type CalorieDayBucket } from "./calorie-trend-chart";
 import { CalorieRing } from "./calorie-ring";
 import { NutritionPeriodComparison } from "./nutrition-period-comparison";
-import { ProgressPhotosCard } from "./progress-photos-card";
+import { ProgressPhotosCard, type ProgressPhotoAngleState } from "./progress-photos-card";
 import { LoggingStreakCard, type StreakWeekDay } from "./logging-streak-card";
 import { BodyCompositionCard, type BodyCompositionEntry } from "./body-composition-card";
 import { PHOTO_ANGLES } from "@/lib/progress-photo-types";
@@ -177,7 +177,7 @@ export default async function NutritionPage() {
   // from today-7 to today-13 depending on what day of the week it is.
   const foodQueryStart = trendStart < lastWeekStart ? trendStart : lastWeekStart;
 
-  const [weightRows, bodyCompositionRows, trendFoodLogs, trendActivities, twoWeekWaterLogs, foodStreakRows] = await Promise.all([
+  const [weightRows, bodyCompositionRows, progressPhotoRows, trendFoodLogs, trendActivities, twoWeekWaterLogs, foodStreakRows] = await Promise.all([
     db.weightLog.findMany({
       where: { userId, loggedAt: { gte: sixtyDaysAgo } },
       orderBy: { loggedAt: "asc" },
@@ -186,6 +186,11 @@ export default async function NutritionPage() {
       where: { userId },
       orderBy: { loggedAt: "desc" },
       take: 6,
+    }),
+    db.progressPhotoLog.findMany({
+      where: { userId },
+      orderBy: { takenAt: "asc" },
+      select: { id: true, angle: true, takenAt: true },
     }),
     db.foodLog.findMany({
       where: { userId, loggedAt: { gte: foodQueryStart } },
@@ -241,6 +246,12 @@ export default async function NutritionPage() {
     skeletalMuscleMassKg: b.skeletalMuscleMassKg,
     visceralFatLevel: b.visceralFatLevel,
     inbodyReportedBmr: b.inbodyReportedBmr,
+  }));
+  const progressPhotoAngles: ProgressPhotoAngleState[] = PHOTO_ANGLES.map((angle) => ({
+    angle,
+    entries: progressPhotoRows
+      .filter((p) => p.angle === angle)
+      .map((p) => ({ id: p.id, takenAtMs: p.takenAt.getTime() })),
   }));
   // bodyCompositionRows is already the most-recent-first list this page
   // needs for the card, so derive the same "latest scan's body-fat%, if it
@@ -332,12 +343,7 @@ export default async function NutritionPage() {
 
       <BodyCompositionCard entries={bodyCompositionEntries} />
 
-      <ProgressPhotosCard
-        photos={PHOTO_ANGLES.map((angle) => ({
-          angle,
-          hasPhoto: Boolean(angle === "FRONT" ? user.frontPhotoPath : angle === "SIDE" ? user.sidePhotoPath : user.backPhotoPath),
-        }))}
-      />
+      <ProgressPhotosCard angles={progressPhotoAngles} />
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <p className="mb-4 text-center text-xs text-neutral-500">แคลอรี่วันนี้</p>

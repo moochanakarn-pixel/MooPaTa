@@ -76,15 +76,6 @@ model User {
   // this flag, same two-part opt-in as the water reminder.
   wheyReminderEnabled Boolean @default(false)
 
-  // Progress photos (front/side/back) — a single current slot per angle,
-  // not a history; re-uploading replaces the previous file. Stores a
-  // relative path under the private uploads/ dir (see
-  // src/app/api/progress-photo), never a public URL — the file is only
-  // ever served back through that auth-gated route.
-  frontPhotoPath String? @db.VarChar(255)
-  sidePhotoPath  String? @db.VarChar(255)
-  backPhotoPath  String? @db.VarChar(255)
-
   connections         ProviderConnection[]
   activities          Activity[]
   foods               Food[]
@@ -94,8 +85,35 @@ model User {
   supplementLogs      SupplementLog[]
   weightLogs          WeightLog[]
   bodyCompositionLogs BodyCompositionLog[]
+  progressPhotoLogs   ProgressPhotoLog[]
   pushSubscriptions   PushSubscription[]
   authTokens          AuthToken[]
+}
+
+enum PhotoAngle {
+  FRONT
+  SIDE
+  BACK
+}
+
+// Progress photos (front/side/back) — one dated entry per upload, kept as a
+// history rather than a single current slot, so old shots stay around for
+// before/after comparison instead of being overwritten by the next upload
+// (the earlier single-slot-per-angle design couldn't show change over time
+// at all). photoPath is a relative path under the private uploads/ dir (see
+// src/app/api/progress-photo), never a public URL — the file is only ever
+// served back through that auth-gated route, keyed by this row's own id
+// rather than by angle.
+model ProgressPhotoLog {
+  id        String     @id @default(cuid())
+  angle     PhotoAngle
+  photoPath String     @db.VarChar(255)
+  takenAt   DateTime   @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, angle, takenAt])
 }
 
 enum Provider {

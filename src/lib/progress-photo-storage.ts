@@ -2,7 +2,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import type { PhotoAngle } from "./progress-photo-types";
 
-export { PHOTO_ANGLES, PHOTO_ANGLE_LABEL, angleField, type PhotoAngle } from "./progress-photo-types";
+export { PHOTO_ANGLES, PHOTO_ANGLE_LABEL, type PhotoAngle } from "./progress-photo-types";
 
 // Stored outside public/ — the only way to ever read one of these files
 // back is through the auth-gated GET route below, never a static URL.

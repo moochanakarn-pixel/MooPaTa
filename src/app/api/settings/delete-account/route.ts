@@ -12,20 +12,21 @@ export async function POST() {
     return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
   }
 
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { frontPhotoPath: true, sidePhotoPath: true, backPhotoPath: true, avatarPath: true },
-  });
+  const [user, progressPhotoLogs] = await Promise.all([
+    db.user.findUnique({ where: { id: userId }, select: { avatarPath: true } }),
+    db.progressPhotoLog.findMany({ where: { userId }, select: { photoPath: true } }),
+  ]);
 
   await db.user.delete({ where: { id: userId } });
   destroySession();
 
   // Progress photos (and the self-uploaded avatar) live as plain files on
-  // disk, not a cascaded DB relation — Prisma's onDelete:Cascade never
-  // touches them, so they'd otherwise leak forever with no user id left to
-  // ever clean them up by.
-  for (const relPath of [user?.frontPhotoPath, user?.sidePhotoPath, user?.backPhotoPath]) {
-    if (relPath) await deleteProgressPhotoFile(relPath);
+  // disk, not a cascaded DB relation — Prisma's onDelete:Cascade drops the
+  // ProgressPhotoLog rows but never touches the files they pointed at, so
+  // they'd otherwise leak forever with no user id left to ever clean them
+  // up by.
+  for (const log of progressPhotoLogs) {
+    await deleteProgressPhotoFile(log.photoPath);
   }
   if (user?.avatarPath) await deleteAvatarFile(user.avatarPath);
 

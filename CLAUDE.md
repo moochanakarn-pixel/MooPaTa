@@ -124,7 +124,8 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
 
 ### 2. เชิงลึก / โภชนาการ (`/dashboard/nutrition` — bottom-nav label คือ "เชิงลึก")
 รวมสถิติ/เป้าหมายระยะยาวที่ไม่ใช่การบันทึกรายวัน:
-- BMI gauge, กราฟน้ำหนัก (`WeightLogCard`), รูปถ่ายความคืบหน้า (`ProgressPhotosCard`)
+- BMI gauge, กราฟน้ำหนัก (`WeightLogCard`), รูปถ่ายความคืบหน้า (`ProgressPhotosCard`) — เก็บเป็นประวัติ
+  ตามวันที่ (`ProgressPhotoLog`, ดูรายละเอียดด้านล่าง) ไม่ใช่ช่องเดียวที่เขียนทับ
 - แคลอรี่วันนี้เทียบเป้า (BMR/TDEE จาก `src/lib/nutrition.ts`), แมโครที่ควรได้ต่อวัน
 - กราฟแนวโน้มแคลอรี่ 14 วัน (`CalorieTrendChart`), เทียบสัปดาห์นี้กับสัปดาห์ก่อน
   (`NutritionPeriodComparison`)
@@ -153,6 +154,16 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
   เข้าไปในแชทเอง) แล้ววางคำตอบ 5 บรรทัด "label: value" กลับมาให้ `parseBodyCompositionText`
   (`src/lib/body-composition-import-parse.ts`) อ่านแทนเข้าไปเติมฟิลด์ฟอร์มเดิม (ไม่ได้บันทึกตรง —
   ผู้ใช้ยังต้องกดกด "บันทึกผลตรวจ" อีกทีหลังตรวจดูค่าที่เติมมาให้)
+- **รูปติดตามรูปร่าง (front/side/back)** — `ProgressPhotosCard`
+  (`src/app/dashboard/nutrition/progress-photos-card.tsx`) เก็บเป็นประวัติแบบมีวันที่
+  (`ProgressPhotoLog`, ตารางแยก ไม่ใช่ field เดียวบน `User` แบบเดิม) อัปโหลดใหม่แต่ละครั้งคือแถวใหม่
+  ไม่เขียนทับของเก่า — การ์ดแสดงรูปล่าสุดของแต่ละมุมเป็นช่องหลัก (แตะเพื่ออัปโหลดรูปใหม่) บวก 2
+  ส่วนเสริมที่โผล่มาเมื่อมีประวัติพอ: "เปรียบเทียบก่อน-หลัง" (รูปแรกสุด vs ล่าสุดของแต่ละมุม เทียบ
+  side-by-side พร้อมนับจำนวนวันห่างกัน โผล่เมื่อมุมนั้นมี ≥2 รูป) และ "ดูประวัติรูปทั้งหมด" (แถบเลื่อน
+  แนวนอนของทุกรูปตามมุม พร้อมลบทีละรูปได้) ไฟล์เก็บนอก `public/` เหมือนเดิม อ่านได้ผ่าน
+  `GET /api/progress-photo/[id]` ที่เช็ค ownership จาก `ProgressPhotoLog.userId` เท่านั้น (ไม่ใช่
+  `/[angle]` แบบเดิมที่ผูกกับ field เดียวบน User) — ลบบัญชี (`/api/settings/delete-account`) ต้อง
+  query `ProgressPhotoLog` ทั้งหมดของ user มาลบไฟล์ทีละอันเองก่อน (cascade ลบแค่แถว DB ไม่ลบไฟล์บนดิสก์)
 
 ### 3. Bottom nav (`src/app/dashboard/bottom-nav.tsx`)
 4 แท็บ: หน้าแรก (`/dashboard`) / ไดอารี่ (`/dashboard/food`) / เชิงลึก (`/dashboard/nutrition`,
