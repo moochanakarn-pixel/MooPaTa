@@ -20,17 +20,15 @@ function BodySilhouette({ angle }: { angle: PhotoAngle }) {
         <g fill="none" stroke="white" strokeOpacity="0.55" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="178" cy="48" r="28" />
           <path
-            d="M158 74
-               C144 86, 140 106, 148 126
-               C124 142, 113 178, 122 208
-               C114 244, 117 274, 128 298
+            d="M155 76
+               L140 130
+               L132 300
                L128 378
                L158 378
-               L164 300
-               C186 294, 200 268, 202 232
-               C207 192, 199 152, 182 120
-               C196 102, 198 82, 185 66
-               C177 72, 165 74, 158 74 Z"
+               L163 300
+               L195 130
+               L183 68
+               C176 74, 163 74, 155 76 Z"
           />
           <path d="M158 100 L133 192" />
         </g>
@@ -42,19 +40,19 @@ function BodySilhouette({ angle }: { angle: PhotoAngle }) {
       <g fill="none" stroke="white" strokeOpacity="0.55" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="150" cy="50" r="32" />
         <path
-          d="M100 110
-             C90 160, 90 200, 100 230
+          d="M104 110
+             L98 230
              L95 340
              L130 390
              L150 340
              L170 390
              L205 340
-             L200 230
-             C210 200, 210 160, 200 110
-             C185 90, 115 90, 100 110 Z"
+             L202 230
+             L196 110
+             C182 92, 118 92, 104 110 Z"
         />
-        <path d="M100 120 L62 220" />
-        <path d="M200 120 L238 220" />
+        <path d="M100 120 L70 220" />
+        <path d="M200 120 L230 220" />
       </g>
     </svg>
   );
