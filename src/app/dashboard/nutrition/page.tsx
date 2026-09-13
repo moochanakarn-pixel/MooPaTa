@@ -70,6 +70,13 @@ function BmiGauge({ weightKg, heightCm }: { weightKg: number; heightCm: number }
         />
       </div>
       <p className="text-xs text-neutral-500">{BMI_CATEGORY_GUIDANCE[category]}</p>
+      {/* Explains the gap users hit when cross-checking against a device like
+          InBody, which defaults to the international cutoff (normal up to
+          25) — same BMI number, different label, not a calculation error. */}
+      <p className="mt-2 text-[11px] text-neutral-600">
+        ใช้เกณฑ์ BMI แบบเอเชีย (WHO ภูมิภาคเอเชีย-แปซิฟิก/สธ.) ซึ่งเข้มกว่ามาตรฐานสากลทั่วไป — เครื่องตรวจองค์ประกอบร่างกายบางรุ่น
+        (เช่น InBody) ใช้เกณฑ์สากลที่กว้างกว่า (ปกติถึง 25) ค่า BMI ตัวเลขอาจเท่ากันแต่ป้ายกำกับต่างกันได้ ไม่ใช่คำนวณผิด
+      </p>
     </div>
   );
 }
