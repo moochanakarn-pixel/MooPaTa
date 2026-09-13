@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { parseActivityText } from "@/lib/activity-import-parse";
+import { estimateCalories, type Intensity } from "@/lib/calorie-estimate";
 import type { ExerciseStat } from "@/lib/exercise-stats";
 import { formatActivityDate } from "@/lib/format";
 
@@ -90,10 +91,12 @@ export function LogActivityForm({
   activityId,
   initial,
   exerciseStats = [],
+  userWeightKg = null,
 }: {
   activityId?: string;
   initial?: LogActivityInitial;
   exerciseStats?: ExerciseStat[];
+  userWeightKg?: number | null;
 }) {
   const router = useRouter();
   const [type, setType] = useState(initial?.type ?? TYPES[0].value);
@@ -124,6 +127,20 @@ export function LogActivityForm({
     for (const s of exerciseStats) map.set(s.name.trim().toLowerCase(), s);
     return map;
   }, [exerciseStats]);
+
+  // A rough MET-based suggestion (src/lib/calorie-estimate.ts) shown only
+  // while the calories field is empty — this is the one field almost nobody
+  // bothers typing in by hand, which then leaves it missing everywhere that
+  // reads it (records page's calorie tab, the activity share card's hero
+  // number). Never auto-fills the field itself: same "show it, let the user
+  // confirm" pattern as the exercise history hint below, since a wrong
+  // guess silently sitting in a field the user didn't type is worse than an
+  // empty one.
+  const estimatedCalories = useMemo(() => {
+    const min = Number(durationMin);
+    if (!Number.isFinite(min) || min <= 0) return null;
+    return estimateCalories({ type, intensity: intensity as Intensity, durationSec: min * 60, weightKg: userWeightKg });
+  }, [type, intensity, durationMin, userWeightKg]);
 
   async function copyPrompt() {
     try {
@@ -352,6 +369,15 @@ export function LogActivityForm({
             <div>
               <label className={LABEL_CLASS}>แคลอรี่ (kcal)</label>
               <input type="number" min="0" value={calories} onChange={(e) => setCalories(e.target.value)} className={INPUT_CLASS} />
+              {!calories.trim() && estimatedCalories !== null && (
+                <button
+                  type="button"
+                  onClick={() => setCalories(String(estimatedCalories))}
+                  className="mt-1 text-left text-[11px] text-neutral-500 underline decoration-dotted transition hover:text-neutral-300"
+                >
+                  ประมาณ ~{estimatedCalories} kcal (ใช้ค่านี้)
+                </button>
+              )}
             </div>
             <div>
               <label className={LABEL_CLASS}>หัวใจเฉลี่ย (bpm)</label>
