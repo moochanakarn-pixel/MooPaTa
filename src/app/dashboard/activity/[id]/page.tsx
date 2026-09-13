@@ -18,6 +18,7 @@ import type { StreamPoint } from "@/lib/streams";
 import type { ActivityWeather } from "@/lib/weather";
 import { ActivityIcon } from "../../activity-icon";
 import { ComparisonCard, PersonalRecordBadges } from "./comparison";
+import { DeleteActivityButton } from "./delete-activity-button";
 import { DetailPanel } from "./detail-panel";
 import { RouteSketch } from "./route-sketch";
 
@@ -72,7 +73,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/dashboard"
           className="inline-flex items-center gap-1.5 text-sm text-neutral-500 transition hover:text-neutral-300"
@@ -82,22 +83,42 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
           </svg>
           กลับไปหน้ารวม
         </Link>
-        <a
-          href={`/api/share/${activity.id}`}
-          download
-          className="inline-flex items-center gap-1.5 rounded-lg bg-[#fc4c02] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#e04402]"
-        >
-          <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-            <path
-              d="M10 3v10m0 0 3.5-3.5M10 13l-3.5-3.5M4 15v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          แชร์
-        </a>
+        <div className="flex items-center gap-2">
+          {activity.provider === "MANUAL" && (
+            <Link
+              href={`/dashboard/activity/${activity.id}/edit`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 px-3 py-1.5 text-sm font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800"
+            >
+              <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                <path
+                  d="M13.5 3.5 16 6l-9 9-3 1 1-3 9-9Z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              แก้ไข
+            </Link>
+          )}
+          <DeleteActivityButton activityId={activity.id} />
+          <a
+            href={`/api/share/${activity.id}`}
+            download
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#fc4c02] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#e04402]"
+          >
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+              <path
+                d="M10 3v10m0 0 3.5-3.5M10 13l-3.5-3.5M4 15v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            แชร์
+          </a>
+        </div>
       </div>
 
       <div className="mb-6 flex items-center gap-4">

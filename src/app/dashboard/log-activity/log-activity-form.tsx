@@ -63,18 +63,41 @@ function emptyExerciseRow(): ExerciseRow {
   return { id: nextExerciseRowId++, name: "", sets: "3", reps: "12", weightKg: "" };
 }
 
-export function LogActivityForm() {
+export interface LogActivityInitial {
+  type: string;
+  name: string;
+  durationMin: string;
+  intensity: string;
+  startedAt: string; // already in the datetime-local input's "YYYY-MM-DDTHH:mm" shape
+  distanceKm: string;
+  avgHeartRate: string;
+  maxHeartRate: string;
+  calories: string;
+  exercises: { name: string; sets: string; reps: string; weightKg: string }[];
+}
+
+// Same form for both logging a new activity and editing an existing
+// manually-logged one — passing `activityId` (+ `initial` to prefill from)
+// switches save() to PATCH /api/activity/[id] instead of POST
+// /api/activity/manual, and lands back on the activity's own detail page
+// instead of the dashboard afterward. Editing is only ever offered for
+// provider: "MANUAL" activities (see that route's comment for why), so
+// there's no case here where this form needs to represent Strava-only
+// fields it was never built to show.
+export function LogActivityForm({ activityId, initial }: { activityId?: string; initial?: LogActivityInitial }) {
   const router = useRouter();
-  const [type, setType] = useState(TYPES[0].value);
-  const [name, setName] = useState("");
-  const [durationMin, setDurationMin] = useState("60");
-  const [intensity, setIntensity] = useState("MODERATE");
-  const [startedAt, setStartedAt] = useState(() => toDatetimeLocal(new Date()));
-  const [distanceKm, setDistanceKm] = useState("");
-  const [avgHeartRate, setAvgHeartRate] = useState("");
-  const [maxHeartRate, setMaxHeartRate] = useState("");
-  const [calories, setCalories] = useState("");
-  const [exercises, setExercises] = useState<ExerciseRow[]>([]);
+  const [type, setType] = useState(initial?.type ?? TYPES[0].value);
+  const [name, setName] = useState(initial?.name ?? "");
+  const [durationMin, setDurationMin] = useState(initial?.durationMin ?? "60");
+  const [intensity, setIntensity] = useState(initial?.intensity ?? "MODERATE");
+  const [startedAt, setStartedAt] = useState(initial?.startedAt ?? (() => toDatetimeLocal(new Date())));
+  const [distanceKm, setDistanceKm] = useState(initial?.distanceKm ?? "");
+  const [avgHeartRate, setAvgHeartRate] = useState(initial?.avgHeartRate ?? "");
+  const [maxHeartRate, setMaxHeartRate] = useState(initial?.maxHeartRate ?? "");
+  const [calories, setCalories] = useState(initial?.calories ?? "");
+  const [exercises, setExercises] = useState<ExerciseRow[]>(
+    () => initial?.exercises.map((e) => ({ id: nextExerciseRowId++, ...e })) ?? []
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -156,8 +179,8 @@ export function LogActivityForm() {
     }
     setError(null);
     setSaving(true);
-    const res = await fetch("/api/activity/manual", {
-      method: "POST",
+    const res = await fetch(activityId ? `/api/activity/${activityId}` : "/api/activity/manual", {
+      method: activityId ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type,
@@ -179,7 +202,7 @@ export function LogActivityForm() {
     });
     setSaving(false);
     if (res.ok) {
-      router.push("/dashboard");
+      router.push(activityId ? `/dashboard/activity/${activityId}` : "/dashboard");
       router.refresh();
     } else {
       setError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
@@ -415,7 +438,7 @@ export function LogActivityForm() {
           disabled={saving}
           className="rounded-lg bg-[#fc4c02] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:opacity-50"
         >
-          {saving ? "กำลังบันทึก..." : "บันทึกกิจกรรม"}
+          {saving ? "กำลังบันทึก..." : activityId ? "บันทึกการแก้ไข" : "บันทึกกิจกรรม"}
         </button>
         </>
       )}

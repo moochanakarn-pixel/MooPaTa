@@ -1,62 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
-
-const MAX_DURATION_MIN = 24 * 60;
-const INTENSITIES = ["LOW", "MODERATE", "HIGH"];
-const MAX_EXERCISES = 30;
-
-interface ParsedExercise {
-  name: string;
-  sets: number;
-  reps: number;
-  weightKg: number | null;
-}
-
-// Validates the optional per-exercise breakdown (sets/reps/weight) a
-// strength-training session can be logged with — every row must be
-// well-formed or the whole request is rejected, same as the other optional
-// fields below, rather than silently dropping a malformed one.
-function parseExercises(value: unknown): ParsedExercise[] | null {
-  if (value === undefined || value === null) return [];
-  if (!Array.isArray(value) || value.length > MAX_EXERCISES) return null;
-
-  const parsed: ParsedExercise[] = [];
-  for (const raw of value) {
-    if (typeof raw !== "object" || raw === null) return null;
-    const r = raw as Record<string, unknown>;
-    const name = typeof r.name === "string" ? r.name.trim().slice(0, 100) : "";
-    const sets = Number(r.sets);
-    const reps = Number(r.reps);
-    const weightKg = optionalNonNegative(r.weightKg);
-    if (!name) return null;
-    if (!Number.isInteger(sets) || sets <= 0 || sets > 50) return null;
-    if (!Number.isInteger(reps) || reps <= 0 || reps > 1000) return null;
-    if (weightKg !== null && Number.isNaN(weightKg)) return null;
-    parsed.push({ name, sets, reps, weightKg });
-  }
-  return parsed;
-}
-
-// Optional fields beyond duration — a phone/watch app that recorded the
-// session (when its own auto-share to Strava doesn't cover a given sport
-// mode) usually shows these, so letting them be copied in here makes a
-// manually-logged activity as complete as a synced one.
-function optionalNonNegative(value: unknown): number | null {
-  const n = Number(value);
-  return typeof value === "number" || (typeof value === "string" && value.trim() !== "")
-    ? Number.isFinite(n) && n >= 0
-      ? n
-      : NaN // signal "provided but invalid" distinctly from "not provided"
-    : null;
-}
+import { INTENSITIES, MAX_DURATION_MIN, optionalNonNegative, parseExercises } from "@/lib/activity-validation";
 
 // Logs an activity Strava doesn't track (football, badminton, ...) into the
 // same Activity table synced activities use — provider=MANUAL with a random
 // providerActId satisfies the (provider, providerActId) unique constraint.
 // This is what makes it show up for free everywhere Activity already flows:
 // the dashboard list, records, heatmap/streaks, compare, and the water/macro
-// activity-bonus calculations.
+// activity-bonus calculations. See PATCH /api/activity/[id] for editing one
+// of these after the fact.
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) {
