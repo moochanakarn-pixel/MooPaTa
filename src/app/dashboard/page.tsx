@@ -16,7 +16,7 @@ import { MonthHighlights } from "./month-highlights";
 import { OnboardingCard, type OnboardingStep } from "./onboarding-card";
 import { PeriodComparison } from "./period-comparison";
 import { TrendChart, type WeekBucket } from "./trend-chart";
-import { TypeBreakdown } from "./type-breakdown";
+import { TypeBreakdown, type TypeShare } from "./type-breakdown";
 
 const WEEKS_OF_HISTORY = 12;
 const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -129,7 +129,7 @@ export default async function DashboardPage({
       }),
       db.activity.findMany({
         where: { userId, startedAt: { gte: thisMonthStart } },
-        select: { id: true, type: true, distanceMeters: true, avgSpeedMs: true, elevationGainM: true },
+        select: { id: true, type: true, distanceMeters: true, avgSpeedMs: true, elevationGainM: true, durationSec: true, calories: true },
       }),
       db.activity.aggregate({
         where: { userId, startedAt: { gte: todayStart } },
@@ -201,12 +201,17 @@ export default async function DashboardPage({
   const showOnboarding = onboardingSteps.some((s) => !s.done) && accountAgeDays <= 14;
 
   const typeShares = Object.values(
-    thisMonthActivities.reduce<Record<string, { type: string; km: number }>>((acc, a) => {
-      acc[a.type] ??= { type: a.type, km: 0 };
-      acc[a.type].km += (a.distanceMeters ?? 0) / 1000;
+    thisMonthActivities.reduce<Record<string, TypeShare>>((acc, a) => {
+      acc[a.type] ??= { type: a.type, durationSec: 0, calories: 0, caloriesTrackedCount: 0, activityCount: 0 };
+      acc[a.type].durationSec += a.durationSec;
+      acc[a.type].activityCount += 1;
+      if (a.calories !== null) {
+        acc[a.type].calories += a.calories;
+        acc[a.type].caloriesTrackedCount += 1;
+      }
       return acc;
     }, {})
-  ).sort((a, b) => b.km - a.km);
+  ).sort((a, b) => b.durationSec - a.durationSec);
 
   const statCards = [
     {
