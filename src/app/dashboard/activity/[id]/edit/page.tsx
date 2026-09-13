@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { getExerciseStats } from "@/lib/exercise-stats";
 import { getSessionUserId } from "@/lib/session";
 import { LogActivityForm, type LogActivityInitial } from "../../../log-activity/log-activity-form";
 
@@ -18,10 +19,13 @@ export default async function EditActivityPage({ params }: { params: { id: strin
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
-  const activity = await db.activity.findUnique({
-    where: { id: params.id },
-    include: { exercises: { orderBy: { order: "asc" } } },
-  });
+  const [activity, exerciseStats] = await Promise.all([
+    db.activity.findUnique({
+      where: { id: params.id },
+      include: { exercises: { orderBy: { order: "asc" } } },
+    }),
+    getExerciseStats(userId),
+  ]);
   if (!activity || activity.userId !== userId || activity.provider !== "MANUAL") notFound();
 
   const raw = activity.raw as { manualIntensity?: string } | null;
@@ -59,7 +63,7 @@ export default async function EditActivityPage({ params }: { params: { id: strin
       <h1 className="mb-1 text-xl font-bold">แก้ไขกิจกรรม</h1>
       <p className="mb-8 text-sm text-neutral-500">แก้ไขข้อมูลกิจกรรมนี้ รวมถึงท่าออกกำลังกายแต่ละท่าได้</p>
 
-      <LogActivityForm activityId={activity.id} initial={initial} />
+      <LogActivityForm activityId={activity.id} initial={initial} exerciseStats={exerciseStats} />
     </main>
   );
 }

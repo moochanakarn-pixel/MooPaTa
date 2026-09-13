@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { parseActivityText } from "@/lib/activity-import-parse";
+import type { ExerciseStat } from "@/lib/exercise-stats";
+import { formatActivityDate } from "@/lib/format";
 
 const TYPES = [
   { value: "Run", label: "วิ่ง" },
@@ -84,7 +86,15 @@ export interface LogActivityInitial {
 // provider: "MANUAL" activities (see that route's comment for why), so
 // there's no case here where this form needs to represent Strava-only
 // fields it was never built to show.
-export function LogActivityForm({ activityId, initial }: { activityId?: string; initial?: LogActivityInitial }) {
+export function LogActivityForm({
+  activityId,
+  initial,
+  exerciseStats = [],
+}: {
+  activityId?: string;
+  initial?: LogActivityInitial;
+  exerciseStats?: ExerciseStat[];
+}) {
   const router = useRouter();
   const [type, setType] = useState(initial?.type ?? TYPES[0].value);
   const [name, setName] = useState(initial?.name ?? "");
@@ -105,6 +115,15 @@ export function LogActivityForm({ activityId, initial }: { activityId?: string; 
   const [pasteText, setPasteText] = useState("");
   const [copied, setCopied] = useState(false);
   const [importNotice, setImportNotice] = useState<string | null>(null);
+
+  // Keyed by trimmed+lowercased name, same normalization getExerciseStats
+  // uses server-side, so a row typed with different casing/spacing still
+  // finds its history.
+  const statsByName = useMemo(() => {
+    const map = new Map<string, ExerciseStat>();
+    for (const s of exerciseStats) map.set(s.name.trim().toLowerCase(), s);
+    return map;
+  }, [exerciseStats]);
 
   async function copyPrompt() {
     try {
@@ -363,13 +382,16 @@ export function LogActivityForm({ activityId, initial }: { activityId?: string; 
           </p>
           {exercises.length > 0 && (
             <div className="mb-2 space-y-2">
-              {exercises.map((r) => (
+              {exercises.map((r) => {
+                const match = statsByName.get(r.name.trim().toLowerCase());
+                return (
                 <div key={r.id} className="rounded-lg border border-neutral-800 p-2.5">
                   <div className="mb-2 flex items-center gap-1.5">
                     <input
                       value={r.name}
                       onChange={(e) => updateExerciseRow(r.id, { name: e.target.value })}
                       placeholder="ชื่อท่า เช่น ดันไหล่ดัมเบล"
+                      list="exercise-name-history"
                       className={`${INPUT_CLASS} flex-1`}
                     />
                     <button
@@ -382,6 +404,28 @@ export function LogActivityForm({ activityId, initial }: { activityId?: string; 
                       </svg>
                     </button>
                   </div>
+                  {match && (
+                    <div className="mb-2 flex items-center justify-between gap-2 rounded-md bg-neutral-800/50 px-2 py-1.5 text-xs text-neutral-400">
+                      <span>
+                        ครั้งก่อน ({formatActivityDate(new Date(match.latestAtMs))}): {match.latestSets} เซ็ท ×{" "}
+                        {match.latestReps} ครั้ง
+                        {match.latestWeightKg !== null && ` @ ${match.latestWeightKg} กก.`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateExerciseRow(r.id, {
+                            sets: String(match.latestSets),
+                            reps: String(match.latestReps),
+                            weightKg: match.latestWeightKg !== null ? String(match.latestWeightKg) : "",
+                          })
+                        }
+                        className="flex-none rounded border border-neutral-700 px-1.5 py-0.5 font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800"
+                      >
+                        ใช้ค่านี้
+                      </button>
+                    </div>
+                  )}
                   <div className="grid grid-cols-3 gap-1.5">
                     <div>
                       <input
@@ -417,7 +461,13 @@ export function LogActivityForm({ activityId, initial }: { activityId?: string; 
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
+              <datalist id="exercise-name-history">
+                {exerciseStats.map((s) => (
+                  <option key={s.name} value={s.name} />
+                ))}
+              </datalist>
             </div>
           )}
           <button

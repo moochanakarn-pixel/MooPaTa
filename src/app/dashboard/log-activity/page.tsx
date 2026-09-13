@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getExerciseStats } from "@/lib/exercise-stats";
 import { getSessionUserId } from "@/lib/session";
 import { LogActivityForm } from "./log-activity-form";
 
 export default async function LogActivityPage() {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
+
+  const exerciseStats = await getExerciseStats(userId);
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
@@ -24,7 +27,7 @@ export default async function LogActivityPage() {
         บันทึกกิจกรรมอะไรก็ได้ เช่น วิ่ง ปั่นจักรยาน เตะบอล ตีแบด ยกเวท — จะเข้าไปนับรวมในสถิติ ปฏิทิน และปรับเป้าน้ำ/แมโครวันนี้ให้อัตโนมัติ
       </p>
 
-      <LogActivityForm />
+      <LogActivityForm exerciseStats={exerciseStats} />
     </main>
   );
 }

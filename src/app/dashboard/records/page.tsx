@@ -5,12 +5,14 @@ import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import {
   activityTypeLabel,
+  formatActivityDate,
   formatDistanceKm,
   formatDuration,
   formatPace,
   formatSpeedKmh,
   type UnitSystem,
 } from "@/lib/format";
+import { getExerciseStats } from "@/lib/exercise-stats";
 import { computePrProgression } from "@/lib/pr-progression";
 import { ActivityIcon } from "../activity-icon";
 import { PrProgressionChart } from "./pr-progression-chart";
@@ -81,7 +83,7 @@ export default async function RecordsPage() {
   const user = await db.user.findUnique({ where: { id: userId } });
   const unit: UnitSystem = user?.unitSystem ?? "METRIC";
 
-  const [grouped, history] = await Promise.all([
+  const [grouped, history, exerciseStats] = await Promise.all([
     db.activity.groupBy({
       by: ["type"],
       where: { userId },
@@ -94,7 +96,15 @@ export default async function RecordsPage() {
       orderBy: { startedAt: "asc" },
       select: { type: true, startedAt: true, distanceMeters: true, avgSpeedMs: true },
     }),
+    getExerciseStats(userId),
   ]);
+
+  // Only exercises with an actual weight logged have a meaningful PR — a
+  // bodyweight-only exercise (weightKg never given) has nothing numeric to
+  // rank, so prWeightKg stays null for it and it's left out of this list.
+  const prList = exerciseStats
+    .filter((s) => s.prWeightKg !== null)
+    .sort((a, b) => a.name.localeCompare(b.name, "th"));
 
   const records: TypeRecord[] = await Promise.all(
     grouped.map(async (g) => {
@@ -254,6 +264,29 @@ export default async function RecordsPage() {
             );
           })}
           </div>
+
+          {prList.length > 0 && (
+            <div className="mt-8">
+              <h2 className="mb-4 font-medium">PR ท่าออกกำลังกาย</h2>
+              <div className="space-y-2">
+                {prList.map((s) => (
+                  <Link
+                    key={s.name}
+                    href={`/dashboard/activity/${s.prActivityId}`}
+                    className="flex items-center justify-between rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-4 py-3 transition hover:border-neutral-700 hover:bg-neutral-900/70"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-neutral-200">{s.name}</p>
+                      <p className="text-xs text-neutral-500">{formatActivityDate(new Date(s.prAtMs))}</p>
+                    </div>
+                    <p className="text-sm font-bold tabular-nums text-neutral-100">
+                      {s.prWeightKg} กก. × {s.prReps}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
     </main>
