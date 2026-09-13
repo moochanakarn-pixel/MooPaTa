@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PHOTO_ANGLE_LABEL, type PhotoAngle } from "@/lib/progress-photo-types";
+import { PoseGuideCamera } from "./pose-guide-camera";
 
 export interface ProgressPhotoEntry {
   id: string;
@@ -30,6 +31,7 @@ export function ProgressPhotosCard({ angles }: { angles: ProgressPhotoAngleState
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [cameraAngle, setCameraAngle] = useState<PhotoAngle | null>(null);
   const fileInputs = useRef<Partial<Record<PhotoAngle, HTMLInputElement | null>>>({});
 
   async function handleFile(angle: PhotoAngle, file: File) {
@@ -45,6 +47,11 @@ export function ProgressPhotosCard({ angles }: { angles: ProgressPhotoAngleState
     } else {
       setError("อัปโหลดไม่สำเร็จ — ใช้ไฟล์ jpg/png/webp ขนาดไม่เกิน 8MB");
     }
+  }
+
+  function handleCapture(angle: PhotoAngle, file: File) {
+    setCameraAngle(null);
+    handleFile(angle, file);
   }
 
   async function handleDelete(id: string) {
@@ -113,10 +120,20 @@ export function ProgressPhotosCard({ angles }: { angles: ProgressPhotoAngleState
               <p className="text-[11px] text-neutral-600">
                 {latest ? `${formatDate(latest.takenAtMs)} · ${a.entries.length} รูป` : "ยังไม่มีรูป"}
               </p>
+              <button
+                onClick={() => setCameraAngle(a.angle)}
+                disabled={uploading === a.angle}
+                className="mt-0.5 text-[10px] text-cyan-500 hover:text-cyan-400 disabled:opacity-50"
+              >
+                ถ่ายรูปพร้อมไกด์
+              </button>
             </div>
           );
         })}
       </div>
+      <p className="mt-3 text-[11px] text-neutral-600">
+        💡 ถ่ายรูปเป็นระยะ (เช่น ทุกเดือน) มุมเดิมท่าเดิม เพื่อเทียบความเปลี่ยนแปลงกับตัวเองย้อนหลังได้ชัดเจนขึ้น
+      </p>
 
       {anglesWithComparison.length > 0 && (
         <div className="mt-5 border-t border-neutral-800/80 pt-4">
@@ -197,6 +214,14 @@ export function ProgressPhotosCard({ angles }: { angles: ProgressPhotoAngleState
       )}
 
       {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
+
+      {cameraAngle && (
+        <PoseGuideCamera
+          angle={cameraAngle}
+          onCapture={(file) => handleCapture(cameraAngle, file)}
+          onClose={() => setCameraAngle(null)}
+        />
+      )}
     </div>
   );
 }
