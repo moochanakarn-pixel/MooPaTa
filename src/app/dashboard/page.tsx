@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
-import { formatDistanceKm, formatDuration } from "@/lib/format";
 import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
 import { getLatestBodyComposition } from "@/lib/body-composition";
@@ -107,7 +106,6 @@ export default async function DashboardPage({
       db.activity.aggregate({
         where: { userId },
         _count: { _all: true },
-        _sum: { distanceMeters: true, durationSec: true },
       }),
       db.activity.findMany({
         where: { userId, startedAt: { gte: chartSince } },
@@ -212,27 +210,6 @@ export default async function DashboardPage({
       return acc;
     }, {})
   ).sort((a, b) => b.durationSec - a.durationSec);
-
-  const statCards = [
-    {
-      label: "กิจกรรมทั้งหมด",
-      value: stats._count._all.toLocaleString("th-TH"),
-      icon: "M4 19h3l2-9 4 14 2-9h5",
-      accent: "text-[#fc4c02]",
-    },
-    {
-      label: "ระยะทางรวม",
-      value: formatDistanceKm(stats._sum.distanceMeters, unit),
-      icon: "M4 18c2-3 4-3 6 0s4 3 6 0 4-3 6 0M4 12c2-3 4-3 6 0s4 3 6 0 4-3 6 0",
-      accent: "text-sky-400",
-    },
-    {
-      label: "เวลารวม",
-      value: formatDuration(stats._sum.durationSec ?? 0),
-      icon: "M12 7v5l3.5 2M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z",
-      accent: "text-emerald-400",
-    },
-  ];
 
   const heatmapDays = buildHeatmapDays(heatmapRows);
   const streaks = computeStreaks(heatmapDays);
@@ -341,22 +318,6 @@ export default async function DashboardPage({
         ))}
       </div>
 
-      <h2 className="mb-3 text-sm font-medium text-neutral-400">สรุปกิจกรรมทั้งหมด</h2>
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        {statCards.map((s) => (
-          <div
-            key={s.label}
-            className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-4 transition hover:border-neutral-700"
-          >
-            <svg viewBox="0 0 24 24" fill="none" className={`mb-2 h-4 w-4 ${s.accent}`}>
-              <path d={s.icon} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <p className="text-xl font-bold tracking-tight sm:text-2xl">{s.value}</p>
-            <p className="mt-0.5 text-xs text-neutral-500">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
       <HealthSummary
         hasAnyData={hasAnyHealthData}
         targets={healthTargets}
@@ -372,7 +333,7 @@ export default async function DashboardPage({
         supplementsTotal={activeSupplements.length}
       />
 
-      <CollapsibleSection title="สถิติและแนวโน้มเพิ่มเติม">
+      <CollapsibleSection title="สถิติและแนวโน้มเพิ่มเติม" defaultOpen>
         {thisMonthActivities.length > 0 && (
           <div className="mb-6">
             <MonthHighlights activities={thisMonthActivities} unit={unit} />
