@@ -1,6 +1,10 @@
 export const DISTANCE_MILESTONES_KM = [10, 50, 100, 250, 500, 1000, 2000];
 export const COUNT_MILESTONES = [10, 25, 50, 100, 250, 500];
 export const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
+// Total weight lifted (kg), summed across every logged set — the weight-
+// training equivalent of DISTANCE_MILESTONES_KM for cardio, so it grows
+// with every session logged the same way distance does.
+export const LIFT_VOLUME_MILESTONES_KG = [1000, 5000, 10000, 25000, 50000, 100000, 250000];
 
 export interface MilestoneStatus {
   value: number;

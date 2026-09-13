@@ -3,7 +3,13 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { formatDistanceKm, type UnitSystem } from "@/lib/format";
-import { COUNT_MILESTONES, DISTANCE_MILESTONES_KM, STREAK_MILESTONES } from "@/lib/achievements";
+import {
+  COUNT_MILESTONES,
+  DISTANCE_MILESTONES_KM,
+  LIFT_VOLUME_MILESTONES_KG,
+  STREAK_MILESTONES,
+} from "@/lib/achievements";
+import { getTotalLiftVolumeKg } from "@/lib/exercise-stats";
 import { buildHeatmapDays, computeStreaks } from "../activity-heatmap";
 import { AchievementSection } from "./achievement-section";
 
@@ -15,13 +21,14 @@ export default async function AchievementsPage() {
 
   const heatmapSince = new Date(Date.now() - HEATMAP_WEEKS_BACK * 7 * 24 * 60 * 60 * 1000);
 
-  const [user, agg, heatmapRows] = await Promise.all([
+  const [user, agg, heatmapRows, totalLiftVolumeKg] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.activity.aggregate({ where: { userId }, _count: { _all: true }, _sum: { distanceMeters: true } }),
     db.activity.findMany({
       where: { userId, startedAt: { gte: heatmapSince } },
       select: { startedAt: true, distanceMeters: true },
     }),
+    getTotalLiftVolumeKg(userId),
   ]);
 
   const unit: UnitSystem = user?.unitSystem ?? "METRIC";
@@ -46,8 +53,8 @@ export default async function AchievementsPage() {
       <h1 className="mb-1 text-xl font-bold">ความสำเร็จ</h1>
       <p className="mb-8 text-sm text-neutral-500">
         {totalCount === 0
-          ? "ยังไม่มีข้อมูลกิจกรรม — เริ่มซิงค์แล้วหมุดหมายจะค่อยๆ ปลดล็อก"
-          : "หมุดหมายจากข้อมูลกิจกรรมทั้งหมดของคุณ อัปเดตทุกครั้งที่ซิงค์"}
+          ? "ยังไม่มีข้อมูลกิจกรรม — เริ่มบันทึกกิจกรรมแล้วหมุดหมายจะค่อยๆ ปลดล็อก"
+          : "หมุดหมายจากข้อมูลกิจกรรมทั้งหมดของคุณ อัปเดตทุกครั้งที่บันทึกกิจกรรมใหม่"}
       </p>
 
       <div className="space-y-6">
@@ -77,6 +84,15 @@ export default async function AchievementsPage() {
           current={bestStreak}
           formatLabel={(v) => `${v} วัน`}
           formatProgress={(cur, next) => `อีก ${Math.ceil(next - cur)} วัน ถึงติดต่อกัน ${next} วัน`}
+        />
+        <AchievementSection
+          title="น้ำหนักสะสมที่ยกได้"
+          icon="🏋️"
+          iconColor="bg-violet-500/10 text-violet-400"
+          thresholds={LIFT_VOLUME_MILESTONES_KG}
+          current={totalLiftVolumeKg}
+          formatLabel={(v) => `${v.toLocaleString("th-TH")} กก.`}
+          formatProgress={(cur, next) => `อีก ${Math.ceil(next - cur).toLocaleString("th-TH")} กก. ถึง ${next.toLocaleString("th-TH")} กก.`}
         />
       </div>
     </main>

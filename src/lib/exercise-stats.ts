@@ -68,3 +68,18 @@ export async function getExerciseStats(userId: string): Promise<ExerciseStat[]> 
   }
   return Array.from(stats.values());
 }
+
+// Total weight actually moved across every logged set, all-time — Σ weight ×
+// reps × sets. Used by the achievements page as an accumulating milestone,
+// the same shape as the running "ระยะทางสะสม" ladder, but one that rewards
+// total effort rather than any single PR — it still grows for someone who
+// mostly repeats the same handful of exercises instead of needing variety
+// across different lifts. Bodyweight-only sets (weightKg null) don't have a
+// meaningful "weight moved" figure and are skipped, same as for PRs above.
+export async function getTotalLiftVolumeKg(userId: string): Promise<number> {
+  const rows = await db.exercise.findMany({
+    where: { activity: { userId }, weightKg: { not: null } },
+    select: { sets: true, reps: true, weightKg: true },
+  });
+  return rows.reduce((sum, r) => sum + (r.weightKg ?? 0) * r.reps * r.sets, 0);
+}
