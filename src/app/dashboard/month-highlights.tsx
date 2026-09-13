@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { activityColor } from "@/lib/activity-colors";
 import {
+  activitySpeedValue,
   activityTypeLabel,
   formatDistanceKm,
   formatElevationM,
-  formatPace,
-  formatSpeedKmh,
   type UnitSystem,
 } from "@/lib/format";
 
@@ -45,7 +44,7 @@ export function MonthHighlights({ activities, unit }: { activities: HighlightAct
       ? {
           activity: fastest,
           label: "เร็วที่สุดเดือนนี้",
-          value: fastest.type === "Run" ? formatPace(fastest.avgSpeedMs, unit) : formatSpeedKmh(fastest.avgSpeedMs, unit),
+          value: activitySpeedValue(fastest.type, fastest.avgSpeedMs, unit),
           icon: "M13 2 3 14h7l-1 8 10-12h-7l1-8Z",
         }
       : null,

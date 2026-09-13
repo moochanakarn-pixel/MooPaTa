@@ -2,12 +2,11 @@ import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
 import { getExerciseStats } from "@/lib/exercise-stats";
 import {
+  activitySpeedValue,
   activityTypeLabel,
   formatDistanceParts,
   formatDuration,
   formatElevationM,
-  formatPace,
-  formatSpeedKmh,
 } from "@/lib/format";
 import { buildRoutePath, extractStravaPolyline, routeGeometryToSvgDataUri } from "@/lib/polyline";
 import { getSessionUserId } from "@/lib/session";
@@ -57,7 +56,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     badges.push("ระยะทางไกลที่สุด");
   }
   if (activity.avgSpeedMs && activity.avgSpeedMs === bests._max.avgSpeedMs) {
-    badges.push("เพซเร็วที่สุด");
+    badges.push(activity.type === "Run" || activity.type === "Swim" ? "เพซเร็วที่สุด" : "ความเร็วสูงสุด");
   }
   // Weight-training PRs (src/lib/exercise-stats.ts) don't fit the
   // distance/speed badges above at all, but they're exactly the kind of
@@ -73,7 +72,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 
   const unit = user?.unitSystem ?? "METRIC";
-  const isRun = activity.type === "Run";
+  const usesPace = activity.type === "Run" || activity.type === "Swim";
   // The hero number is distance when the activity has one (run/ride/swim/...)
   // — but weight training and similar sessions never do, so showing
   // "0.00 กม." there was actively wrong rather than just sparse. Duration is
@@ -103,14 +102,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
   if (activity.avgSpeedMs) {
     statItems.push({
-      value: isRun ? formatPace(activity.avgSpeedMs, unit) : formatSpeedKmh(activity.avgSpeedMs, unit),
-      label: isRun ? "เพซเฉลี่ย" : "ความเร็วเฉลี่ย",
+      value: activitySpeedValue(activity.type, activity.avgSpeedMs, unit),
+      label: usesPace ? "เพซเฉลี่ย" : "ความเร็วเฉลี่ย",
     });
   }
   if (activity.maxSpeedMs) {
     statItems.push({
-      value: isRun ? formatPace(activity.maxSpeedMs, unit) : formatSpeedKmh(activity.maxSpeedMs, unit),
-      label: isRun ? "เพซสูงสุด" : "ความเร็วสูงสุด",
+      value: activitySpeedValue(activity.type, activity.maxSpeedMs, unit),
+      label: usesPace ? "เพซสูงสุด" : "ความเร็วสูงสุด",
     });
   }
   if (activity.elevationGainM) {

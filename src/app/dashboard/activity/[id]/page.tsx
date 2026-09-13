@@ -4,13 +4,12 @@ import { activityColor } from "@/lib/activity-colors";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import {
+  activitySpeedValue,
   activityTypeLabel,
   formatActivityDate,
   formatDistanceKm,
   formatDuration,
   formatElevationM,
-  formatPace,
-  formatSpeedKmh,
 } from "@/lib/format";
 import { extractStravaPolyline } from "@/lib/polyline";
 import type { StravaBestEffort, StravaLap, StravaSplit } from "@/lib/activity-detail-types";
@@ -45,6 +44,11 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
 
   const unit = user?.unitSystem ?? "METRIC";
   const isRun = activity.type === "Run";
+  // Run and Swim both read their speed as a "pace" (min:sec per km, or per
+  // 100m for swimming) rather than km/h — everything else (cycling etc.)
+  // uses plain speed. isRun above stays scoped to DetailPanel's legacy
+  // Strava splits/laps view, which only ever handled the running case.
+  const usesPace = activity.type === "Run" || activity.type === "Swim";
   const polyline = extractStravaPolyline(activity.raw);
   const color = activityColor(activity.type);
 
@@ -69,7 +73,8 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
     badges.push(`ระยะทางไกลที่สุด (${activityTypeLabel(activity.type)})`);
   }
   if (activity.avgSpeedMs && activity.avgSpeedMs === bests._max.avgSpeedMs) {
-    badges.push(`เพซเร็วที่สุด (${activityTypeLabel(activity.type)})`);
+    const label = activity.type === "Run" || activity.type === "Swim" ? "เพซเร็วที่สุด" : "ความเร็วสูงสุด";
+    badges.push(`${label} (${activityTypeLabel(activity.type)})`);
   }
 
   return (
@@ -146,12 +151,12 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
         <Stat label="ระยะทาง" value={formatDistanceKm(activity.distanceMeters, unit)} />
         <Stat label="เวลา" value={formatDuration(activity.durationSec)} />
         <Stat
-          label={isRun ? "เพซเฉลี่ย" : "ความเร็วเฉลี่ย"}
-          value={isRun ? formatPace(activity.avgSpeedMs, unit) : formatSpeedKmh(activity.avgSpeedMs, unit)}
+          label={usesPace ? "เพซเฉลี่ย" : "ความเร็วเฉลี่ย"}
+          value={activitySpeedValue(activity.type, activity.avgSpeedMs, unit)}
         />
         <Stat
-          label={isRun ? "เพซสูงสุด" : "ความเร็วสูงสุด"}
-          value={isRun ? formatPace(activity.maxSpeedMs, unit) : formatSpeedKmh(activity.maxSpeedMs, unit)}
+          label={usesPace ? "เพซสูงสุด" : "ความเร็วสูงสุด"}
+          value={activitySpeedValue(activity.type, activity.maxSpeedMs, unit)}
         />
         <Stat label="ระยะไต่ระดับ" value={formatElevationM(activity.elevationGainM, unit)} />
         <Stat label="จุดสูงสุด" value={formatElevationM(activity.elevHighM, unit)} />

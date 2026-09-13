@@ -3,17 +3,18 @@
 import { useMemo, useState } from "react";
 import { activityColor } from "@/lib/activity-colors";
 import {
+  activitySpeedValue,
   activityTypeLabel,
   formatDistanceKm,
   formatDuration,
   formatElevationM,
-  formatPace,
   formatSignedDistance,
   formatSignedDuration,
   formatSignedHeartRate,
   formatSignedPace,
-  formatSpeedKmh,
+  formatSignedSwimPace,
   paceSecondsPerUnit,
+  swimPaceSecondsPerUnit,
   type UnitSystem,
 } from "@/lib/format";
 import { ActivityIcon } from "../activity-icon";
@@ -93,13 +94,21 @@ export function CompareView({ activities, unit }: { activities: CompareActivity[
   }
 
   const bothRun = a?.type === "Run" && b?.type === "Run";
-  const bothSameKind = a && b && (a.type === "Run") === (b.type === "Run");
+  const bothSwim = a?.type === "Swim" && b?.type === "Swim";
+  // A pace-style delta only means something when both sides use the same
+  // "how fast" convention (both running pace, or both swim pace) — mixing
+  // e.g. a run's per-km pace with a ride's per-km pace, or worse a run's
+  // pace with a swim's per-100m pace, would just be two incomparable
+  // numbers subtracted from each other.
+  const bothSameKind = a && b && (a.type === "Run") === (b.type === "Run") && (a.type === "Swim") === (b.type === "Swim");
 
   const distanceDiff = a && b ? (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0) : null;
   const durationDiff = a && b ? a.durationSec - b.durationSec : null;
   const paceDiff =
     a && b && bothSameKind && a.avgSpeedMs && b.avgSpeedMs
-      ? paceSecondsPerUnit(a.avgSpeedMs, unit) - paceSecondsPerUnit(b.avgSpeedMs, unit)
+      ? bothSwim
+        ? swimPaceSecondsPerUnit(a.avgSpeedMs, unit) - swimPaceSecondsPerUnit(b.avgSpeedMs, unit)
+        : paceSecondsPerUnit(a.avgSpeedMs, unit) - paceSecondsPerUnit(b.avgSpeedMs, unit)
       : null;
   const elevationDiff = a && b && a.elevationGainM && b.elevationGainM ? a.elevationGainM - b.elevationGainM : null;
   const hrDiff = a && b && a.avgHeartRate && b.avgHeartRate ? a.avgHeartRate - b.avgHeartRate : null;
@@ -151,10 +160,10 @@ export function CompareView({ activities, unit }: { activities: CompareActivity[
             deltaText={durationDiff !== null ? formatSignedDuration(durationDiff) : undefined}
           />
           <Row
-            label={bothRun ? "เพซเฉลี่ย" : "เพซ/ความเร็วเฉลี่ย"}
-            aValue={a.type === "Run" ? formatPace(a.avgSpeedMs, unit) : formatSpeedKmh(a.avgSpeedMs, unit)}
-            bValue={b.type === "Run" ? formatPace(b.avgSpeedMs, unit) : formatSpeedKmh(b.avgSpeedMs, unit)}
-            deltaText={paceDiff !== null ? formatSignedPace(paceDiff, unit) : undefined}
+            label={bothRun || bothSwim ? "เพซเฉลี่ย" : "เพซ/ความเร็วเฉลี่ย"}
+            aValue={activitySpeedValue(a.type, a.avgSpeedMs, unit)}
+            bValue={activitySpeedValue(b.type, b.avgSpeedMs, unit)}
+            deltaText={paceDiff !== null ? (bothSwim ? formatSignedSwimPace(paceDiff, unit) : formatSignedPace(paceDiff, unit)) : undefined}
             tone={paceDiff !== null ? (paceDiff < 0 ? "up" : paceDiff > 0 ? "down" : "neutral") : undefined}
           />
           <Row

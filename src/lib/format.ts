@@ -36,6 +36,34 @@ export function formatPace(metersPerSec?: number | null, unit: UnitSystem = "MET
   return `${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? "ไมล์" : "กม."}`;
 }
 
+const YARDS_PER_100 = 91.44; // 100 yd, the customary imperial-pool swim distance
+
+// Swimming pace, expressed as minutes:seconds per 100m (or 100yd for
+// imperial units) — the convention swimmers actually use, distinct from
+// formatPace's per-km/mile running convention. Nobody describes swim effort
+// as "minutes per kilometer."
+export function formatSwimPace(metersPerSec?: number | null, unit: UnitSystem = "METRIC"): string {
+  if (!metersPerSec) return "-";
+  const perUnitMeters = unit === "IMPERIAL" ? YARDS_PER_100 : 100;
+  const secPerUnit = perUnitMeters / metersPerSec;
+  const m = Math.floor(secPerUnit / 60);
+  const s = Math.round(secPerUnit % 60);
+  return `${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? "100 หลา" : "100 ม."}`;
+}
+
+// The one place that decides which "how fast" convention an activity type
+// gets — running pace for Run, swimming pace for Swim, plain km/h (or mph)
+// speed for everything else (cycling etc., where "pace" isn't how people
+// talk about effort). Used everywhere an activity's avg/max speed is shown
+// so every page picks the same convention the same way, instead of each
+// call site re-deriving its own isRun-only check that quietly showed
+// swimming in the cycling convention (km/h) — swimmers don't think in km/h.
+export function activitySpeedValue(type: string, metersPerSec?: number | null, unit: UnitSystem = "METRIC"): string {
+  if (type === "Run") return formatPace(metersPerSec, unit);
+  if (type === "Swim") return formatSwimPace(metersPerSec, unit);
+  return formatSpeedKmh(metersPerSec, unit);
+}
+
 export function formatElevationM(meters?: number | null, unit: UnitSystem = "METRIC"): string {
   if (meters === null || meters === undefined) return "-";
   if (unit === "IMPERIAL") return `${Math.round(meters * 3.28084)} ฟุต`;
@@ -76,6 +104,24 @@ export function formatSignedPace(diffSecPerUnit: number, unit: UnitSystem = "MET
   const m = Math.floor(abs / 60);
   const s = abs % 60;
   return `${sign}${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? "ไมล์" : "กม."}`;
+}
+
+// Swimming counterparts of paceSecondsPerUnit/formatSignedPace above — per
+// 100m/100yd instead of per km/mile, for diffing two swim activities'
+// average pace. Kept separate rather than parameterizing the existing pair
+// since the two are never mixed (a diff is only ever meaningful between two
+// activities of the same type).
+export function swimPaceSecondsPerUnit(metersPerSec: number, unit: UnitSystem = "METRIC"): number {
+  const perUnitMeters = unit === "IMPERIAL" ? YARDS_PER_100 : 100;
+  return perUnitMeters / metersPerSec;
+}
+
+export function formatSignedSwimPace(diffSecPerUnit: number, unit: UnitSystem = "METRIC"): string {
+  const sign = diffSecPerUnit > 0 ? "+" : diffSecPerUnit < 0 ? "-" : "";
+  const abs = Math.round(Math.abs(diffSecPerUnit));
+  const m = Math.floor(abs / 60);
+  const s = abs % 60;
+  return `${sign}${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? "100 หลา" : "100 ม."}`;
 }
 
 export function formatSignedCount(diff: number): string {

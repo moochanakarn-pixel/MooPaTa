@@ -1,16 +1,19 @@
 import {
+  activitySpeedValue,
   formatDistanceKm,
   formatDuration,
-  formatPace,
   formatSignedDistance,
   formatSignedDuration,
   formatSignedHeartRate,
   formatSignedPace,
+  formatSignedSwimPace,
   paceSecondsPerUnit,
+  swimPaceSecondsPerUnit,
   type UnitSystem,
 } from "@/lib/format";
 
 interface ComparableActivity {
+  type: string;
   distanceMeters: number | null;
   durationSec: number;
   avgSpeedMs: number | null;
@@ -48,9 +51,17 @@ export function ComparisonCard({
   const distanceDiff = (current.distanceMeters ?? 0) - (compare.distanceMeters ?? 0);
   const durationDiff = current.durationSec - compare.durationSec;
 
-  const hasPace = current.avgSpeedMs && compare.avgSpeedMs;
+  // current/compare are always the same activity type (this card only ever
+  // compares an activity against the previous one of the same type — see
+  // the "เทียบกับครั้งก่อน" query on the detail page), so a single type check
+  // is enough to pick the right pace convention for both sides at once.
+  const usesPace = current.type === "Run" || current.type === "Swim";
+  const isSwim = current.type === "Swim";
+  const hasPace = usesPace && current.avgSpeedMs && compare.avgSpeedMs;
   const paceDiff = hasPace
-    ? paceSecondsPerUnit(current.avgSpeedMs!, unit) - paceSecondsPerUnit(compare.avgSpeedMs!, unit)
+    ? isSwim
+      ? swimPaceSecondsPerUnit(current.avgSpeedMs!, unit) - swimPaceSecondsPerUnit(compare.avgSpeedMs!, unit)
+      : paceSecondsPerUnit(current.avgSpeedMs!, unit) - paceSecondsPerUnit(compare.avgSpeedMs!, unit)
     : null;
 
   const hrDiff =
@@ -74,11 +85,14 @@ export function ComparisonCard({
         delta={{ text: formatSignedDuration(durationDiff), tone: "neutral" }}
       />
       <Row
-        label="เพซเฉลี่ย"
-        value={formatPace(current.avgSpeedMs, unit)}
+        label={usesPace ? "เพซเฉลี่ย" : "ความเร็วเฉลี่ย"}
+        value={activitySpeedValue(current.type, current.avgSpeedMs, unit)}
         delta={
           paceDiff !== null
-            ? { text: formatSignedPace(paceDiff, unit), tone: paceDiff < 0 ? "up" : paceDiff > 0 ? "down" : "neutral" }
+            ? {
+                text: isSwim ? formatSignedSwimPace(paceDiff, unit) : formatSignedPace(paceDiff, unit),
+                tone: paceDiff < 0 ? "up" : paceDiff > 0 ? "down" : "neutral",
+              }
             : undefined
         }
       />

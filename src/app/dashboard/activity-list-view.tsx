@@ -4,13 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { activityColor } from "@/lib/activity-colors";
 import {
+  activitySpeedValue,
   activityTypeLabel,
   formatActivityDate,
   formatDistanceKm,
   formatDuration,
   formatElevationM,
-  formatPace,
-  formatSpeedKmh,
   type UnitSystem,
 } from "@/lib/format";
 import { ActivityIcon } from "./activity-icon";
@@ -146,7 +145,6 @@ export function ActivityListView({ activities, unit }: { activities: ActivityRow
             <tbody>
               {sorted.map((a) => {
                 const color = activityColor(a.type);
-                const isRun = a.type === "Run";
                 return (
                   <tr key={a.id} className="border-b border-neutral-800/40 transition last:border-0 hover:bg-neutral-800/30">
                     <td className="px-4 py-3">
@@ -165,9 +163,7 @@ export function ActivityListView({ activities, unit }: { activities: ActivityRow
                     </td>
                     <td className="px-4 py-3 text-right font-medium tabular-nums">{formatDistanceKm(a.distanceMeters, unit)}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatDuration(a.durationSec)}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      {isRun ? formatPace(a.avgSpeedMs, unit) : formatSpeedKmh(a.avgSpeedMs, unit)}
-                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">{activitySpeedValue(a.type, a.avgSpeedMs, unit)}</td>
                     <td className="px-4 py-3 text-right tabular-nums">
                       {a.elevationGainM ? formatElevationM(a.elevationGainM, unit) : "-"}
                     </td>

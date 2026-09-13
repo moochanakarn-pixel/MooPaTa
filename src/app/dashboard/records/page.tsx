@@ -4,12 +4,11 @@ import { activityColor } from "@/lib/activity-colors";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import {
+  activitySpeedValue,
   activityTypeLabel,
   formatActivityDate,
   formatDistanceKm,
   formatDuration,
-  formatPace,
-  formatSpeedKmh,
   type UnitSystem,
 } from "@/lib/format";
 import { getExerciseStats } from "@/lib/exercise-stats";
@@ -204,7 +203,7 @@ export default async function RecordsPage() {
           <div className="space-y-4">
           {records.map((r, i) => {
             const color = activityColor(r.type);
-            const isRun = r.type === "Run";
+            const usesPace = r.type === "Run" || r.type === "Swim";
             const stroke = typeStroke(r.type);
             return (
             <div
@@ -233,8 +232,8 @@ export default async function RecordsPage() {
                   href={r.longestActivityId ? `/dashboard/activity/${r.longestActivityId}` : undefined}
                 />
                 <RecordRow
-                  label={isRun ? "เพซเร็วที่สุด" : "ความเร็วสูงสุด"}
-                  value={isRun ? formatPace(r.maxAvgSpeedMs, unit) : formatSpeedKmh(r.maxAvgSpeedMs, unit)}
+                  label={usesPace ? "เพซเร็วที่สุด" : "ความเร็วสูงสุด"}
+                  value={activitySpeedValue(r.type, r.maxAvgSpeedMs, unit)}
                   href={r.fastestActivityId ? `/dashboard/activity/${r.fastestActivityId}` : undefined}
                 />
                 <RecordRow label="เวลานานที่สุด" value={r.maxDurationSec ? formatDuration(r.maxDurationSec) : "-"} />
@@ -254,9 +253,9 @@ export default async function RecordsPage() {
                   />
                   <PrProgressionChart
                     points={r.speedProgression}
-                    label={isRun ? "แนวโน้ม PR เพซ" : "แนวโน้ม PR ความเร็ว"}
+                    label={usesPace ? "แนวโน้ม PR เพซ" : "แนวโน้ม PR ความเร็ว"}
                     color={stroke}
-                    formatValue={(v) => (isRun ? formatPace(v, unit) : formatSpeedKmh(v, unit))}
+                    formatValue={(v) => activitySpeedValue(r.type, v, unit)}
                   />
                 </div>
               )}
