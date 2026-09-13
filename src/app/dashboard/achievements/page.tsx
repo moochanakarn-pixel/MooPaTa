@@ -9,9 +9,10 @@ import {
   LIFT_VOLUME_MILESTONES_KG,
   STREAK_MILESTONES,
 } from "@/lib/achievements";
-import { getTotalLiftVolumeKg } from "@/lib/exercise-stats";
+import { getExerciseStats, getTotalLiftVolumeKg } from "@/lib/exercise-stats";
 import { buildHeatmapDays, computeStreaks } from "../activity-heatmap";
 import { AchievementSection } from "./achievement-section";
+import { ExercisePrBadges } from "./exercise-pr-badges";
 
 const HEATMAP_WEEKS_BACK = 53;
 
@@ -21,7 +22,7 @@ export default async function AchievementsPage() {
 
   const heatmapSince = new Date(Date.now() - HEATMAP_WEEKS_BACK * 7 * 24 * 60 * 60 * 1000);
 
-  const [user, agg, heatmapRows, totalLiftVolumeKg] = await Promise.all([
+  const [user, agg, heatmapRows, totalLiftVolumeKg, exerciseStats] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.activity.aggregate({ where: { userId }, _count: { _all: true }, _sum: { distanceMeters: true } }),
     db.activity.findMany({
@@ -29,6 +30,7 @@ export default async function AchievementsPage() {
       select: { startedAt: true, distanceMeters: true },
     }),
     getTotalLiftVolumeKg(userId),
+    getExerciseStats(userId),
   ]);
 
   const unit: UnitSystem = user?.unitSystem ?? "METRIC";
@@ -37,6 +39,12 @@ export default async function AchievementsPage() {
   const totalKm = (agg._sum.distanceMeters ?? 0) / 1000;
   const totalCount = agg._count._all;
   const bestStreak = streaks.longest;
+  // Most-recent-first — a feed of "what did I just achieve," distinct from
+  // records page's alphabetical reference list of the same underlying data.
+  const prExercises = exerciseStats
+    .filter((s): s is typeof s & { prWeightKg: number } => s.prWeightKg !== null)
+    .sort((a, b) => b.prAtMs - a.prAtMs)
+    .map((s) => ({ name: s.name, weightKg: s.prWeightKg, activityId: s.prActivityId }));
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
@@ -94,6 +102,7 @@ export default async function AchievementsPage() {
           formatLabel={(v) => `${v.toLocaleString("th-TH")} กก.`}
           formatProgress={(cur, next) => `อีก ${Math.ceil(next - cur).toLocaleString("th-TH")} กก. ถึง ${next.toLocaleString("th-TH")} กก.`}
         />
+        <ExercisePrBadges exercises={prExercises} />
       </div>
     </main>
   );
