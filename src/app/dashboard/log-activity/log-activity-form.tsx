@@ -65,7 +65,7 @@ function emptyExerciseRow(): ExerciseRow {
 
 export function LogActivityForm() {
   const router = useRouter();
-  const [type, setType] = useState("Football");
+  const [type, setType] = useState(TYPES[0].value);
   const [name, setName] = useState("");
   const [durationMin, setDurationMin] = useState("60");
   const [intensity, setIntensity] = useState("MODERATE");
