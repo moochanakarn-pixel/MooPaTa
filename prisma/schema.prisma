@@ -53,6 +53,19 @@ model User {
   nutritionGoal     NutritionGoal  @default(MAINTAIN)
   goalRateKgPerWeek Float? // only meaningful when nutritionGoal is LOSE/GAIN
 
+  // Optional overrides for the two macro "anchors" computeTargets uses
+  // (src/lib/nutrition.ts) — protein g/kg (bodyweight, or lean mass once a
+  // body-composition scan is available) and fat as a share of calories.
+  // Carbs are never directly settable: they're always whatever calories are
+  // left after protein+fat, so these two are the only inputs that can't
+  // produce a macro split that fails to add back up to targetCalories.
+  // Null means "use the default" — see PROTEIN_G_PER_KG(_LBM)_MIN/MAX and
+  // FAT_PERCENT_MIN/MAX in nutrition.ts for the clamped range the settings
+  // form offers (computeTargets itself re-clamps too, so a stale/bad stored
+  // value can never push targets outside that range).
+  proteinGPerKg        Float?
+  fatPercentOfCalories Float?
+
   // Water-reminder schedule (src/app/api/cron/water-reminder) — a time
   // window plus how often within it, instead of the two fixed
   // afternoon/evening checkpoints the feature launched with. "HH:mm",

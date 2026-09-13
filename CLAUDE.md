@@ -135,6 +135,17 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
   โดยตรง คำนวณจาก `buildDayCounts`/`computeStreak` ใน `src/lib/streak.ts` (window 60 วันย้อนหลัง)
 - คำนวณเป้าหมาย/BMR/TDEE ทั้งหมดต้องมีโปรไฟล์ครบ (`isProfileComplete`) ไม่งั้นหน้านี้จะโชว์ CTA
   ให้ไปกรอกโปรไฟล์แทน
+- **ปรับสัดส่วนแมโครเอง (โปรตีน/ไขมัน)** — `MacroPreferencesForm`
+  (`src/app/dashboard/settings/macro-preferences-form.tsx`, อยู่ในหน้าตั้งค่า ไม่ใช่หน้าเชิงลึก)
+  ให้ผู้ใช้ปรับได้แค่ 2 อย่าง: โปรตีน (ก./กก. น้ำหนักตัวหรือ lean body mass ถ้ามี InBody) กับไขมัน
+  (% ของแคลอรี่เป้าหมาย) — **คาร์บไม่มีช่องให้ปรับเลย เป็นส่วนที่เหลือจากแคลอรี่เป้าหมายเสมอ** (ดู
+  `computeTargets`) ทำให้ยังไงก็รวมได้ 100% เองโดยไม่ต้อง validate ว่าผลรวมครบมั้ย เก็บที่
+  `User.proteinGPerKg`/`fatPercentOfCalories` (nullable, `null` = ใช้ค่า default เดิม 1.8 ก./กก.
+  หรือ 2.4 ก./กก. LBM และ 25%) ช่วงที่ปรับได้ถูก clamp ไว้ทั้งฝั่ง UI (slider min/max) และใน
+  `computeTargets` เอง (`PROTEIN_G_PER_KG(_LBM)_MIN/MAX`, `FAT_PERCENT_MIN/MAX` ใน `nutrition.ts`)
+  กันไม่ให้ค่าที่ค้างอยู่ก่อนเปลี่ยนช่วง หรือแก้ตรง DB เอง ดันตัวเลขออกนอกเกณฑ์ที่ฟอร์มอนุญาต — ทุกจุด
+  ที่เรียก `computeTargets` (เหมือน body composition) ต้องส่ง `{ proteinGPerKg, fatPercentOfCalories }`
+  ของ user เข้าไปด้วย ยกเว้น `cron/water-reminder` ที่ใช้แค่ `.waterMl` ซึ่งไม่ขึ้นกับค่านี้เลย
 - **องค์ประกอบร่างกาย (InBody)** — `BodyCompositionCard` (`src/app/dashboard/nutrition/body-composition-card.tsx`)
   ให้กรอกผลตรวจ InBody เองแบบ manual form (weightKg บังคับ, %ไขมัน/มวลกล้ามเนื้อ/ไขมันช่องท้อง/BMR
   ที่เครื่องรายงานเป็น optional) — ฟีเจอร์นี้ optional เต็มรูปแบบ: ใครไม่มีข้อมูลแอพทำงานปกติด้วยสูตร

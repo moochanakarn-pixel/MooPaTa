@@ -104,7 +104,8 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
     };
     if (isProfileComplete(profile)) {
       const latestBodyComposition = await getLatestBodyComposition(userId);
-      const t = applyActivityBonus(computeTargets(profile, latestBodyComposition), activityDurationViewDaySec);
+      const macroPrefs = { proteinGPerKg: user.proteinGPerKg, fatPercentOfCalories: user.fatPercentOfCalories };
+      const t = applyActivityBonus(computeTargets(profile, latestBodyComposition, macroPrefs), activityDurationViewDaySec);
       targets = {
         targetCalories: t.targetCalories,
         proteinG: t.proteinG,

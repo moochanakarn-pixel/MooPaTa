@@ -259,7 +259,8 @@ export default async function NutritionPage() {
   // for, instead of hitting the DB twice for the same row.
   const latestScan = bodyCompositionRows[0];
   const latestBodyComposition = latestScan && latestScan.bodyFatPercent !== null ? { weightKg: latestScan.weightKg, bodyFatPercent: latestScan.bodyFatPercent } : null;
-  const baseTargets = computeTargets(profile, latestBodyComposition);
+  const macroPrefs = { proteinGPerKg: user.proteinGPerKg, fatPercentOfCalories: user.fatPercentOfCalories };
+  const baseTargets = computeTargets(profile, latestBodyComposition, macroPrefs);
 
   const caloriesByDay = new Map<string, number>();
   for (const log of trendFoodLogs) {

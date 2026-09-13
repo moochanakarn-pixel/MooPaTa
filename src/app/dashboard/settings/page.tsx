@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getBuildInfo } from "@/lib/build-info";
+import { getLatestBodyComposition } from "@/lib/body-composition";
 import { db } from "@/lib/db";
+import { computeTargets, isProfileComplete } from "@/lib/nutrition";
 import { getSessionUserId } from "@/lib/session";
 import { DeleteAccountButton, GoalInput, UnitToggle } from "./settings-client";
 import { NutritionProfileForm } from "./nutrition-profile-form";
+import { MacroPreferencesForm } from "./macro-preferences-form";
 import { HealthFlagsForm } from "./health-flags-form";
 import { SetPasswordForm } from "./set-password-form";
 import { ProfileForm } from "./profile-form";
@@ -29,6 +32,32 @@ export default async function SettingsPage({
     db.user.findUnique({ where: { id: userId } }),
     db.providerConnection.findFirst({ where: { userId, provider: "GOOGLE" } }),
   ]);
+
+  const nutritionProfile = {
+    weightKg: user?.weightKg ?? null,
+    heightCm: user?.heightCm ?? null,
+    age: user?.age ?? null,
+    sex: user?.sex ?? null,
+    activityLevel: user?.activityLevel ?? null,
+    goal: user?.nutritionGoal ?? "MAINTAIN",
+    goalRateKgPerWeek: user?.goalRateKgPerWeek ?? null,
+  };
+  const latestBodyComposition = isProfileComplete(nutritionProfile) ? await getLatestBodyComposition(userId) : null;
+  const macroPreferencesInitial = isProfileComplete(nutritionProfile)
+    ? {
+        proteinGPerKg: user?.proteinGPerKg ?? null,
+        fatPercentOfCalories: user?.fatPercentOfCalories ?? null,
+        usedBodyComposition: latestBodyComposition !== null,
+        referenceWeightKg: latestBodyComposition
+          ? latestBodyComposition.weightKg * (1 - latestBodyComposition.bodyFatPercent / 100)
+          : nutritionProfile.weightKg,
+        // Ignores any stored protein/fat override on purpose — this is the
+        // calorie budget the live preview sliders compare against, and it
+        // needs to be stable regardless of where those sliders currently
+        // sit, not shift under the user's feet as they drag them.
+        targetCaloriesAtDefaultMacros: computeTargets(nutritionProfile, latestBodyComposition).targetCalories,
+      }
+    : null;
 
   const build = getBuildInfo();
 
@@ -119,6 +148,20 @@ export default async function SettingsPage({
           }}
         />
       </section>
+
+      {macroPreferencesInitial && (
+        <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-lime-500/10 text-lime-400">
+              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+                <path d="M4 10h12M4 6h12M4 14h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </div>
+            <h2 className="font-medium">ปรับสัดส่วนแมโคร</h2>
+          </div>
+          <MacroPreferencesForm initial={macroPreferencesInitial} />
+        </section>
+      )}
 
       <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <div className="mb-3 flex items-center gap-3">

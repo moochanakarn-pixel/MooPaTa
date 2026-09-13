@@ -149,7 +149,8 @@ export async function GET(req: NextRequest) {
   let targetWaterMl: number | null = null;
   if (isProfileComplete(profile)) {
     const latestBodyComposition = await getLatestBodyComposition(userId);
-    const today = applyActivityBonus(computeTargets(profile, latestBodyComposition), activityDurationSec);
+    const macroPrefs = { proteinGPerKg: user.proteinGPerKg, fatPercentOfCalories: user.fatPercentOfCalories };
+    const today = applyActivityBonus(computeTargets(profile, latestBodyComposition, macroPrefs), activityDurationSec);
     targetCalories = today.targetCalories;
     targetWaterMl = today.waterMl;
   }

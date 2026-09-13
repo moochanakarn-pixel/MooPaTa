@@ -168,8 +168,9 @@ export default async function DashboardPage({
     goalRateKgPerWeek: user?.goalRateKgPerWeek ?? null,
   };
   const latestBodyComposition = isProfileComplete(nutritionProfile) ? await getLatestBodyComposition(userId) : null;
+  const macroPrefs = { proteinGPerKg: user?.proteinGPerKg, fatPercentOfCalories: user?.fatPercentOfCalories };
   const healthTargets = isProfileComplete(nutritionProfile)
-    ? applyActivityBonus(computeTargets(nutritionProfile, latestBodyComposition), todayActivityAgg._sum.durationSec ?? 0)
+    ? applyActivityBonus(computeTargets(nutritionProfile, latestBodyComposition, macroPrefs), todayActivityAgg._sum.durationSec ?? 0)
     : null;
   const todayFoodTotals = todayFoodLogs.reduce(
     (acc, l) => {

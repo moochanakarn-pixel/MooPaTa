@@ -31,7 +31,7 @@ const DEFAULT_RATE_KG_PER_WEEK = 0.5;
 // Never recommend below this regardless of how aggressive the goal rate is —
 // a floor, not a target; genuinely low-calorie diets need medical supervision.
 const MIN_SAFE_CALORIES = 1200;
-const PROTEIN_G_PER_KG = 1.8; // middle of the common 1.6-2.2 g/kg range for an active person
+export const PROTEIN_G_PER_KG = 1.8; // middle of the common 1.6-2.2 g/kg range for an active person
 // Once we know actual lean body mass (from a body-composition scan) rather
 // than guessing at it, protein needs scale with that instead of total
 // bodyweight — fat mass isn't metabolically demanding tissue. 2.4 g/kg LBM
@@ -41,9 +41,32 @@ const PROTEIN_G_PER_KG = 1.8; // middle of the common 1.6-2.2 g/kg range for an 
 // and pushed to the top of that range (rather than its middle) so the
 // result lands closer to what sports-nutrition guidance treats as a
 // reasonable daily target rather than a conservative floor within it.
-const PROTEIN_G_PER_KG_LBM = 2.4;
-const FAT_SHARE_OF_CALORIES = 0.25;
+export const PROTEIN_G_PER_KG_LBM = 2.4;
+export const FAT_SHARE_OF_CALORIES = 0.25;
 const WATER_ML_PER_KG = 33; // common baseline guideline (~30-35ml/kg)
+
+// Adjustable ranges for the settings form's protein/fat sliders (see
+// User.proteinGPerKg/fatPercentOfCalories) — carbs are deliberately never a
+// direct input (see computeTargets), so these two are the only knobs, and
+// computeTargets clamps into these same bounds regardless of what's stored,
+// so a stale or hand-edited value can never push targets past them. Widened
+// a bit past the "commonly cited" defaults above in both directions — down
+// for someone who wants more of their calories from carbs, up for someone
+// prioritizing protein — while staying inside ranges general sports-nutrition
+// guidance still treats as reasonable rather than extreme.
+export const PROTEIN_G_PER_KG_MIN = 1.2;
+export const PROTEIN_G_PER_KG_MAX = 2.4;
+export const PROTEIN_G_PER_KG_LBM_MIN = 1.6;
+export const PROTEIN_G_PER_KG_LBM_MAX = 2.8;
+// Never below ~20% — the commonly-cited floor for essential fatty acids and
+// hormone production regardless of goal — and capped at 35% so fat can't
+// crowd out carbs (or protein) entirely.
+export const FAT_PERCENT_MIN = 0.2;
+export const FAT_PERCENT_MAX = 0.35;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
 
 export interface NutritionProfile {
   weightKg: number;
@@ -73,6 +96,11 @@ export interface NutritionTargets {
 export interface BodyComposition {
   weightKg: number;
   bodyFatPercent: number;
+}
+
+export interface MacroPreferences {
+  proteinGPerKg?: number | null;
+  fatPercentOfCalories?: number | null;
 }
 
 interface NullableNutritionProfile {
@@ -118,7 +146,11 @@ export function computeBmrKatchMcArdle(leanBodyMassKg: number): number {
   return 370 + 21.6 * leanBodyMassKg;
 }
 
-export function computeTargets(p: NutritionProfile, bodyComposition?: BodyComposition | null): NutritionTargets {
+export function computeTargets(
+  p: NutritionProfile,
+  bodyComposition?: BodyComposition | null,
+  macroPrefs?: MacroPreferences | null
+): NutritionTargets {
   const leanBodyMassKg = bodyComposition ? bodyComposition.weightKg * (1 - bodyComposition.bodyFatPercent / 100) : null;
   const usedBodyComposition = leanBodyMassKg !== null;
   const bmr = usedBodyComposition ? computeBmrKatchMcArdle(leanBodyMassKg) : computeBmr(p);
@@ -129,9 +161,21 @@ export function computeTargets(p: NutritionProfile, bodyComposition?: BodyCompos
   const rawTarget = p.goal === "LOSE" ? tdee - dailyDelta : p.goal === "GAIN" ? tdee + dailyDelta : tdee;
   const floorTargetCalories = Math.max(rawTarget, MIN_SAFE_CALORIES);
 
-  const proteinG = usedBodyComposition ? leanBodyMassKg * PROTEIN_G_PER_KG_LBM : p.weightKg * PROTEIN_G_PER_KG;
+  // Carbs are never a direct input — always whatever's left after protein
+  // and fat (below) — so these two are the only macro knobs a user can
+  // adjust, and re-clamping here (rather than trusting whatever's stored)
+  // means a stale value from before the range changed, or a row edited by
+  // hand, still can't push targets outside what the settings form allows.
+  const proteinGPerKg = clamp(
+    macroPrefs?.proteinGPerKg ?? (usedBodyComposition ? PROTEIN_G_PER_KG_LBM : PROTEIN_G_PER_KG),
+    usedBodyComposition ? PROTEIN_G_PER_KG_LBM_MIN : PROTEIN_G_PER_KG_MIN,
+    usedBodyComposition ? PROTEIN_G_PER_KG_LBM_MAX : PROTEIN_G_PER_KG_MAX
+  );
+  const fatShareOfCalories = clamp(macroPrefs?.fatPercentOfCalories ?? FAT_SHARE_OF_CALORIES, FAT_PERCENT_MIN, FAT_PERCENT_MAX);
+
+  const proteinG = usedBodyComposition ? leanBodyMassKg * proteinGPerKg : p.weightKg * proteinGPerKg;
   const proteinKcal = proteinG * 4;
-  const fatKcal = floorTargetCalories * FAT_SHARE_OF_CALORIES;
+  const fatKcal = floorTargetCalories * fatShareOfCalories;
   // Protein (a fixed g/kg floor, never cut) plus the fat share can together
   // already exceed a very low, MIN_SAFE_CALORIES-clamped target (e.g. a
   // heavy user on an aggressive LOSE rate) — carbG can't go negative, so
