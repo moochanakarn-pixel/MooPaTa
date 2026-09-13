@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
+import { getExerciseStats } from "@/lib/exercise-stats";
 import {
   activityTypeLabel,
   formatDistanceParts,
@@ -17,15 +18,22 @@ import { loadShareFonts } from "@/lib/share-fonts";
 // to save and post to Instagram/Facebook/Line stories themselves. There's no
 // direct "post to story" here: that needs a reviewed Meta/Instagram business
 // app integration, well beyond a personal project's scope.
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+//
+// ?bg=transparent drops the gradient background entirely (next/og's PNG
+// output supports alpha natively — nothing extra needed) so the card can be
+// dropped onto an Instagram/Line story over a photo instead of always
+// carrying its own backdrop, mirroring what Strava's own share sheet offers.
+export async function GET(req: Request, { params }: { params: { id: string } }) {
   const userId = await getSessionUserId();
   if (!userId) {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  const transparent = new URL(req.url).searchParams.get("bg") === "transparent";
+
   const [user, activity] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
-    db.activity.findUnique({ where: { id: params.id } }),
+    db.activity.findUnique({ where: { id: params.id }, include: { exercises: true } }),
   ]);
   if (!activity || activity.userId !== userId) {
     return new Response("Not found", { status: 404 });
@@ -42,21 +50,54 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   if (activity.avgSpeedMs && activity.avgSpeedMs === bests._max.avgSpeedMs) {
     badges.push("เพซเร็วที่สุด");
   }
+  // Weight-training PRs (src/lib/exercise-stats.ts) don't fit the
+  // distance/speed badges above at all, but they're exactly the kind of
+  // "worth bragging about" moment this card exists for — only queried when
+  // the activity actually logged exercises, since most activities won't.
+  if (activity.exercises.length > 0) {
+    const exerciseStats = await getExerciseStats(userId);
+    for (const s of exerciseStats) {
+      if (s.prActivityId === activity.id && s.prWeightKg !== null) {
+        badges.push(`PR ${s.name} ${s.prWeightKg} กก.`);
+      }
+    }
+  }
 
   const unit = user?.unitSystem ?? "METRIC";
   const isRun = activity.type === "Run";
-  const distance = formatDistanceParts(activity.distanceMeters, unit);
+  // The hero number is distance when the activity has one (run/ride/swim/...)
+  // — but weight training and similar sessions never do, so showing
+  // "0.00 กม." there was actively wrong rather than just sparse. Duration is
+  // the one number every activity always has, so it's the universal fallback.
+  const distance = activity.distanceMeters ? formatDistanceParts(activity.distanceMeters, unit) : null;
+  let heroValue: string;
+  let heroUnit: string;
+  if (distance) {
+    heroValue = distance.value;
+    heroUnit = distance.unitLabel;
+  } else {
+    const h = Math.floor(activity.durationSec / 3600);
+    const m = Math.round((activity.durationSec % 3600) / 60);
+    heroValue = h > 0 ? `${h}:${String(m).padStart(2, "0")}` : String(m);
+    heroUnit = h > 0 ? "ชม." : "นาที";
+  }
 
-  // Everything below the hero distance number, built as a plain list so a
-  // missing field (no HR sensor, no cadence data, etc.) just drops that one
-  // stat instead of leaving a blank grid cell.
-  const statItems: { value: string; label: string }[] = [
-    { value: formatDuration(activity.durationSec), label: "เวลา" },
-    {
+  // Everything below the hero number, built as a plain list so a missing
+  // field (no distance, no HR sensor, no cadence data, etc.) just drops that
+  // one stat instead of leaving a blank/bogus grid cell — duration and
+  // pace/speed used to be unconditional here, which meant a weight-training
+  // card always showed a meaningless "-" ความเร็วเฉลี่ย row, and duration is
+  // skipped when it's already the hero number above instead of repeating it.
+  const statItems: { value: string; label: string }[] = [];
+  if (distance) {
+    statItems.push({ value: formatDuration(activity.durationSec), label: "เวลา" });
+  }
+  if (activity.avgSpeedMs) {
+    statItems.push({
       value: isRun ? formatPace(activity.avgSpeedMs, unit) : formatSpeedKmh(activity.avgSpeedMs, unit),
       label: isRun ? "เพซเฉลี่ย" : "ความเร็วเฉลี่ย",
-    },
-  ];
+    });
+  }
   if (activity.maxSpeedMs) {
     statItems.push({
       value: isRun ? formatPace(activity.maxSpeedMs, unit) : formatSpeedKmh(activity.maxSpeedMs, unit),
@@ -111,6 +152,16 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     );
   }
 
+  // Transparent mode drops the card's own backdrop, so every text element
+  // needs its own shadow to stay legible over whatever photo it ends up on
+  // — pointless (and a visual downgrade) against the card's already-dark
+  // background, so only applied when there's no background to rely on.
+  // Explicitly "none" rather than leaving it undefined — satori's style
+  // parser chokes (crashes rendering with an unrelated-looking "Cannot read
+  // properties of undefined" deep inside @vercel/og) on a style object that
+  // has a `textShadow` key present at all whose value is `undefined`.
+  const textShadow = transparent ? "0 2px 10px rgba(0,0,0,0.85)" : "none";
+
   const image = new ImageResponse(
     (
       <div
@@ -119,7 +170,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          background: "linear-gradient(160deg, #0b0f19 0%, #171313 55%, #1c0f08 100%)",
+          background: transparent ? "transparent" : "linear-gradient(160deg, #0b0f19 0%, #171313 55%, #1c0f08 100%)",
           padding: 64,
           fontFamily: "Noto Sans Thai",
         }}
@@ -142,8 +193,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
             M
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: "white" }}>MooPaTa</span>
-            <span style={{ fontSize: 20, color: "#a3a3a3" }}>{dateLabel}</span>
+            <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>MooPaTa</span>
+            <span style={{ fontSize: 20, color: "#a3a3a3", textShadow }}>{dateLabel}</span>
           </div>
         </div>
 
@@ -186,12 +237,16 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
           </div>
 
           {activity.name && (
-            <div style={{ display: "flex", fontSize: 34, fontWeight: 700, color: "white" }}>{activity.name}</div>
+            <div style={{ display: "flex", fontSize: 34, fontWeight: 700, color: "white", textShadow }}>
+              {activity.name}
+            </div>
           )}
 
           <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
-            <span style={{ fontSize: 150, fontWeight: 700, color: "white", lineHeight: 1 }}>{distance.value}</span>
-            <span style={{ fontSize: 44, fontWeight: 700, color: "#a3a3a3" }}>{distance.unitLabel}</span>
+            <span style={{ fontSize: 150, fontWeight: 700, color: "white", lineHeight: 1, textShadow }}>
+              {heroValue}
+            </span>
+            <span style={{ fontSize: 44, fontWeight: 700, color: "#a3a3a3", textShadow }}>{heroUnit}</span>
           </div>
 
           {routeImg && (
@@ -202,26 +257,28 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
           )}
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 22,
-            borderTop: "2px solid rgba(255,255,255,0.12)",
-            paddingTop: 32,
-          }}
-        >
-          {statRows.map((row, i) => (
-            <div key={i} style={{ display: "flex", gap: 32 }}>
-              {row.map((s) => (
-                <div key={s.label} style={{ display: "flex", flexDirection: "column", width: 288 }}>
-                  <span style={{ fontSize: 36, fontWeight: 700, color: "white" }}>{s.value}</span>
-                  <span style={{ fontSize: 20, color: "#a3a3a3" }}>{s.label}</span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
+        {statItems.length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 22,
+              borderTop: `2px solid ${transparent ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.12)"}`,
+              paddingTop: 32,
+            }}
+          >
+            {statRows.map((row, i) => (
+              <div key={i} style={{ display: "flex", gap: 32 }}>
+                {row.map((s) => (
+                  <div key={s.label} style={{ display: "flex", flexDirection: "column", width: 288 }}>
+                    <span style={{ fontSize: 36, fontWeight: 700, color: "white", textShadow }}>{s.value}</span>
+                    <span style={{ fontSize: 20, color: "#a3a3a3", textShadow }}>{s.label}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     ),
     {

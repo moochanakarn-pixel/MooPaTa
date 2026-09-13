@@ -21,6 +21,7 @@ import { ComparisonCard, PersonalRecordBadges } from "./comparison";
 import { DeleteActivityButton } from "./delete-activity-button";
 import { DetailPanel } from "./detail-panel";
 import { RouteSketch } from "./route-sketch";
+import { ShareActivityButton } from "./share-activity-button";
 
 function Stat({ label, value }: { label: string; value: string }) {
   if (value === "-") return null;
@@ -102,22 +103,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
             </Link>
           )}
           <DeleteActivityButton activityId={activity.id} />
-          <a
-            href={`/api/share/${activity.id}`}
-            download
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#fc4c02] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#e04402]"
-          >
-            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-              <path
-                d="M10 3v10m0 0 3.5-3.5M10 13l-3.5-3.5M4 15v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            แชร์
-          </a>
+          <ShareActivityButton activityId={activity.id} />
         </div>
       </div>
 

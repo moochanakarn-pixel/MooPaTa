@@ -203,7 +203,8 @@ InBody) — 2 อันหลังลิงก์ไป `/dashboard/nutrition?q
 achievements, activity detail) เข้าถึงผ่านลิงก์จากหน้าแรกเท่านั้น
 
 ### 4. Share cards (Satori/`next/og`)
-- `src/app/api/share/{daily-summary,nutrition,period}/route.tsx` — สร้างรูปสรุปแชร์
+- `src/app/api/share/{daily-summary,nutrition,period,[id]}/route.tsx` — สร้างรูปสรุปแชร์
+  (`[id]` = การ์ดกิจกรรมเดี่ยว เปิดจากปุ่ม "แชร์" ที่หน้ารายละเอียดกิจกรรม)
 - สไตล์การ์ดร่วมกันอยู่ที่ `src/lib/share-card-styles.ts` (`cardStyle`, `rowCardStyle`, `titleStyle`,
   `iconCircleStyle`) — ใช้ทั้ง period/nutrition (โทนเข้มเดิม navy/green) และ daily-summary
 - ข้อจำกัดของ Satori ที่เจอแล้ว: ไม่รองรับ `conic-gradient()`, `justify-content: space-evenly`
@@ -220,6 +221,27 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     ในหน้า configurator ไม่ใช่จาก "วันนี้" เสมอไป** (`buildWeekDots` แยกจาก `buildDayCounts` ใน
     `src/lib/streak.ts` เพราะอันนั้น anchor ที่ "วันนี้" เสมอ ใช้กับ streak card/heatmap ในหน้า
     เชิงลึกที่เป็นปัจจุบันเท่านั้น — การ์ดนี้เลือกดูวันในอดีตได้ด้วยจาก date picker)
+- **การ์ดแชร์กิจกรรมเดี่ยว** (`/api/share/[id]/route.tsx`, ปุ่ม "แชร์" ที่หน้ารายละเอียดกิจกรรม เปิด
+  `ShareActivityButton` เป็น bottom sheet ให้เลือกก่อนดาวน์โหลด แทนที่จะดาวน์โหลดทันทีแบบเดิม):
+  - **`?bg=transparent`** — next/og คืน PNG แบบมี alpha channel ในตัวอยู่แล้ว (ไม่ต้องพึ่ง lib เพิ่ม)
+    แค่ไม่ set `background` บน div รากก็ได้ PNG โปร่งใส เอาไปวางทับรูปพื้นหลังอื่นต่อได้ (สไตล์เดียวกับ
+    "Transparent" template ของ Strava) — element ที่มีตัวอักษรทุกจุดต้องมี `textShadow` (ค่าคงที่
+    `0 2px 10px rgba(0,0,0,0.85)` ตอน transparent, `"none"` ตอนปกติ) กันอ่านไม่ออกเวลาไปทับรูปสว่าง ๆ
+    — **ห้าม set `textShadow: undefined`** (ต้องเป็น string เสมอ อย่างน้อย `"none"`) เจอแล้วว่า satori
+    (ที่ next/og ใช้ข้างใน) crash "Cannot read properties of undefined (reading 'toString')" ถ้า style
+    object มี key `textShadow` โผล่มาแต่ value เป็น `undefined` — error message ไม่บอกเลยว่าปัญหาอยู่ตรง
+    field ไหน กว่าจะรู้ต้องไล่ดูว่า mode ไหน error มีค่า string จริงถึงผ่าน
+  - **hero number ปรับตามประเภทกิจกรรม** — เดิม hero ใช้ระยะทางตายตัวเสมอ พังกับเวทเทรนนิ่ง/กิจกรรมที่
+    ไม่มีระยะทาง (โชว์ "0.00 กม." ที่ไม่มีความหมาย) ตอนนี้เช็ค `activity.distanceMeters` ก่อน ถ้าไม่มี
+    fallback ไปโชว์เวลาที่ใช้แทน (`h:mm` ถ้าเกิน 1 ชม., นาทีเฉย ๆ ถ้าไม่ถึง) — stat row ด้านล่างก็ทำ
+    แบบเดียวกัน (เดิม "เวลา"/"ความเร็วเฉลี่ย" ไม่มีเงื่อนไขเลย ทำให้เวทเทรนนิ่งโชว์ "-" ความเร็วเฉลี่ย
+    ที่ไม่มีความหมายเสมอ) ทุก stat เช็คว่ามีค่าจริงก่อนถึงจะใส่ และไม่ซ้ำกับตัวที่กลายเป็น hero ไปแล้ว —
+    ถ้า stat row ว่างทั้งหมด (เช่น เวทเทรนนิ่งที่ไม่ได้กรอกแคลอรี่/หัวใจ) ไม่ render แถบเส้นคั่นว่าง ๆ
+    ด้านล่างเลย
+  - **badge PR ท่าเวท** — ถ้ากิจกรรมนั้นมีท่าที่ทำ PR ใหม่ (เช็คจาก `getExerciseStats(userId)`,
+    `prActivityId === activity.id`) จะโชว์ badge "🏆 PR ชื่อท่า น้ำหนัก กก." ต่อจาก badge ระยะทาง/เพซ
+    เดิม — query `getExerciseStats` เฉพาะตอน `activity.exercises.length > 0` เท่านั้น (กิจกรรมส่วนใหญ่
+    ไม่มีท่าเวทเลย ไม่ต้อง query เปล่า ๆ)
 
 ### 5. อื่น ๆ
 - Activity pages: `/dashboard` (list), `/dashboard/activity/[id]` (detail), `/dashboard/log-activity`
