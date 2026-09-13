@@ -120,6 +120,32 @@ const QUICK_ACTIONS = [
       </>
     ),
   },
+  {
+    href: "/dashboard/nutrition?quick=photo",
+    label: "ถ่ายรูปติดตามรูปร่าง",
+    color: "text-cyan-400",
+    icon: (
+      <path
+        d="M4 7a1 1 0 0 1 1-1h1.5l1-1.5h5l1 1.5H15a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7Z M10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    ),
+  },
+  {
+    href: "/dashboard/nutrition?quick=inbody",
+    label: "บันทึกผลตรวจ InBody",
+    color: "text-fuchsia-400",
+    icon: (
+      <>
+        <circle cx="10" cy="8" r="4" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M8 8h4M10 6v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </>
+    ),
+  },
 ];
 
 // Fixed bottom navigation shared by every /dashboard/* page, matching the

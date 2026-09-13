@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseBodyCompositionText } from "@/lib/body-composition-import-parse";
@@ -50,9 +50,27 @@ BMR: 1592`;
 // once a scan has a body-fat%, src/lib/nutrition.ts automatically switches
 // from the plain weight-based BMR formula to Katch-McArdle for every
 // target shown across the app.
-export function BodyCompositionCard({ entries }: { entries: BodyCompositionEntry[] }) {
+export function BodyCompositionCard({
+  entries,
+  autoOpen = false,
+}: {
+  entries: BodyCompositionEntry[];
+  // Set from the [+] quick-action sheet's "บันทึกผลตรวจ InBody" shortcut
+  // (?quick=inbody) — forces the form open and scrolls to it immediately,
+  // rather than landing on the page and leaving the user to scroll down
+  // and find/expand this card themselves.
+  autoOpen?: boolean;
+}) {
   const router = useRouter();
-  const [showForm, setShowForm] = useState(entries.length === 0);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [showForm, setShowForm] = useState(entries.length === 0 || autoOpen);
+
+  useEffect(() => {
+    if (autoOpen) cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Only ever meant to fire once, right after landing from the shortcut —
+    // not on every re-render this component happens to go through.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [weightKg, setWeightKg] = useState("");
   const [bodyFatPercent, setBodyFatPercent] = useState("");
   const [skeletalMuscleMassKg, setSkeletalMuscleMassKg] = useState("");
@@ -145,7 +163,7 @@ export function BodyCompositionCard({ entries }: { entries: BodyCompositionEntry
   }
 
   return (
-    <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+    <div ref={cardRef} className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">

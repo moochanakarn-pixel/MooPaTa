@@ -111,7 +111,7 @@ function MacroBar({ proteinG, carbG, fatG }: { proteinG: number; carbG: number; 
   );
 }
 
-export default async function NutritionPage() {
+export default async function NutritionPage({ searchParams }: { searchParams: { quick?: string } }) {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
@@ -342,9 +342,9 @@ export default async function NutritionPage() {
 
       <WeightLogCard logs={weightLogs} />
 
-      <BodyCompositionCard entries={bodyCompositionEntries} />
+      <BodyCompositionCard entries={bodyCompositionEntries} autoOpen={searchParams.quick === "inbody"} />
 
-      <ProgressPhotosCard angles={progressPhotoAngles} />
+      <ProgressPhotosCard angles={progressPhotoAngles} autoOpenAngle={searchParams.quick === "photo" ? "FRONT" : null} />
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <p className="mb-4 text-center text-xs text-neutral-500">แคลอรี่วันนี้</p>

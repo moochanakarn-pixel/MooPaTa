@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PHOTO_ANGLE_LABEL, type PhotoAngle } from "@/lib/progress-photo-types";
 import { PoseGuideCamera } from "./pose-guide-camera";
@@ -25,14 +25,31 @@ function formatDate(ms: number): string {
 // both possible. Files never touch /public; they're written to a private
 // uploads/ dir and only ever read back through the auth-gated
 // /api/progress-photo/[id] route (see src/lib/progress-photo-storage.ts).
-export function ProgressPhotosCard({ angles }: { angles: ProgressPhotoAngleState[] }) {
+export function ProgressPhotosCard({
+  angles,
+  autoOpenAngle = null,
+}: {
+  angles: ProgressPhotoAngleState[];
+  // Set from the [+] quick-action sheet's "ถ่ายรูปติดตามรูปร่าง" shortcut
+  // (?quick=photo) — opens the pose-guide camera immediately for this angle
+  // instead of landing on the page and leaving the user to scroll down and
+  // tap a thumbnail themselves.
+  autoOpenAngle?: PhotoAngle | null;
+}) {
   const router = useRouter();
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const [uploading, setUploading] = useState<PhotoAngle | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [cameraAngle, setCameraAngle] = useState<PhotoAngle | null>(null);
+  const [cameraAngle, setCameraAngle] = useState<PhotoAngle | null>(autoOpenAngle);
   const fileInputs = useRef<Partial<Record<PhotoAngle, HTMLInputElement | null>>>({});
+
+  useEffect(() => {
+    if (autoOpenAngle) cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Only ever meant to fire once, right after landing from the shortcut.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleFile(angle: PhotoAngle, file: File) {
     setError(null);
@@ -70,7 +87,7 @@ export function ProgressPhotosCard({ angles }: { angles: ProgressPhotoAngleState
   const anglesWithAnyPhoto = angles.filter((a) => a.entries.length >= 1);
 
   return (
-    <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+    <div ref={cardRef} className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
       <h2 className="mb-1 font-medium">รูปติดตามรูปร่าง</h2>
       <p className="mb-4 text-xs text-neutral-500">
         ถ่ายรูปด้านหน้า/ข้าง/หลัง เพื่อดูความเปลี่ยนแปลงย้อนหลังได้ — เก็บส่วนตัว ไม่มีใครเห็นนอกจากคุณ

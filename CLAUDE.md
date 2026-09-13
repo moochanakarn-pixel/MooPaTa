@@ -195,7 +195,11 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
 ### 3. Bottom nav (`src/app/dashboard/bottom-nav.tsx`)
 4 แท็บ: หน้าแรก (`/dashboard`) / ไดอารี่ (`/dashboard/food`) / เชิงลึก (`/dashboard/nutrition`,
 ครอบคลุม `/dashboard/knowledge` ด้วย) / บัญชี (`/dashboard/settings`) + ปุ่ม [+] กลางเปิด sheet
-ทางลัด (เพิ่มอาหาร/บันทึกกิจกรรม/อาหารเสริม/บันทึกน้ำหนัก) หน้าที่ไม่มีแท็บของตัวเอง (records, compare,
+ทางลัด 6 อัน (เพิ่มอาหาร/บันทึกกิจกรรม/อาหารเสริม/บันทึกน้ำหนัก/ถ่ายรูปติดตามรูปร่าง/บันทึกผลตรวจ
+InBody) — 2 อันหลังลิงก์ไป `/dashboard/nutrition?quick=photo|inbody`: หน้า nutrition อ่าน
+`searchParams.quick` แล้วส่ง `autoOpenAngle="FRONT"`/`autoOpen` ลงไปให้ `ProgressPhotosCard`/
+`BodyCompositionCard` เปิดกล้อง (หรือฟอร์ม) ให้เองทันทีพร้อม scroll ไปหาเลย ไม่ต้องกดหาการ์ดเอง
+เหมือนเข้าหน้าเชิงลึกแบบธรรมดา หน้าที่ไม่มีแท็บของตัวเอง (records, compare,
 achievements, activity detail) เข้าถึงผ่านลิงก์จากหน้าแรกเท่านั้น
 
 ### 4. Share cards (Satori/`next/og`)
