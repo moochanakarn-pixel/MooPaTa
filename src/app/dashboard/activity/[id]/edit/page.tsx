@@ -24,7 +24,7 @@ export default async function EditActivityPage({ params }: { params: { id: strin
       where: { id: params.id },
       include: { exercises: { orderBy: { order: "asc" } } },
     }),
-    getExerciseStats(userId),
+    getExerciseStats(userId, params.id),
     db.user.findUnique({ where: { id: userId }, select: { weightKg: true } }),
   ]);
   if (!activity || activity.userId !== userId || activity.provider !== "MANUAL") notFound();

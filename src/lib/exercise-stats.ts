@@ -26,9 +26,19 @@ export interface ExerciseStat {
 // all of it is cheap, and capping it would make an exercise done long ago
 // look like it had never been logged at all instead of correctly showing
 // "last time: 8 months ago."
-export async function getExerciseStats(userId: string): Promise<ExerciseStat[]> {
+//
+// `excludeActivityId` — pass the activity currently being edited so its own
+// rows don't count as "history." Without this, editing the most recent (or
+// only) session of a given exercise name would fold that very row into
+// `latest`/`prActivityId`, and the edit form's "ครั้งก่อน" hint would show
+// the row's own current values as if they were a genuinely previous
+// session — the numbers are technically accurate but self-referential and
+// misleading in that one spot. records/achievements pages call this
+// without the param since they want every row, edit-only history hints
+// don't.
+export async function getExerciseStats(userId: string, excludeActivityId?: string): Promise<ExerciseStat[]> {
   const rows = await db.exercise.findMany({
-    where: { activity: { userId } },
+    where: { activity: { userId }, ...(excludeActivityId ? { activityId: { not: excludeActivityId } } : {}) },
     orderBy: { activity: { startedAt: "asc" } },
     select: { name: true, sets: true, reps: true, weightKg: true, activityId: true, activity: { select: { startedAt: true } } },
   });

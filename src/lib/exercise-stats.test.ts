@@ -78,6 +78,20 @@ describe("getExerciseStats", () => {
     findManyMock.mockResolvedValue([]);
     expect(await getExerciseStats("u1")).toEqual([]);
   });
+
+  it("passes excludeActivityId through to the query, so an activity being edited never counts as its own history", async () => {
+    findManyMock.mockResolvedValue([]);
+    await getExerciseStats("u1", "a2");
+    const whereArg = findManyMock.mock.calls[0][0].where;
+    expect(whereArg.activityId).toEqual({ not: "a2" });
+  });
+
+  it("omits the where clause's activityId filter entirely when no excludeActivityId is given", async () => {
+    findManyMock.mockResolvedValue([]);
+    await getExerciseStats("u1");
+    const whereArg = findManyMock.mock.calls[0][0].where;
+    expect(whereArg.activityId).toBeUndefined();
+  });
 });
 
 describe("getTotalLiftVolumeKg", () => {
