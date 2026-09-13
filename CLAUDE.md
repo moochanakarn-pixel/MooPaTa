@@ -361,15 +361,30 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
    (local) — **production ใช้ `npx prisma migrate deploy` เท่านั้น อย่าลืมรันก่อน/พร้อมกับ deploy
    โค้ดใหม่ทุกครั้งที่มี migration ใหม่ ไม่งั้นจะเจอ error แบบ `column ... does not exist`**
 2. `npx tsc --noEmit` แล้ว `npm run build` ให้ผ่านทั้งคู่ก่อน
-3. ถ้าเทสฟีเจอร์จริง: seed user/ข้อมูลทดสอบผ่าน Prisma ตรง ๆ, มินต์ session JWT ด้วย `jose`'s
+3. `npm run test` (Vitest, `vitest.config.mts`) — unit test สำหรับ logic ล้วน ๆ ที่ไม่ต้องพึ่ง DB/
+   Next.js runtime: `src/lib/*.test.ts` ครอบคลุม nutrition calc, exercise-stats (mock `db` ผ่าน
+   `vi.mock("./db", ...)` ไม่ต้องต่อ DB จริง), ตัวแปลงข้อความ AI-import ทั้ง 3 ตัว (activity/meal/
+   body-composition — มี regression test เฉพาะบั๊ก comma-thousands ที่เจอมาแล้ว 2 รอบ), format.ts,
+   calorie-estimate, achievements, activity-validation, pr-progression, streak — รันเร็ว (~1 วิ)
+   ควรรันทุกครั้งที่แก้ไฟล์พวกนี้ก่อนจะไปเทสมือรอบใหญ่ต่อ **แต่ไม่ได้แทนที่ข้อ 4 ด้านล่าง** — เทสพวกนี้
+   คุม logic ล้วน ๆ เท่านั้น ไม่ครอบคลุม DB query จริง/UI จริง/next/og render จริง (เช่น บั๊ก
+   `textShadow: undefined` ที่ทำ satori crash ในการ์ดแชร์ก็ไม่มีทางจับได้จาก unit test แบบนี้ ต้องเทส
+   มือแบบข้อ 4 เท่านั้นถึงจะเจอ) — ไฟล์เทสใหม่วางคู่กับไฟล์จริงเสมอ (`foo.ts` + `foo.test.ts`
+   directory เดียวกัน) ไม่มี `tests/` แยก
+4. ถ้าเทสฟีเจอร์จริง: seed user/ข้อมูลทดสอบผ่าน Prisma ตรง ๆ, มินต์ session JWT ด้วย `jose`'s
    `SignJWT` + `SESSION_SECRET` (**อย่าลืม strip เครื่องหมาย `"` ออกจากค่าใน `.env` ก่อน** ตามที่เขียนไว้
    ด้านบน) แล้ว curl/Playwright ยิงเข้าเซิร์ฟเวอร์ที่รันด้วย `npm run start` (ใช้ `fuser -k 3000/tcp`
    เคลียร์พอร์ตก่อนถ้าจำเป็น) ตรวจผลทั้งจาก HTML ที่ได้และ query ตรงจาก Prisma
-4. เก็บกวาดข้อมูลทดสอบ + ไฟล์ scratch ทิ้งให้หมดก่อน commit, หยุด dev server/DB
-5. Commit (มี attribution footer ตามที่ session กำหนด), push ไปยัง branch ที่ทำงานอยู่ — ถ้า push
+5. เก็บกวาดข้อมูลทดสอบ + ไฟล์ scratch ทิ้งให้หมดก่อน commit, หยุด dev server/DB
+6. Commit (มี attribution footer ตามที่ session กำหนด), push ไปยัง branch ที่ทำงานอยู่ — ถ้า push
    โดน reject ให้ `git fetch` + `git rebase` ก่อน push ใหม่ (ผู้ใช้บางทีก็ push เข้า remote branch เอง)
 
 ## หมายเหตุอื่นที่มีประโยชน์
+- **`vitest.config.mts` ต้องเป็น `.mts` ไม่ใช่ `.ts`** — `package.json` ไม่มี `"type": "module"`
+  (ทั้งโปรเจกต์เป็น CommonJS by default) ถ้าตั้งชื่อ `.ts` เฉย ๆ vitest จะพยายาม `require()` ไฟล์ config
+  ที่ import `vite-tsconfig-paths` (ESM-only package) เข้ามา แล้ว crash ตั้งแต่ยังไม่เริ่มรันเทสเลย
+  ("ESM file cannot be loaded by `require`") เปลี่ยนนามสกุลเป็น `.mts` ให้ Node/Vite โหลดเป็น ESM ตรง ๆ
+  แก้ปัญหานี้ได้ทันที
 - Deploy จริงอยู่บน **Windows Server** ผ่าน `nssm` (`D:\Projectphp\MooPaTa`, service ชื่อ `MooPaTa`)
   — คนละ workflow กับ dev/test ที่นี่ (Linux) ดู `DEPLOY-WINDOWS.md` สำหรับขั้นตอน deploy ฉบับเต็ม
 - ทุกอย่างในแอพเป็นภาษาไทย (UI text) — comment ในโค้ดเป็นอังกฤษเป็นหลัก อธิบาย "ทำไม" ไม่ใช่ "ทำอะไร"
