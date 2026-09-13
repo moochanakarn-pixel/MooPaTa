@@ -8,16 +8,23 @@ const BG_OPTIONS = [
 ] as const;
 type Bg = (typeof BG_OPTIONS)[number]["value"];
 
+const STYLE_OPTIONS = [
+  { value: "grid", label: "กริดสถิติ" },
+  { value: "hero", label: "ตัวเลขเด่น" },
+] as const;
+type Style = (typeof STYLE_OPTIONS)[number]["value"];
+
 // A small sheet in front of the plain "download the PNG" link this replaced
-// — lets the user preview & pick a transparent background (see
-// src/app/api/share/[id]/route.tsx's ?bg=transparent) before saving, so a
+// — lets the user preview & pick a card style + transparent background (see
+// src/app/api/share/[id]/route.tsx's ?style/?bg) before saving, so a
 // story/reel background photo can go underneath it instead of the card
 // always carrying its own dark backdrop.
 export function ShareActivityButton({ activityId }: { activityId: string }) {
   const [open, setOpen] = useState(false);
   const [bg, setBg] = useState<Bg>("card");
+  const [style, setStyle] = useState<Style>("grid");
 
-  const href = `/api/share/${activityId}?bg=${bg}`;
+  const href = `/api/share/${activityId}?bg=${bg}&style=${style}`;
 
   // Same debounce-then-swap pattern as summary-configurator.tsx's preview —
   // avoids re-running the actual next/og image generation on every click
@@ -60,6 +67,22 @@ export function ShareActivityButton({ activityId }: { activityId: string }) {
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-neutral-700" />
             <h2 className="mb-3 text-sm font-medium text-neutral-200">แชร์กิจกรรม</h2>
 
+            <p className="mb-1.5 text-xs text-neutral-500">สไตล์การ์ด</p>
+            <div className="mb-3 flex gap-2 rounded-xl bg-neutral-950 p-1">
+              {STYLE_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => setStyle(o.value)}
+                  className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition ${
+                    style === o.value ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+
+            <p className="mb-1.5 text-xs text-neutral-500">พื้นหลัง</p>
             <div className="mb-4 flex gap-2 rounded-xl bg-neutral-950 p-1">
               {BG_OPTIONS.map((o) => (
                 <button

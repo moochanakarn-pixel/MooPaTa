@@ -242,6 +242,12 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     `prActivityId === activity.id`) จะโชว์ badge "🏆 PR ชื่อท่า น้ำหนัก กก." ต่อจาก badge ระยะทาง/เพซ
     เดิม — query `getExerciseStats` เฉพาะตอน `activity.exercises.length > 0` เท่านั้น (กิจกรรมส่วนใหญ่
     ไม่มีท่าเวทเลย ไม่ต้อง query เปล่า ๆ)
+  - **`?style=hero|grid`** — สไตล์การ์ด 2 แบบเลือกได้จาก sheet เดียวกับ `?bg` ด้านบน (`ShareActivityButton`
+    มี toggle 2 อัน: สไตล์การ์ด + พื้นหลัง) — `grid` (ค่า default, เหมือนเดิมก่อนมี `style` param) คือ
+    กริดสถิติเต็ม + เส้นทาง (ถ้ามี) ชิดซ้ายทั้งหมด, `hero` คือการ์ดมินิมอลจัดกึ่งกลางทั้งการ์ด (badge/ชื่อ/
+    ตัวเลขหลัก/ตัวเลขรอง) โชว์แค่ hero number ใหญ่ขึ้น (180px แทน 150px) บวกสถิติรองไม่เกิน 2 ตัว
+    (`heroSubStats`, ตัดมาจาก `statItems` 2 ตัวแรก) ไม่มีกริดเต็ม ไม่มีเส้นทางเลย — ออกแบบให้ `grid` เป็น
+    การ์ดบันทึกละเอียด ส่วน `hero` เป็นการ์ดโพสต์เร็ว ๆ อ่านง่ายในแวบเดียว
 
 ### 5. อื่น ๆ
 - Activity pages: `/dashboard` (list), `/dashboard/activity/[id]` (detail), `/dashboard/log-activity`

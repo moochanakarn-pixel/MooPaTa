@@ -23,13 +23,22 @@ import { loadShareFonts } from "@/lib/share-fonts";
 // output supports alpha natively — nothing extra needed) so the card can be
 // dropped onto an Instagram/Line story over a photo instead of always
 // carrying its own backdrop, mirroring what Strava's own share sheet offers.
+//
+// ?style=hero switches from the default "grid" layout (full stat grid +
+// route sketch, left-aligned) to a minimal, centered card with just the hero
+// number and at most two supporting stats — no grid, no route. Two very
+// different use cases: grid for a detailed record of the activity, hero for
+// a quick centered flex that reads at a glance (closer to what most people
+// actually post to a story).
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const userId = await getSessionUserId();
   if (!userId) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const transparent = new URL(req.url).searchParams.get("bg") === "transparent";
+  const searchParams = new URL(req.url).searchParams;
+  const transparent = searchParams.get("bg") === "transparent";
+  const cardStyle = searchParams.get("style") === "hero" ? "hero" : "grid";
 
   const [user, activity] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
@@ -122,6 +131,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const statRows: { value: string; label: string }[][] = [];
   for (let i = 0; i < statItems.length; i += 3) statRows.push(statItems.slice(i, i + 3));
 
+  // style=hero shows at most 2 supporting numbers instead of the full grid
+  // above — just whichever second/third numbers matter most next to the
+  // hero, so the card stays glanceable instead of turning into a smaller
+  // version of the grid layout.
+  const heroSubStats = statItems.slice(0, 2);
+
   // A malformed/unsupported polyline shouldn't cost the user the whole
   // card — fall back to a routeless layout instead of a 500.
   let routeImg: string | null = null;
@@ -200,9 +215,21 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
         {/* Everything below the header centers together as one block in the
             remaining space, so the composition stays balanced whether or
-            not there's a route to draw. */}
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "center", gap: 28 }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            not there's a route to draw. Hero style additionally centers
+            everything horizontally too, instead of grid's left alignment —
+            the one visual choice that does the most to make it read as a
+            different, sparser card rather than just "grid with less stuff." */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            flex: 1,
+            justifyContent: "center",
+            alignItems: cardStyle === "hero" ? "center" : "stretch",
+            gap: 28,
+          }}
+        >
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: cardStyle === "hero" ? "center" : "flex-start" }}>
             <div
               style={{
                 display: "flex",
@@ -243,13 +270,32 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           )}
 
           <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
-            <span style={{ fontSize: 150, fontWeight: 700, color: "white", lineHeight: 1, textShadow }}>
+            <span
+              style={{
+                fontSize: cardStyle === "hero" ? 180 : 150,
+                fontWeight: 700,
+                color: "white",
+                lineHeight: 1,
+                textShadow,
+              }}
+            >
               {heroValue}
             </span>
             <span style={{ fontSize: 44, fontWeight: 700, color: "#a3a3a3", textShadow }}>{heroUnit}</span>
           </div>
 
-          {routeImg && (
+          {cardStyle === "hero" && heroSubStats.length > 0 && (
+            <div style={{ display: "flex", gap: 48, justifyContent: "center" }}>
+              {heroSubStats.map((s) => (
+                <div key={s.label} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <span style={{ fontSize: 40, fontWeight: 700, color: "white", textShadow }}>{s.value}</span>
+                  <span style={{ fontSize: 20, color: "#a3a3a3", textShadow }}>{s.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {cardStyle === "grid" && routeImg && (
             <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={routeImg} width={520} height={520} />
@@ -257,7 +303,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           )}
         </div>
 
-        {statItems.length > 0 && (
+        {cardStyle === "grid" && statItems.length > 0 && (
           <div
             style={{
               display: "flex",
