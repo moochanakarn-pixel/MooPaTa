@@ -8,7 +8,7 @@ import { isValidEmail, isValidPassword } from "@/lib/auth-validation";
 
 const VERIFY_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
-// Lets an existing (typically Strava-only) user add a fallback
+// Lets an existing (typically Google-only) user add a fallback
 // email+password login to their *same* account — same
 // emailVerifiedAt-gated flow as a fresh signup (see
 // /api/auth/signup and /api/auth/verify-email), just starting from an
@@ -37,10 +37,22 @@ export async function POST(req: NextRequest) {
   }
 
   const passwordHash = await hashPassword(password);
-  // Changing email always resets verification, even for the same user
-  // re-submitting a typo fix — an unverified address must never be
-  // treated as confirmed just because it used to be a different
+
+  // Re-submitting the exact email that's already verified on this same
+  // account means the user only wanted to change their password — the
+  // settings form pre-fills the email field with it for that reason.
+  // Skip the reset-and-reverify path in that case: forcing a re-verify on
+  // every password change would leave password login rejected as
+  // "unverified" until a fresh link is clicked, even though the address
+  // itself never changed. A genuinely different (or first-time) email
+  // always still resets verification below — an unverified address must
+  // never be treated as confirmed just because it used to be a different
   // (verified) one.
+  if (existing?.id === userId && existing.emailVerifiedAt !== null) {
+    await db.user.update({ where: { id: userId }, data: { passwordHash } });
+    return NextResponse.json({ ok: true, message: "เปลี่ยนรหัสผ่านเรียบร้อยแล้ว" });
+  }
+
   await db.user.update({ where: { id: userId }, data: { email, passwordHash, emailVerifiedAt: null } });
 
   const rawToken = await createAuthToken(userId, "VERIFY_EMAIL", VERIFY_TOKEN_TTL_MS);

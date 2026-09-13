@@ -18,7 +18,11 @@ function maskEmail(email: string): string {
 export function SetPasswordForm({ currentEmail, verified }: { currentEmail: string | null; verified: boolean }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(!currentEmail);
-  const [email, setEmail] = useState("");
+  // Pre-filled with the existing (verified or not) email — otherwise
+  // someone who just wants to change their password has to retype it from
+  // memory, and a typo there silently changes their account's login email
+  // instead of just its password.
+  const [email, setEmail] = useState(currentEmail ?? "");
   const [password, setPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
