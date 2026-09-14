@@ -214,7 +214,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             details" whose position is selectable. */}
         <div style={{ display: "flex" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={mascotLogo} width={72} height={72} style={{ borderRadius: 18 }} />
+          <img src={mascotLogo} width={96} height={96} style={{ borderRadius: 24 }} />
         </div>
 
         {/* Everything that makes up "the details" — badges, name, hero
@@ -303,7 +303,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
               {heroSubStats.map((s) => (
                 <div key={s.label} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                   <span style={{ fontSize: 40, fontWeight: 700, color: "white", textShadow }}>{s.value}</span>
-                  <span style={{ fontSize: 20, color: "#a3a3a3", textShadow }}>{s.label}</span>
+                  <span style={{ fontSize: 25, color: "#a3a3a3", textShadow }}>{s.label}</span>
                 </div>
               ))}
             </div>
@@ -335,7 +335,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                   {row.map((s) => (
                     <div key={s.label} style={{ display: "flex", flexDirection: "column", width: 288 }}>
                       <span style={{ fontSize: 36, fontWeight: 700, color: "white", textShadow }}>{s.value}</span>
-                      <span style={{ fontSize: 20, color: "#a3a3a3", textShadow }}>{s.label}</span>
+                      <span style={{ fontSize: 25, color: "#a3a3a3", textShadow }}>{s.label}</span>
                     </div>
                   ))}
                 </div>
