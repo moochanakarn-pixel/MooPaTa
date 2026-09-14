@@ -171,20 +171,6 @@ export async function GET(req: NextRequest) {
   const goalPct = user.monthlyGoalKm ? Math.max(0, Math.min(100, (monthDistanceM / 1000 / user.monthlyGoalKm) * 100)) : 0;
   const weekDots = needHeatmap ? buildWeekDots(weekFoodLogs.map((l) => l.loggedAt), date) : [];
 
-  // Self-uploaded avatar (avatarPath) takes priority for display over
-  // avatarUrl everywhere else in the app (see dashboard header) — same
-  // rule here. It's a private file (only ever served through the
-  // auth-gated GET /api/avatar route), so next/og can't just fetch it by
-  // URL like it does for a Google avatarUrl; read the bytes directly and
-  // embed as a data URI instead.
-  let avatarSrc: string | null = null;
-  if (user.avatarPath) {
-    const buf = await readAvatarFile(user.avatarPath);
-    if (buf) avatarSrc = `data:${contentTypeForAvatarPath(user.avatarPath)};base64,${buf.toString("base64")}`;
-  } else if (user.avatarUrl) {
-    avatarSrc = user.avatarUrl;
-  }
-
   const dateLabel =
     (isToday ? "วันนี้ · " : "") +
     date.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
@@ -196,9 +182,26 @@ export async function GET(req: NextRequest) {
   ];
   const macroKcalTotal = macroShares.reduce((s, m) => s + m.kcal, 0) || 1;
 
+  // Self-uploaded avatar (avatarPath) takes priority for display over
+  // avatarUrl everywhere else in the app (see dashboard header) — same
+  // rule here. It's a private file (only ever served through the
+  // auth-gated GET /api/avatar route), so next/og can't just fetch it by
+  // URL like it does for a Google avatarUrl; read the bytes directly and
+  // embed as a data URI instead. Run alongside the font load rather than
+  // after it (readAvatarFile already swallows its own errors into `null`,
+  // so it never rejects and can't be mistaken for a font-load failure
+  // below) — same Promise.all pattern the single-activity share card
+  // ([id]/route.tsx) already uses for its own font + logo loads.
+  const avatarPromise: Promise<string | null> = user.avatarPath
+    ? readAvatarFile(user.avatarPath).then((buf) =>
+        buf ? `data:${contentTypeForAvatarPath(user.avatarPath!)};base64,${buf.toString("base64")}` : null
+      )
+    : Promise.resolve(user.avatarUrl ?? null);
+
   let fonts;
+  let avatarSrc: string | null;
   try {
-    fonts = await loadShareFonts();
+    [fonts, avatarSrc] = await Promise.all([loadShareFonts(), avatarPromise]);
   } catch (err) {
     console.error("Daily summary share card: font load failed", err);
     return new Response(

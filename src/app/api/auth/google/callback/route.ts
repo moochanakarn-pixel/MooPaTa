@@ -45,7 +45,20 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const { tokens, profile } = await exchangeGoogleCode(code);
+  // exchangeGoogleCode throws on a non-OK response from either Google
+  // endpoint (a reused/expired code from a double-submitted callback,
+  // a transient 5xx, ...) — every other failure path here redirects with
+  // an error code instead of letting the request crash into an unstyled
+  // Next.js 500, so this needs the same treatment.
+  let tokens: Awaited<ReturnType<typeof exchangeGoogleCode>>["tokens"];
+  let profile: Awaited<ReturnType<typeof exchangeGoogleCode>>["profile"];
+  try {
+    ({ tokens, profile } = await exchangeGoogleCode(code));
+  } catch {
+    return NextResponse.redirect(
+      linkUserId ? `${settingsUrl}?googleError=exchange_failed` : `${appUrl}/?error=google_exchange_failed`
+    );
+  }
   if (!tokens.providerAccountId) {
     return NextResponse.redirect(
       linkUserId ? `${settingsUrl}?googleError=no_profile` : `${appUrl}/?error=google_no_profile`

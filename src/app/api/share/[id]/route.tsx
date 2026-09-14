@@ -251,6 +251,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                 color: "#fc4c02",
                 fontSize: 26,
                 fontWeight: 700,
+                textShadow,
               }}
             >
               {activityTypeLabel(activity.type)}
@@ -268,6 +269,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                   color: "#f59e0b",
                   fontSize: 22,
                   fontWeight: 700,
+                  textShadow,
                 }}
               >
                 🏆 {b}
