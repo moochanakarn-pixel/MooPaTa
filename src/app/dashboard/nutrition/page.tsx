@@ -7,6 +7,7 @@ import { macrosForGrams } from "@/lib/food";
 import {
   applyActivityBonus,
   computeTargets,
+  explainCalorieTarget,
   isProfileComplete,
   GOAL_LABEL,
   ACTIVITY_LEVEL_LABEL,
@@ -367,6 +368,15 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
         {targets.usedBodyComposition && (
           <p className="mt-2 text-center text-[11px] text-violet-400">คำนวณจากผลตรวจ InBody ล่าสุด (Katch-McArdle)</p>
         )}
+
+        {/* explainCalorieTarget() plugs this user's own TDEE/goal/rate into
+            the same formula the knowledge page (/dashboard/knowledge)
+            explains in the abstract — so someone whose goal isn't a deficit
+            (คงน้ำหนัก/เพิ่มน้ำหนัก) sees exactly why their own number is
+            what it is, not just a generic "ลดน้ำหนัก"-flavored explanation. */}
+        <p className="mt-3 text-center text-xs leading-relaxed text-neutral-500">
+          {explainCalorieTarget(profile, baseTargets)}
+        </p>
 
         <div className="mt-5 space-y-2 border-t border-neutral-800 pt-4 text-xs">
           <div className="flex items-center justify-between">

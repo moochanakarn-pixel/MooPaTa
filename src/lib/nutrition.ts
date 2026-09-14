@@ -198,6 +198,47 @@ export function computeTargets(
   };
 }
 
+function th(n: number): string {
+  return Math.round(n).toLocaleString("th-TH");
+}
+
+// A one-paragraph explanation of *this user's own* calorie target, plugging
+// their real TDEE/goal/rate into a sentence instead of leaving them to do
+// that substitution themselves against the generic formulas on the
+// knowledge page (/dashboard/knowledge) — same numbers, same formulas,
+// just written out for the person actually looking at them. Recomputes
+// dailyDelta/rawTarget itself (cheap, pure, deterministic from `p` and
+// `targets.tdee`) rather than having computeTargets return them, since
+// they're presentation detail nothing else in the app needs.
+export function explainCalorieTarget(p: NutritionProfile, targets: NutritionTargets): string {
+  const tdee = targets.tdee;
+
+  if (p.goal === "MAINTAIN") {
+    return `TDEE ของคุณคือ ${th(tdee)} kcal/วัน — เป้าหมายตอนนี้คือ "คงน้ำหนัก" เป้าหมายแคลอรี่เลยเท่ากับ TDEE พอดี ไม่ต้องขาดดุลหรือเกินดุลเลย`;
+  }
+
+  const rate = p.goalRateKgPerWeek ?? DEFAULT_RATE_KG_PER_WEEK;
+  const dailyDelta = (rate * KCAL_PER_KG_FAT) / 7;
+  const isLose = p.goal === "LOSE";
+  const rawTarget = isLose ? tdee - dailyDelta : tdee + dailyDelta;
+  const goalVerb = isLose ? "ลดน้ำหนัก" : "เพิ่มน้ำหนัก";
+  const balanceVerb = isLose ? "ขาดดุล" : "เกินดุล";
+  const sign = isLose ? "−" : "+";
+
+  let sentence =
+    `TDEE ของคุณคือ ${th(tdee)} kcal/วัน — เป้าหมายตอนนี้คือ "${goalVerb} ${rate} กก./สัปดาห์" ` +
+    `ต้อง${balanceVerb}วันละ ${th(dailyDelta)} kcal (ไขมันในร่างกาย 1 กก. ≈ 7,700 kcal) ` +
+    `เป้าหมายแคลอรี่เลยเท่ากับ ${th(tdee)} ${sign} ${th(dailyDelta)} = ${th(rawTarget)} kcal`;
+
+  if (targets.targetCalories !== Math.round(rawTarget)) {
+    sentence +=
+      ` — แต่ค่านี้ต่ำกว่าขั้นต่ำที่ปลอดภัย (1,200 kcal/วัน) หรือต่ำกว่าที่โปรตีน+ไขมันเป้าหมายต้องใช้ ` +
+      `แอปเลยปรับขึ้นมาที่ ${th(targets.targetCalories)} kcal แทน`;
+  }
+
+  return sentence;
+}
+
 export type BmiCategory = "UNDER" | "NORMAL" | "OVER" | "OBESE1" | "OBESE2";
 
 export const BMI_CATEGORY_LABEL: Record<BmiCategory, string> = {

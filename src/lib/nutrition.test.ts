@@ -8,6 +8,7 @@ import {
   computeBmr,
   computeBmrKatchMcArdle,
   computeTargets,
+  explainCalorieTarget,
   FAT_PERCENT_MAX,
   FAT_PERCENT_MIN,
   isProfileComplete,
@@ -95,6 +96,59 @@ describe("computeTargets", () => {
     // allow small rounding slack since targetCalories itself can shift with the clamp
     expect(Math.abs(tooLow.fatG - floorFat)).toBeLessThanOrEqual(2);
     expect(Math.abs(tooHigh.fatG - ceilFat)).toBeLessThanOrEqual(2);
+  });
+});
+
+describe("explainCalorieTarget", () => {
+  it("says target = TDEE exactly for MAINTAIN, with no deficit/surplus math", () => {
+    const t = computeTargets(baseProfile);
+    const sentence = explainCalorieTarget(baseProfile, t);
+    expect(sentence).toContain(`${t.tdee.toLocaleString("th-TH")} kcal`);
+    expect(sentence).toContain("คงน้ำหนัก");
+    // No LOSE/GAIN-only phrasing ("ต้องขาดดุลวันละ"/"ต้องเกินดุลวันละ") — the
+    // sentence does mention "ไม่ต้องขาดดุลหรือเกินดุล" itself, so check for the
+    // absent daily-delta clause specifically rather than the bare words.
+    expect(sentence).not.toContain("ต้องขาดดุลวันละ");
+    expect(sentence).not.toContain("ต้องเกินดุลวันละ");
+  });
+
+  it("explains a LOSE goal as a daily deficit derived from the weekly rate", () => {
+    const losing: NutritionProfile = { ...baseProfile, goal: "LOSE", goalRateKgPerWeek: 0.5 };
+    const t = computeTargets(losing);
+    const sentence = explainCalorieTarget(losing, t);
+    // 0.5 kg/week * 7700 / 7 = 550 kcal/day
+    expect(sentence).toContain("550");
+    expect(sentence).toContain("ขาดดุล");
+    expect(sentence).not.toContain("เกินดุล");
+  });
+
+  it("explains a GAIN goal as a daily surplus derived from the weekly rate", () => {
+    const gaining: NutritionProfile = { ...baseProfile, goal: "GAIN", goalRateKgPerWeek: 0.25 };
+    const t = computeTargets(gaining);
+    const sentence = explainCalorieTarget(gaining, t);
+    // 0.25 kg/week * 7700 / 7 = 275 kcal/day
+    expect(sentence).toContain("275");
+    expect(sentence).toContain("เกินดุล");
+    expect(sentence).not.toContain("ขาดดุล");
+  });
+
+  it("mentions the safety-floor adjustment when the raw deficit target got clamped up", () => {
+    // 150kg * a very aggressive 3kg/week rate pushes the raw deficit target
+    // (TDEE - dailyDelta) below MIN_SAFE_CALORIES, so computeTargets floors
+    // it back up — the explanation should say so rather than silently
+    // showing a target that doesn't match the TDEE-minus-delta arithmetic.
+    const heavyLosing: NutritionProfile = { ...baseProfile, weightKg: 150, goal: "LOSE", goalRateKgPerWeek: 3 };
+    const t = computeTargets(heavyLosing);
+    const sentence = explainCalorieTarget(heavyLosing, t);
+    expect(sentence).toContain(t.targetCalories.toLocaleString("th-TH"));
+    expect(sentence).toContain("ปรับขึ้นมาที่");
+  });
+
+  it("says nothing about a floor adjustment when the raw target already stands", () => {
+    const losing: NutritionProfile = { ...baseProfile, goal: "LOSE", goalRateKgPerWeek: 0.5 };
+    const t = computeTargets(losing);
+    const sentence = explainCalorieTarget(losing, t);
+    expect(sentence).not.toContain("ปรับขึ้นมาที่");
   });
 });
 
