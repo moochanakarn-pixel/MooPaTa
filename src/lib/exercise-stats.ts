@@ -3,6 +3,7 @@ import { db } from "./db";
 export interface ExerciseSetSummary {
   reps: number;
   weightKg: number | null;
+  rpe: number | null;
 }
 
 export interface ExerciseStat {
@@ -65,6 +66,7 @@ export async function getExerciseStats(userId: string, excludeActivityId?: strin
     select: {
       reps: true,
       weightKg: true,
+      rpe: true,
       exercise: { select: { id: true, name: true, activityId: true, activity: { select: { startedAt: true } } } },
     },
   });
@@ -100,7 +102,7 @@ export async function getExerciseStats(userId: string, excludeActivityId?: strin
       stat.name = row.exercise.name;
       stat._latestExerciseId = row.exercise.id;
     }
-    stat.latestSets.push({ reps: row.reps, weightKg: row.weightKg });
+    stat.latestSets.push({ reps: row.reps, weightKg: row.weightKg, rpe: row.rpe });
 
     if (row.weightKg !== null && (stat.prWeightKg === null || row.weightKg > stat.prWeightKg)) {
       stat.prWeightKg = row.weightKg;

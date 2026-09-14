@@ -310,6 +310,12 @@ model Activity {
   kilojoules         Float?
   sufferScore        Int?
   calories           Float?
+  // 1-10 subjective exertion (RPE) for the session as a whole — the
+  // talk-test/breathlessness framing (Borg-style), distinct from the
+  // per-set reps-in-reserve RPE on ExerciseSet below. Meaningful for any
+  // activity type but entered manually or via AI-import (from a watch's
+  // own exertion readout) — no formula derives it in-app.
+  rpe                Int?
   kudosCount         Int?
   achievementCount   Int?
   prCount            Int?
@@ -365,6 +371,11 @@ model ExerciseSet {
   order    Int
   reps     Int
   weightKg Float?
+  // 1-10 subjective exertion (RPE) for this specific set, reps-in-reserve
+  // framing (10 = 0 reps left, 9 = ~1 left, ...) — a different scale than
+  // Activity.rpe's whole-session exertion, so kept as a separate field
+  // rather than reusing one meaning across both models.
+  rpe      Int?
 
   exerciseId String
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)

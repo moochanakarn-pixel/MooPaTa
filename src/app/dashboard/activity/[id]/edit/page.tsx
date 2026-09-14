@@ -41,11 +41,13 @@ export default async function EditActivityPage({ params }: { params: { id: strin
     avgHeartRate: activity.avgHeartRate !== null ? String(Math.round(activity.avgHeartRate)) : "",
     maxHeartRate: activity.maxHeartRate !== null ? String(Math.round(activity.maxHeartRate)) : "",
     calories: activity.calories !== null ? String(Math.round(activity.calories)) : "",
+    rpe: activity.rpe !== null ? String(activity.rpe) : "",
     exercises: activity.exercises.map((ex) => ({
       name: ex.name,
       sets: ex.sets.map((s) => ({
         reps: String(s.reps),
         weightKg: s.weightKg !== null ? String(s.weightKg) : "",
+        rpe: s.rpe !== null ? String(s.rpe) : "",
       })),
     })),
   };

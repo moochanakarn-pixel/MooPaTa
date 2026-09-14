@@ -18,8 +18,16 @@ const { getExerciseStats, getTotalLiftVolumeKg } = await import("./exercise-stat
 // belong to the same logged session (Exercise row) share `exerciseId` — a
 // pyramid/drop set is several calls to this with the same exerciseId and
 // different reps/weightKg.
-function set(exerciseId: string, name: string, reps: number, weightKg: number | null, startedAt: string, activityId: string) {
-  return { reps, weightKg, exercise: { id: exerciseId, name, activityId, activity: { startedAt: new Date(startedAt) } } };
+function set(
+  exerciseId: string,
+  name: string,
+  reps: number,
+  weightKg: number | null,
+  startedAt: string,
+  activityId: string,
+  rpe: number | null = null,
+) {
+  return { reps, weightKg, rpe, exercise: { id: exerciseId, name, activityId, activity: { startedAt: new Date(startedAt) } } };
 }
 
 beforeEach(() => {
@@ -48,8 +56,8 @@ describe("getExerciseStats", () => {
     ]);
     const [stat] = await getExerciseStats("u1");
     expect(stat.latestSets).toEqual([
-      { reps: 10, weightKg: 45 },
-      { reps: 8, weightKg: 45 },
+      { reps: 10, weightKg: 45, rpe: null },
+      { reps: 8, weightKg: 45, rpe: null },
     ]);
     expect(stat.latestAtMs).toBe(new Date("2026-02-01").getTime());
   });
@@ -62,9 +70,21 @@ describe("getExerciseStats", () => {
     ]);
     const [stat] = await getExerciseStats("u1");
     expect(stat.latestSets).toEqual([
-      { reps: 15, weightKg: 5 },
-      { reps: 14, weightKg: 5 },
-      { reps: 10, weightKg: 4 },
+      { reps: 15, weightKg: 5, rpe: null },
+      { reps: 14, weightKg: 5, rpe: null },
+      { reps: 10, weightKg: 4, rpe: null },
+    ]);
+  });
+
+  it("carries each set's own RPE through to latestSets", async () => {
+    findManyMock.mockResolvedValue([
+      set("ex1", "เบนช์เพรส", 15, 5, "2026-01-01", "a1", 8),
+      set("ex1", "เบนช์เพรส", 10, 4, "2026-01-01", "a1", 9),
+    ]);
+    const [stat] = await getExerciseStats("u1");
+    expect(stat.latestSets).toEqual([
+      { reps: 15, weightKg: 5, rpe: 8 },
+      { reps: 10, weightKg: 4, rpe: 9 },
     ]);
   });
 

@@ -8,7 +8,8 @@ describe("parseActivityText", () => {
 ระยะทาง: 7.2
 แคลอรี่: 420
 หัวใจเฉลี่ย: 145
-หัวใจสูงสุด: 172`;
+หัวใจสูงสุด: 172
+ระดับความเหนื่อย: 7`;
     const parsed = parseActivityText(text);
     expect(parsed).toMatchObject({
       type: "Run",
@@ -17,7 +18,12 @@ describe("parseActivityText", () => {
       calories: 420,
       avgHeartRate: 145,
       maxHeartRate: 172,
+      rpe: 7,
     });
+  });
+
+  it("also matches the English 'RPE' keyword", () => {
+    expect(parseActivityText("RPE: 6").rpe).toBe(6);
   });
 
   it("does not truncate a comma-thousands calorie figure at the comma (regression)", () => {

@@ -14,6 +14,13 @@ export interface ParsedActivity {
   calories: number | null;
   avgHeartRate: number | null;
   maxHeartRate: number | null;
+  // Whole-session RPE (Rate of Perceived Exertion, Borg/talk-test framing,
+  // 1-10) — a watch's own summary screen often shows this directly, same
+  // zero-formula "just read it off the source" approach as the other
+  // fields here. Distinct from per-set weight-training RPE (reps-in-reserve
+  // framing), which this parser doesn't attempt to read — see
+  // parseExerciseLine's comment.
+  rpe: number | null;
   exercises: { name: string; sets: number; reps: number; weightKg: number | null }[];
 }
 
@@ -38,6 +45,11 @@ const FIELD_MATCHERS: { key: Exclude<keyof ParsedActivity, "type" | "exercises">
   { key: "durationMin", test: (l) => /ระยะเวลา|duration/i.test(l) },
   { key: "distanceKm", test: (l) => /ระยะทาง|distance/i.test(l) },
   { key: "calories", test: (l) => /แคลอรี่|แคลอรี|calor/i.test(l) },
+  // Whole-session RPE — checked after calories/heart-rate/etc. so a line
+  // that happens to also mention those keywords already got claimed first;
+  // in practice the prompt asks for RPE on its own line so this rarely
+  // matters in ordering, but kept last since it's the newest field.
+  { key: "rpe", test: (l) => /ระดับความเหนื่อย|^rpe|\brpe\b/i.test(l) },
 ];
 
 // "HH:MM:SS" duration text (Huawei/Apple Health's own format) -> total
@@ -104,6 +116,7 @@ export function parseActivityText(text: string): ParsedActivity {
     calories: null,
     avgHeartRate: null,
     maxHeartRate: null,
+    rpe: null,
     exercises: [],
   };
 

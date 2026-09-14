@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { optionalNonNegative, parseExercises } from "./activity-validation";
+import { optionalNonNegative, optionalRpe, parseExercises } from "./activity-validation";
 
 describe("parseExercises", () => {
   it("returns an empty array when the field wasn't sent at all", () => {
@@ -22,8 +22,8 @@ describe("parseExercises", () => {
       {
         name: "สควอท",
         sets: [
-          { reps: 8, weightKg: 60 },
-          { reps: 8, weightKg: 60 },
+          { reps: 8, weightKg: 60, rpe: null },
+          { reps: 8, weightKg: 60, rpe: null },
         ],
       },
     ]);
@@ -41,15 +41,31 @@ describe("parseExercises", () => {
       },
     ]);
     expect(result![0].sets).toEqual([
-      { reps: 15, weightKg: 5 },
-      { reps: 14, weightKg: 5 },
-      { reps: 10, weightKg: 4 },
+      { reps: 15, weightKg: 5, rpe: null },
+      { reps: 14, weightKg: 5, rpe: null },
+      { reps: 10, weightKg: 4, rpe: null },
     ]);
   });
 
   it("leaves weightKg null for a bodyweight set", () => {
     expect(parseExercises([{ name: "แพลงก์", sets: [{ reps: 1 }] }])).toEqual([
-      { name: "แพลงก์", sets: [{ reps: 1, weightKg: null }] },
+      { name: "แพลงก์", sets: [{ reps: 1, weightKg: null, rpe: null }] },
+    ]);
+  });
+
+  it("keeps each set's own RPE", () => {
+    const result = parseExercises([
+      {
+        name: "เบนช์เพรส",
+        sets: [
+          { reps: 15, weightKg: 5, rpe: 8 },
+          { reps: 10, weightKg: 4, rpe: 9 },
+        ],
+      },
+    ]);
+    expect(result![0].sets).toEqual([
+      { reps: 15, weightKg: 5, rpe: 8 },
+      { reps: 10, weightKg: 4, rpe: 9 },
     ]);
   });
 
@@ -60,6 +76,8 @@ describe("parseExercises", () => {
     expect(parseExercises([{ name: "ok", sets: [{ reps: 0 }] }])).toBeNull(); // reps must be > 0
     expect(parseExercises([{ name: "ok", sets: Array.from({ length: 51 }, () => ({ reps: 8 })) }])).toBeNull(); // sets capped at 50
     expect(parseExercises([{ name: "ok", sets: [{ reps: 8, weightKg: "not a number" }] }])).toBeNull();
+    expect(parseExercises([{ name: "ok", sets: [{ reps: 8, rpe: 11 }] }])).toBeNull(); // rpe must be 1-10
+    expect(parseExercises([{ name: "ok", sets: [{ reps: 8, rpe: 0 }] }])).toBeNull();
     expect(parseExercises([{ name: "ok", sets: "not an array" }])).toBeNull();
   });
 
@@ -88,5 +106,28 @@ describe("optionalNonNegative", () => {
     expect(optionalNonNegative("abc")).toBeNaN();
     expect(optionalNonNegative(-5)).toBeNaN(); // provided, but negative isn't allowed
     expect(optionalNonNegative("-5")).toBeNaN();
+  });
+});
+
+describe("optionalRpe", () => {
+  it("returns null when the value wasn't provided at all", () => {
+    expect(optionalRpe(undefined)).toBeNull();
+    expect(optionalRpe(null)).toBeNull();
+    expect(optionalRpe("")).toBeNull();
+    expect(optionalRpe("   ")).toBeNull();
+  });
+
+  it("returns the number when provided and within 1-10", () => {
+    expect(optionalRpe(8)).toBe(8);
+    expect(optionalRpe("8")).toBe(8);
+    expect(optionalRpe(1)).toBe(1);
+    expect(optionalRpe(10)).toBe(10);
+  });
+
+  it("signals 'provided but invalid' as NaN for out-of-range or non-integer values", () => {
+    expect(optionalRpe(0)).toBeNaN(); // below 1
+    expect(optionalRpe(11)).toBeNaN(); // above 10
+    expect(optionalRpe(8.5)).toBeNaN(); // not an integer
+    expect(optionalRpe("abc")).toBeNaN();
   });
 });

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
-import { INTENSITIES, MAX_DURATION_MIN, optionalNonNegative, parseExercises } from "@/lib/activity-validation";
+import { INTENSITIES, MAX_DURATION_MIN, optionalNonNegative, optionalRpe, parseExercises } from "@/lib/activity-validation";
 
 // Logs an activity Strava doesn't track (football, badminton, ...) into the
 // same Activity table synced activities use — provider=MANUAL with a random
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
   const avgHeartRate = optionalNonNegative(body.avgHeartRate);
   const maxHeartRate = optionalNonNegative(body.maxHeartRate);
   const calories = optionalNonNegative(body.calories);
+  const rpe = optionalRpe(body.rpe);
   const exercises = parseExercises(body.exercises);
 
   if (!type) {
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
   if (Number.isNaN(startedAt.getTime())) {
     return NextResponse.json({ error: "invalid_date" }, { status: 400 });
   }
-  if ([distanceKm, avgHeartRate, maxHeartRate, calories].some((n) => n !== null && Number.isNaN(n))) {
+  if ([distanceKm, avgHeartRate, maxHeartRate, calories, rpe].some((n) => n !== null && Number.isNaN(n))) {
     return NextResponse.json({ error: "invalid_optional_field" }, { status: 400 });
   }
   if (exercises === null) {
@@ -57,13 +58,14 @@ export async function POST(req: NextRequest) {
       avgHeartRate,
       maxHeartRate,
       calories,
+      rpe,
       raw: intensity ? { manualIntensity: intensity } : {},
       exercises: {
         create: exercises.map((ex, i) => ({
           name: ex.name,
           order: i,
           sets: {
-            create: ex.sets.map((s, j) => ({ order: j, reps: s.reps, weightKg: s.weightKg })),
+            create: ex.sets.map((s, j) => ({ order: j, reps: s.reps, weightKg: s.weightKg, rpe: s.rpe })),
           },
         })),
       },

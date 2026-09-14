@@ -173,6 +173,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
           value={activity.maxHeartRate ? `${Math.round(activity.maxHeartRate)} bpm` : "-"}
         />
         <Stat label="แคลอรี่" value={activity.calories ? `${Math.round(activity.calories)} kcal` : "-"} />
+        <Stat label="ระดับความเหนื่อย (RPE)" value={activity.rpe !== null ? `${activity.rpe}/10` : "-"} />
         <Stat label="เคเดนซ์เฉลี่ย" value={activity.avgCadence ? `${Math.round(activity.avgCadence)} rpm` : "-"} />
         <Stat label="กำลังเฉลี่ย" value={activity.avgWatts ? `${Math.round(activity.avgWatts)} W` : "-"} />
         <Stat label="พลังงาน" value={activity.kilojoules ? `${Math.round(activity.kilojoules)} kJ` : "-"} />
@@ -213,6 +214,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
                       <span className="text-neutral-500">เซ็ท {i + 1}</span>
                       <span className="tabular-nums text-neutral-300">
                         {s.reps} ครั้ง{s.weightKg !== null ? ` × ${s.weightKg} กก.` : ""}
+                        {s.rpe !== null ? ` (RPE ${s.rpe})` : ""}
                       </span>
                     </div>
                   ))}

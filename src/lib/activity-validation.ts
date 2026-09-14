@@ -12,6 +12,7 @@ export const MAX_SETS_PER_EXERCISE = 50;
 export interface ParsedSet {
   reps: number;
   weightKg: number | null;
+  rpe: number | null;
 }
 
 // Reps/weight used to be one aggregate pair per exercise (a single `sets`
@@ -46,9 +47,11 @@ export function parseExercises(value: unknown): ParsedExercise[] | null {
       const s = rawSet as Record<string, unknown>;
       const reps = Number(s.reps);
       const weightKg = optionalNonNegative(s.weightKg);
+      const rpe = optionalRpe(s.rpe);
       if (!Number.isInteger(reps) || reps <= 0 || reps > 1000) return null;
       if (weightKg !== null && Number.isNaN(weightKg)) return null;
-      sets.push({ reps, weightKg });
+      if (rpe !== null && Number.isNaN(rpe)) return null;
+      sets.push({ reps, weightKg, rpe });
     }
     parsed.push({ name, sets });
   }
@@ -66,4 +69,16 @@ export function optionalNonNegative(value: unknown): number | null {
       ? n
       : NaN // signal "provided but invalid" distinctly from "not provided"
     : null;
+}
+
+// RPE (Rate of Perceived Exertion), 1-10 integer — used both for a whole
+// session (Activity.rpe, Borg/talk-test breathlessness framing) and per set
+// (ExerciseSet.rpe, reps-in-reserve framing: 10 = none left, 9 = ~1 left,
+// ...). Different meaning at each call site, but the same 1-10 integer
+// shape, so one validator covers both.
+export function optionalRpe(value: unknown): number | null {
+  const provided = typeof value === "number" || (typeof value === "string" && value.trim() !== "");
+  if (!provided) return null;
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 1 && n <= 10 ? n : NaN;
 }

@@ -43,6 +43,7 @@ const AI_PROMPT_TEMPLATE = `อ่านค่าจากรูปสรุป�
 แคลอรี่: [kcal]
 หัวใจเฉลี่ย: [bpm]
 หัวใจสูงสุด: [bpm]
+ระดับความเหนื่อย: [RPE 1-10 ถ้ารูปมีบอกไว้]
 
 ถ้าเป็นเวทเทรนนิ่ง ให้ใส่รายการท่าต่อท้ายด้วย บรรทัดละท่า รูปแบบ "ชื่อท่า | เซ็ท | ครั้ง | น้ำหนัก(กก.)":
 ท่า:
@@ -57,6 +58,10 @@ interface SetRow {
   id: number;
   reps: string;
   weightKg: string;
+  // Reps-in-reserve framing (1-10) — see ExerciseSet.rpe's schema comment.
+  // Distinct from the whole-session `rpe` field below (Activity.rpe,
+  // Borg/talk-test framing).
+  rpe: string;
 }
 
 interface ExerciseRow {
@@ -67,7 +72,7 @@ interface ExerciseRow {
 
 let nextRowId = 1;
 function emptySetRow(): SetRow {
-  return { id: nextRowId++, reps: "12", weightKg: "" };
+  return { id: nextRowId++, reps: "12", weightKg: "", rpe: "" };
 }
 function emptyExerciseRow(): ExerciseRow {
   // Three sets by default — the common case — rather than starting from
@@ -77,10 +82,16 @@ function emptyExerciseRow(): ExerciseRow {
   return { id: nextRowId++, name: "", sets: [emptySetRow(), emptySetRow(), emptySetRow()] };
 }
 
-// Compact "15×5kg, 14×5kg, 10×4kg" summary for the "ครั้งก่อน" hint —
-// bodyweight sets (weightKg null) show as just "N ครั้ง" with no "×weight".
-function formatSetsCompact(sets: { reps: number; weightKg: number | null }[]): string {
-  return sets.map((s) => (s.weightKg !== null ? `${s.reps}×${s.weightKg}กก.` : `${s.reps}ครั้ง`)).join(", ");
+// Compact "15×5kg (RPE 8), 14×5kg (RPE 8), 10×4kg (RPE 9)" summary for the
+// "ครั้งก่อน" hint — bodyweight sets (weightKg null) show as just "N ครั้ง"
+// with no "×weight", and a set logged without RPE just omits that part.
+function formatSetsCompact(sets: { reps: number; weightKg: number | null; rpe: number | null }[]): string {
+  return sets
+    .map((s) => {
+      const base = s.weightKg !== null ? `${s.reps}×${s.weightKg}กก.` : `${s.reps}ครั้ง`;
+      return s.rpe !== null ? `${base} (RPE ${s.rpe})` : base;
+    })
+    .join(", ");
 }
 
 export interface LogActivityInitial {
@@ -93,7 +104,8 @@ export interface LogActivityInitial {
   avgHeartRate: string;
   maxHeartRate: string;
   calories: string;
-  exercises: { name: string; sets: { reps: string; weightKg: string }[] }[];
+  rpe: string;
+  exercises: { name: string; sets: { reps: string; weightKg: string; rpe: string }[] }[];
 }
 
 // Same form for both logging a new activity and editing an existing
@@ -125,6 +137,7 @@ export function LogActivityForm({
   const [avgHeartRate, setAvgHeartRate] = useState(initial?.avgHeartRate ?? "");
   const [maxHeartRate, setMaxHeartRate] = useState(initial?.maxHeartRate ?? "");
   const [calories, setCalories] = useState(initial?.calories ?? "");
+  const [rpe, setRpe] = useState(initial?.rpe ?? "");
   const [exercises, setExercises] = useState<ExerciseRow[]>(
     () =>
       initial?.exercises.map((e) => ({
@@ -182,13 +195,16 @@ export function LogActivityForm({
     if (parsed.calories !== null) setCalories(String(parsed.calories));
     if (parsed.avgHeartRate !== null) setAvgHeartRate(String(parsed.avgHeartRate));
     if (parsed.maxHeartRate !== null) setMaxHeartRate(String(parsed.maxHeartRate));
+    if (parsed.rpe !== null) setRpe(String(parsed.rpe));
     if (parsed.exercises.length > 0) {
       setExercises((rows) => [
         ...rows,
         // The AI-import table still gives one uniform reps/weight per
         // exercise (see activity-import-parse.ts) — expanded here into N
         // identical set rows, each individually editable afterward for
-        // anyone whose sets actually varied (a pyramid/drop set).
+        // anyone whose sets actually varied (a pyramid/drop set). Per-set
+        // RPE isn't part of that table either (same reasoning), so it
+        // starts blank on every expanded row.
         ...parsed.exercises.map((e) => ({
           id: nextRowId++,
           name: e.name,
@@ -196,6 +212,7 @@ export function LogActivityForm({
             id: nextRowId++,
             reps: String(e.reps),
             weightKg: e.weightKg !== null ? String(e.weightKg) : "",
+            rpe: "",
           })),
         })),
       ]);
@@ -208,6 +225,7 @@ export function LogActivityForm({
       parsed.calories !== null ||
       parsed.avgHeartRate !== null ||
       parsed.maxHeartRate !== null ||
+      parsed.rpe !== null ||
       parsed.exercises.length > 0;
     if (!gotAnything) {
       setImportNotice("อ่านค่าไม่ได้เลย ลองวางข้อความใหม่ หรือดูว่าตรงกับตัวอย่างมั้ย");
@@ -245,6 +263,7 @@ export function LogActivityForm({
         id: nextRowId++,
         reps: String(s.reps),
         weightKg: s.weightKg !== null ? String(s.weightKg) : "",
+        rpe: s.rpe !== null ? String(s.rpe) : "",
       })),
     });
   }
@@ -279,11 +298,13 @@ export function LogActivityForm({
         avgHeartRate: avgHeartRate.trim() || undefined,
         maxHeartRate: maxHeartRate.trim() || undefined,
         calories: calories.trim() || undefined,
+        rpe: rpe.trim() || undefined,
         exercises: namedExercises.map((r) => ({
           name: r.name.trim(),
           sets: r.sets.map((s) => ({
             reps: Number(s.reps),
             weightKg: s.weightKg.trim() || undefined,
+            rpe: s.rpe.trim() || undefined,
           })),
         })),
       }),
@@ -336,7 +357,7 @@ export function LogActivityForm({
           <textarea
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
-            placeholder={`ประเภท: วิ่ง\nระยะเวลา: 02:53:39\nระยะทาง: 5.2\nแคลอรี่: 350\nหัวใจเฉลี่ย: 130\nหัวใจสูงสุด: 165`}
+            placeholder={`ประเภท: วิ่ง\nระยะเวลา: 02:53:39\nระยะทาง: 5.2\nแคลอรี่: 350\nหัวใจเฉลี่ย: 130\nหัวใจสูงสุด: 165\nระดับความเหนื่อย: 7`}
             rows={7}
             className={`${INPUT_CLASS} resize-y font-mono text-xs`}
           />
@@ -451,6 +472,19 @@ export function LogActivityForm({
                 className={INPUT_CLASS}
               />
             </div>
+            <div>
+              <label className={LABEL_CLASS}>ระดับความเหนื่อย (RPE 1-10)</label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={rpe}
+                onChange={(e) => setRpe(e.target.value)}
+                placeholder="เช่น 7"
+                title="ระดับความเหนื่อยของกิจกรรมนี้โดยรวม (หายใจ/พูดคุยได้แค่ไหน) — คนละแบบกับ RPE รายเซ็ทของท่าเวทด้านล่าง"
+                className={INPUT_CLASS}
+              />
+            </div>
           </div>
         </div>
 
@@ -496,18 +530,21 @@ export function LogActivityForm({
                       </button>
                     </div>
                   )}
-                  {/* One row per set — reps/weight are independent per set
-                      (not one value applied to all of them), so a
-                      pyramid/drop set can be entered exactly as performed. */}
-                  <div className="mb-1 grid grid-cols-[1.75rem_1fr_1fr_1.25rem] gap-1.5 px-0.5">
+                  {/* One row per set — reps/weight/RPE are independent per
+                      set (not one value applied to all of them), so a
+                      pyramid/drop set can be entered exactly as performed.
+                      RPE here is reps-in-reserve framing (10 = 0 reps left)
+                      — see ExerciseSet.rpe's schema comment. */}
+                  <div className="mb-1 grid grid-cols-[1.5rem_1fr_1fr_2.75rem_1.25rem] gap-1 px-0.5">
                     <span className="text-center text-[10px] text-neutral-600">เซ็ท</span>
                     <span className="text-center text-[10px] text-neutral-600">ครั้ง</span>
                     <span className="text-center text-[10px] text-neutral-600">น้ำหนัก (กก.)</span>
+                    <span className="text-center text-[10px] text-neutral-600">RPE</span>
                     <span />
                   </div>
                   <div className="space-y-1.5">
                     {r.sets.map((s, i) => (
-                      <div key={s.id} className="grid grid-cols-[1.75rem_1fr_1fr_1.25rem] items-center gap-1.5">
+                      <div key={s.id} className="grid grid-cols-[1.5rem_1fr_1fr_2.75rem_1.25rem] items-center gap-1">
                         <span className="text-center text-xs text-neutral-500">{i + 1}</span>
                         <input
                           type="number"
@@ -524,6 +561,16 @@ export function LogActivityForm({
                           onChange={(e) => updateSetRow(r.id, s.id, { weightKg: e.target.value })}
                           placeholder="ไม่มี"
                           className={INPUT_CLASS}
+                        />
+                        <input
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={s.rpe}
+                          onChange={(e) => updateSetRow(r.id, s.id, { rpe: e.target.value })}
+                          placeholder="-"
+                          title="RPE (เหลือแรงยกได้อีกกี่ที — 10 = ยกไม่ไหวแล้ว)"
+                          className={`${INPUT_CLASS} px-1.5`}
                         />
                         <button
                           type="button"
