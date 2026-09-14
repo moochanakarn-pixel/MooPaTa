@@ -99,8 +99,15 @@ export function CompareView({ activities, unit }: { activities: CompareActivity[
   // "how fast" convention (both running pace, or both swim pace) — mixing
   // e.g. a run's per-km pace with a ride's per-km pace, or worse a run's
   // pace with a swim's per-100m pace, would just be two incomparable
-  // numbers subtracted from each other.
-  const bothSameKind = a && b && (a.type === "Run") === (b.type === "Run") && (a.type === "Swim") === (b.type === "Swim");
+  // numbers subtracted from each other. There's no "speed delta" formatter
+  // for non-Run/non-Swim types (see ComparisonCard on the activity detail
+  // page, which shows no delta at all outside Run/Swim for the same
+  // reason) — so eligibility is simply bothRun || bothSwim, not "neither
+  // side is Run and neither side is Swim" (which a previous, buggy version
+  // of this check wrongly treated as "comparable," admitting e.g. a Ride
+  // vs a Walk and producing a running-pace-formatted delta next to
+  // km/h-formatted values).
+  const bothSameKind = bothRun || bothSwim;
 
   const distanceDiff = a && b ? (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0) : null;
   const durationDiff = a && b ? a.durationSec - b.durationSec : null;
