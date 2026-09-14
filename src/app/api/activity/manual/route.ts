@@ -61,10 +61,10 @@ export async function POST(req: NextRequest) {
       exercises: {
         create: exercises.map((ex, i) => ({
           name: ex.name,
-          sets: ex.sets,
-          reps: ex.reps,
-          weightKg: ex.weightKg,
           order: i,
+          sets: {
+            create: ex.sets.map((s, j) => ({ order: j, reps: s.reps, weightKg: s.weightKg })),
+          },
         })),
       },
     },

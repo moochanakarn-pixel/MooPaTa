@@ -53,17 +53,34 @@ function toDatetimeLocal(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-interface ExerciseRow {
+interface SetRow {
   id: number;
-  name: string;
-  sets: string;
   reps: string;
   weightKg: string;
 }
 
-let nextExerciseRowId = 1;
+interface ExerciseRow {
+  id: number;
+  name: string;
+  sets: SetRow[];
+}
+
+let nextRowId = 1;
+function emptySetRow(): SetRow {
+  return { id: nextRowId++, reps: "12", weightKg: "" };
+}
 function emptyExerciseRow(): ExerciseRow {
-  return { id: nextExerciseRowId++, name: "", sets: "3", reps: "12", weightKg: "" };
+  // Three sets by default — the common case — rather than starting from
+  // one and making everyone tap "เพิ่มเซ็ท" twice just to reach a normal
+  // working set count; each one is still fully editable/removable on its
+  // own since reps/weight no longer have to match across sets.
+  return { id: nextRowId++, name: "", sets: [emptySetRow(), emptySetRow(), emptySetRow()] };
+}
+
+// Compact "15×5kg, 14×5kg, 10×4kg" summary for the "ครั้งก่อน" hint —
+// bodyweight sets (weightKg null) show as just "N ครั้ง" with no "×weight".
+function formatSetsCompact(sets: { reps: number; weightKg: number | null }[]): string {
+  return sets.map((s) => (s.weightKg !== null ? `${s.reps}×${s.weightKg}กก.` : `${s.reps}ครั้ง`)).join(", ");
 }
 
 export interface LogActivityInitial {
@@ -76,7 +93,7 @@ export interface LogActivityInitial {
   avgHeartRate: string;
   maxHeartRate: string;
   calories: string;
-  exercises: { name: string; sets: string; reps: string; weightKg: string }[];
+  exercises: { name: string; sets: { reps: string; weightKg: string }[] }[];
 }
 
 // Same form for both logging a new activity and editing an existing
@@ -109,7 +126,12 @@ export function LogActivityForm({
   const [maxHeartRate, setMaxHeartRate] = useState(initial?.maxHeartRate ?? "");
   const [calories, setCalories] = useState(initial?.calories ?? "");
   const [exercises, setExercises] = useState<ExerciseRow[]>(
-    () => initial?.exercises.map((e) => ({ id: nextExerciseRowId++, ...e })) ?? []
+    () =>
+      initial?.exercises.map((e) => ({
+        id: nextRowId++,
+        name: e.name,
+        sets: e.sets.map((s) => ({ id: nextRowId++, ...s })),
+      })) ?? []
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -163,12 +185,18 @@ export function LogActivityForm({
     if (parsed.exercises.length > 0) {
       setExercises((rows) => [
         ...rows,
+        // The AI-import table still gives one uniform reps/weight per
+        // exercise (see activity-import-parse.ts) — expanded here into N
+        // identical set rows, each individually editable afterward for
+        // anyone whose sets actually varied (a pyramid/drop set).
         ...parsed.exercises.map((e) => ({
-          id: nextExerciseRowId++,
+          id: nextRowId++,
           name: e.name,
-          sets: String(e.sets),
-          reps: String(e.reps),
-          weightKg: e.weightKg !== null ? String(e.weightKg) : "",
+          sets: Array.from({ length: e.sets }, () => ({
+            id: nextRowId++,
+            reps: String(e.reps),
+            weightKg: e.weightKg !== null ? String(e.weightKg) : "",
+          })),
         })),
       ]);
     }
@@ -192,11 +220,33 @@ export function LogActivityForm({
   function addExerciseRow() {
     setExercises((rows) => [...rows, emptyExerciseRow()]);
   }
-  function updateExerciseRow(id: number, patch: Partial<ExerciseRow>) {
+  function updateExercise(id: number, patch: Partial<ExerciseRow>) {
     setExercises((rows) => rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
   function removeExerciseRow(id: number) {
     setExercises((rows) => rows.filter((r) => r.id !== id));
+  }
+  function addSetRow(exerciseId: number) {
+    setExercises((rows) => rows.map((r) => (r.id === exerciseId ? { ...r, sets: [...r.sets, emptySetRow()] } : r)));
+  }
+  function updateSetRow(exerciseId: number, setId: number, patch: Partial<SetRow>) {
+    setExercises((rows) =>
+      rows.map((r) => (r.id === exerciseId ? { ...r, sets: r.sets.map((s) => (s.id === setId ? { ...s, ...patch } : s)) } : r))
+    );
+  }
+  function removeSetRow(exerciseId: number, setId: number) {
+    setExercises((rows) =>
+      rows.map((r) => (r.id === exerciseId ? { ...r, sets: r.sets.filter((s) => s.id !== setId) } : r))
+    );
+  }
+  function useLastTime(exerciseId: number, stat: ExerciseStat) {
+    updateExercise(exerciseId, {
+      sets: stat.latestSets.map((s) => ({
+        id: nextRowId++,
+        reps: String(s.reps),
+        weightKg: s.weightKg !== null ? String(s.weightKg) : "",
+      })),
+    });
   }
 
   async function save() {
@@ -206,11 +256,12 @@ export function LogActivityForm({
     }
     const namedExercises = exercises.filter((r) => r.name.trim());
     for (const r of namedExercises) {
-      const sets = Number(r.sets);
-      const reps = Number(r.reps);
-      if (!Number.isInteger(sets) || sets <= 0 || !Number.isInteger(reps) || reps <= 0) {
-        setError(`ท่า "${r.name.trim()}" ต้องกรอกเซ็ทและครั้งเป็นจำนวนเต็มมากกว่า 0`);
-        return;
+      for (const s of r.sets) {
+        const reps = Number(s.reps);
+        if (!Number.isInteger(reps) || reps <= 0) {
+          setError(`ท่า "${r.name.trim()}" ต้องกรอกจำนวนครั้งเป็นจำนวนเต็มมากกว่า 0 ทุกเซ็ท`);
+          return;
+        }
       }
     }
     setError(null);
@@ -230,9 +281,10 @@ export function LogActivityForm({
         calories: calories.trim() || undefined,
         exercises: namedExercises.map((r) => ({
           name: r.name.trim(),
-          sets: Number(r.sets),
-          reps: Number(r.reps),
-          weightKg: r.weightKg.trim() || undefined,
+          sets: r.sets.map((s) => ({
+            reps: Number(s.reps),
+            weightKg: s.weightKg.trim() || undefined,
+          })),
         })),
       }),
     });
@@ -415,7 +467,7 @@ export function LogActivityForm({
                   <div className="mb-2 flex items-center gap-1.5">
                     <input
                       value={r.name}
-                      onChange={(e) => updateExerciseRow(r.id, { name: e.target.value })}
+                      onChange={(e) => updateExercise(r.id, { name: e.target.value })}
                       placeholder="ชื่อท่า เช่น ดันไหล่ดัมเบล"
                       list="exercise-name-history"
                       className={`${INPUT_CLASS} flex-1`}
@@ -433,59 +485,67 @@ export function LogActivityForm({
                   {match && (
                     <div className="mb-2 flex items-center justify-between gap-2 rounded-md bg-neutral-800/50 px-2 py-1.5 text-xs text-neutral-400">
                       <span>
-                        ครั้งก่อน ({formatActivityDate(new Date(match.latestAtMs))}): {match.latestSets} เซ็ท ×{" "}
-                        {match.latestReps} ครั้ง
-                        {match.latestWeightKg !== null && ` @ ${match.latestWeightKg} กก.`}
+                        ครั้งก่อน ({formatActivityDate(new Date(match.latestAtMs))}): {formatSetsCompact(match.latestSets)}
                       </span>
                       <button
                         type="button"
-                        onClick={() =>
-                          updateExerciseRow(r.id, {
-                            sets: String(match.latestSets),
-                            reps: String(match.latestReps),
-                            weightKg: match.latestWeightKg !== null ? String(match.latestWeightKg) : "",
-                          })
-                        }
+                        onClick={() => useLastTime(r.id, match)}
                         className="flex-none rounded border border-neutral-700 px-1.5 py-0.5 font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800"
                       >
                         ใช้ค่านี้
                       </button>
                     </div>
                   )}
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <div>
-                      <input
-                        type="number"
-                        min="1"
-                        value={r.sets}
-                        onChange={(e) => updateExerciseRow(r.id, { sets: e.target.value })}
-                        className={INPUT_CLASS}
-                      />
-                      <p className="mt-0.5 text-center text-[10px] text-neutral-600">เซ็ท</p>
-                    </div>
-                    <div>
-                      <input
-                        type="number"
-                        min="1"
-                        value={r.reps}
-                        onChange={(e) => updateExerciseRow(r.id, { reps: e.target.value })}
-                        className={INPUT_CLASS}
-                      />
-                      <p className="mt-0.5 text-center text-[10px] text-neutral-600">ครั้ง/เซ็ท</p>
-                    </div>
-                    <div>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        value={r.weightKg}
-                        onChange={(e) => updateExerciseRow(r.id, { weightKg: e.target.value })}
-                        placeholder="ไม่มี"
-                        className={INPUT_CLASS}
-                      />
-                      <p className="mt-0.5 text-center text-[10px] text-neutral-600">น้ำหนัก (กก.)</p>
-                    </div>
+                  {/* One row per set — reps/weight are independent per set
+                      (not one value applied to all of them), so a
+                      pyramid/drop set can be entered exactly as performed. */}
+                  <div className="mb-1 grid grid-cols-[1.75rem_1fr_1fr_1.25rem] gap-1.5 px-0.5">
+                    <span className="text-center text-[10px] text-neutral-600">เซ็ท</span>
+                    <span className="text-center text-[10px] text-neutral-600">ครั้ง</span>
+                    <span className="text-center text-[10px] text-neutral-600">น้ำหนัก (กก.)</span>
+                    <span />
                   </div>
+                  <div className="space-y-1.5">
+                    {r.sets.map((s, i) => (
+                      <div key={s.id} className="grid grid-cols-[1.75rem_1fr_1fr_1.25rem] items-center gap-1.5">
+                        <span className="text-center text-xs text-neutral-500">{i + 1}</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={s.reps}
+                          onChange={(e) => updateSetRow(r.id, s.id, { reps: e.target.value })}
+                          className={INPUT_CLASS}
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          value={s.weightKg}
+                          onChange={(e) => updateSetRow(r.id, s.id, { weightKg: e.target.value })}
+                          placeholder="ไม่มี"
+                          className={INPUT_CLASS}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeSetRow(r.id, s.id)}
+                          disabled={r.sets.length <= 1}
+                          title="ลบเซ็ทนี้"
+                          className="flex-none text-neutral-600 hover:text-red-400 disabled:opacity-30"
+                        >
+                          <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5">
+                            <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => addSetRow(r.id)}
+                    className="mt-2 text-[11px] font-medium text-neutral-400 transition hover:text-neutral-200"
+                  >
+                    + เพิ่มเซ็ท
+                  </button>
                 </div>
                 );
               })}

@@ -337,21 +337,39 @@ model Activity {
 }
 
 // One strength-training movement logged within a manually-entered activity
-// (sets/reps/weight) — Strava-synced activities don't carry this kind of
-// detail, so in practice this only ever attaches to provider=MANUAL
-// activities, though nothing enforces that at the schema level.
+// — Strava-synced activities don't carry this kind of detail, so in
+// practice this only ever attaches to provider=MANUAL activities, though
+// nothing enforces that at the schema level. Reps/weight used to live here
+// as single aggregate fields (one reps/weightKg assumed identical across
+// every set) — moved out to ExerciseSet below so a pyramid/drop set (e.g.
+// 15×5kg, 14×5kg, 10×4kg) can be recorded set-by-set instead of forcing one
+// uniform number onto all of them.
 model Exercise {
-  id       String @id @default(cuid())
-  name     String
-  sets     Int
-  reps     Int
-  weightKg Float?
-  order    Int // preserves the order entered in the form
+  id    String @id @default(cuid())
+  name  String
+  order Int // preserves the order entered in the form
 
   activityId String
   activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
+  sets ExerciseSet[]
+
   @@index([activityId])
+}
+
+// One row per set actually performed for an Exercise — reps/weight can
+// differ set to set (see Exercise's comment). `order` is 1-indexed and
+// preserves entry order, same convention as Exercise.order.
+model ExerciseSet {
+  id       String @id @default(cuid())
+  order    Int
+  reps     Int
+  weightKg Float?
+
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([exerciseId])
 }
 
 // Richer per-activity data (splits, best efforts, laps, time-series streams)

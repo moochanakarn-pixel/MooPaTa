@@ -74,10 +74,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         exercises: {
           create: exercises.map((ex, i) => ({
             name: ex.name,
-            sets: ex.sets,
-            reps: ex.reps,
-            weightKg: ex.weightKg,
             order: i,
+            sets: {
+              create: ex.sets.map((s, j) => ({ order: j, reps: s.reps, weightKg: s.weightKg })),
+            },
           })),
         },
       },

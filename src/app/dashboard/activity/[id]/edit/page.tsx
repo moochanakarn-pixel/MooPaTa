@@ -22,7 +22,7 @@ export default async function EditActivityPage({ params }: { params: { id: strin
   const [activity, exerciseStats, user] = await Promise.all([
     db.activity.findUnique({
       where: { id: params.id },
-      include: { exercises: { orderBy: { order: "asc" } } },
+      include: { exercises: { orderBy: { order: "asc" }, include: { sets: { orderBy: { order: "asc" } } } } },
     }),
     getExerciseStats(userId, params.id),
     db.user.findUnique({ where: { id: userId }, select: { weightKg: true } }),
@@ -43,9 +43,10 @@ export default async function EditActivityPage({ params }: { params: { id: strin
     calories: activity.calories !== null ? String(Math.round(activity.calories)) : "",
     exercises: activity.exercises.map((ex) => ({
       name: ex.name,
-      sets: String(ex.sets),
-      reps: String(ex.reps),
-      weightKg: ex.weightKg !== null ? String(ex.weightKg) : "",
+      sets: ex.sets.map((s) => ({
+        reps: String(s.reps),
+        weightKg: s.weightKg !== null ? String(s.weightKg) : "",
+      })),
     })),
   };
 

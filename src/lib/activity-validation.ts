@@ -7,12 +7,21 @@
 export const MAX_DURATION_MIN = 24 * 60;
 export const INTENSITIES = ["LOW", "MODERATE", "HIGH"];
 export const MAX_EXERCISES = 30;
+export const MAX_SETS_PER_EXERCISE = 50;
 
-export interface ParsedExercise {
-  name: string;
-  sets: number;
+export interface ParsedSet {
   reps: number;
   weightKg: number | null;
+}
+
+// Reps/weight used to be one aggregate pair per exercise (a single `sets`
+// count paired with one reps/weightKg, assumed identical across every set)
+// — now a real per-set list, so a pyramid/drop set (15x5kg, 14x5kg, 10x4kg)
+// records what actually happened instead of forcing one uniform number onto
+// every set. `sets.length` is what used to be the standalone `sets` count.
+export interface ParsedExercise {
+  name: string;
+  sets: ParsedSet[];
 }
 
 // A row with a non-numeric or out-of-range value fails the *whole* request
@@ -28,14 +37,20 @@ export function parseExercises(value: unknown): ParsedExercise[] | null {
     if (typeof raw !== "object" || raw === null) return null;
     const r = raw as Record<string, unknown>;
     const name = typeof r.name === "string" ? r.name.trim().slice(0, 100) : "";
-    const sets = Number(r.sets);
-    const reps = Number(r.reps);
-    const weightKg = optionalNonNegative(r.weightKg);
     if (!name) return null;
-    if (!Number.isInteger(sets) || sets <= 0 || sets > 50) return null;
-    if (!Number.isInteger(reps) || reps <= 0 || reps > 1000) return null;
-    if (weightKg !== null && Number.isNaN(weightKg)) return null;
-    parsed.push({ name, sets, reps, weightKg });
+    if (!Array.isArray(r.sets) || r.sets.length === 0 || r.sets.length > MAX_SETS_PER_EXERCISE) return null;
+
+    const sets: ParsedSet[] = [];
+    for (const rawSet of r.sets) {
+      if (typeof rawSet !== "object" || rawSet === null) return null;
+      const s = rawSet as Record<string, unknown>;
+      const reps = Number(s.reps);
+      const weightKg = optionalNonNegative(s.weightKg);
+      if (!Number.isInteger(reps) || reps <= 0 || reps > 1000) return null;
+      if (weightKg !== null && Number.isNaN(weightKg)) return null;
+      sets.push({ reps, weightKg });
+    }
+    parsed.push({ name, sets });
   }
   return parsed;
 }

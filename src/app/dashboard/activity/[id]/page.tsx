@@ -38,7 +38,10 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
 
   const [user, activity] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
-    db.activity.findUnique({ where: { id: params.id }, include: { exercises: { orderBy: { order: "asc" } } } }),
+    db.activity.findUnique({
+      where: { id: params.id },
+      include: { exercises: { orderBy: { order: "asc" }, include: { sets: { orderBy: { order: "asc" } } } } },
+    }),
   ]);
   if (!activity || activity.userId !== userId) notFound();
 
@@ -196,29 +199,26 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
       {activity.exercises.length > 0 && (
         <div className="mt-8">
           <h2 className="mb-4 font-medium">ท่าออกกำลังกาย</h2>
-          <div className="overflow-hidden rounded-xl border border-neutral-800/80">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-neutral-900/60 text-left text-xs text-neutral-500">
-                  <th className="px-4 py-2 font-normal">ท่า</th>
-                  <th className="px-4 py-2 text-right font-normal">เซ็ท</th>
-                  <th className="px-4 py-2 text-right font-normal">ครั้ง</th>
-                  <th className="px-4 py-2 text-right font-normal">น้ำหนัก</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activity.exercises.map((ex) => (
-                  <tr key={ex.id} className="border-t border-neutral-800/80">
-                    <td className="px-4 py-2.5">{ex.name}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-neutral-400">{ex.sets}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-neutral-400">{ex.reps}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-neutral-400">
-                      {ex.weightKg ? `${ex.weightKg} กก.` : "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* One card per exercise (rather than the old fixed sets/reps/
+              weight table columns) since each set can now carry its own
+              reps/weight — a pyramid/drop set has a different number for
+              every row, not one uniform value to put in a single column. */}
+          <div className="space-y-3">
+            {activity.exercises.map((ex) => (
+              <div key={ex.id} className="rounded-xl border border-neutral-800/80 p-4">
+                <p className="mb-2 font-medium">{ex.name}</p>
+                <div className="space-y-1">
+                  {ex.sets.map((s, i) => (
+                    <div key={s.id} className="flex items-center justify-between text-sm">
+                      <span className="text-neutral-500">เซ็ท {i + 1}</span>
+                      <span className="tabular-nums text-neutral-300">
+                        {s.reps} ครั้ง{s.weightKg !== null ? ` × ${s.weightKg} กก.` : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
