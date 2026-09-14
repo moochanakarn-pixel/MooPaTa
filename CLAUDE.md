@@ -364,6 +364,13 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     `HealthSummary` (แคลอรี่/น้ำ/น้ำหนักวันนี้ ซึ่งเปลี่ยนทุกวันและใช้งานได้จริงกว่า) — `stats`
     aggregate query บนหน้านี้เลยเหลือแค่ `_count._all` (ใช้เช็ค onboarding/empty-state) ไม่ต้อง
     `_sum` แล้ว
+  - **"ความสม่ำเสมอ" (`ActivityHeatmap`, `src/app/dashboard/activity-heatmap.tsx`) ไม่มีกริดสี่เหลี่ยม
+    52 สัปดาห์แบบ GitHub แล้ว** — เดิมช่องเล็ก 11px ต้องเลื่อนซ้ายขวาดูบนมือถือ อ่านยาก แถมตัวเลข
+    "ติดต่อกัน X วัน" ก็โชว์อยู่แล้วในหัวหน้า (ข้าง avatar/คำทักทาย) ซ้ำกับที่กริดจะบอก ตอนนี้เหลือแค่
+    การ์ดบรรทัดเดียวโชว์ "ติดต่อกัน X วัน / สูงสุด Y วัน" (`streaks.current`/`streaks.longest`) ไม่มี
+    กริดวันต่อวันแล้ว — `buildHeatmapDays`/`computeStreaks` (`activity-heatmap.tsx` เดิม) ยังอยู่เหมือนเดิม
+    เพราะยังต้องใช้คำนวณ streak ทั้งที่หน้านี้และหน้าความสำเร็จ (`/dashboard/achievements`) แค่
+    `ActivityHeatmap` component ไม่รับ `days` prop มาวาดกริดอีกต่อไป (เหลือรับแค่ `streaks`)
   - หน้าแรก (`/dashboard`) มีบล็อก "สัดส่วนกิจกรรมเดือนนี้" (`type-breakdown.tsx`, อยู่ในส่วน
     "สถิติและแนวโน้มเพิ่มเติม" — `CollapsibleSection` ที่ยุบ/ขยายได้ แต่ตัวนี้ตั้ง `defaultOpen`
     ไว้ให้กางออกมาให้เห็นเองตั้งแต่โหลดหน้า ไม่ต้องกดขยายก่อนเหมือนตอนที่ component ถูกสร้างมาแรก ๆ)

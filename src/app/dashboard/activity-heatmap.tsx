@@ -61,45 +61,23 @@ export function computeStreaks(days: HeatmapDay[]): { current: number; longest: 
   return { current, longest };
 }
 
-function intensityClass(km: number): string {
-  if (km <= 0) return "bg-neutral-900";
-  if (km < 3) return "bg-[#fc4c02]/30";
-  if (km < 6) return "bg-[#fc4c02]/55";
-  if (km < 10) return "bg-[#fc4c02]/80";
-  return "bg-[#fc4c02]";
-}
-
-export function ActivityHeatmap({ days, streaks }: { days: HeatmapDay[]; streaks: { current: number; longest: number } }) {
-  const weeks: HeatmapDay[][] = [];
-  for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
-
+// Used to be a GitHub-style 52-week square grid here too — dropped because on
+// mobile it needed horizontal scrolling to see anything, the squares were too
+// small to read at a glance, and the current-streak number is already shown
+// right in the page header next to the greeting anyway. Just the two streak
+// numbers carry the useful part of "how consistent have I been" without the
+// scroll-to-see-it grid.
+export function ActivityHeatmap({ streaks }: { streaks: { current: number; longest: number } }) {
   return (
-    <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-medium">ความสม่ำเสมอ</h2>
-        <div className="flex gap-4 text-xs text-neutral-500">
-          <span>
-            ติดต่อกัน <span className="font-medium text-neutral-200">{streaks.current}</span> วัน
-          </span>
-          <span>
-            สูงสุด <span className="font-medium text-neutral-200">{streaks.longest}</span> วัน
-          </span>
-        </div>
-      </div>
-      <div className="overflow-x-auto">
-        <div className="flex gap-[3px]" style={{ width: "max-content" }}>
-          {weeks.map((week, wi) => (
-            <div key={wi} className="flex flex-col gap-[3px]">
-              {week.map((d) => (
-                <div
-                  key={d.date}
-                  title={`${d.date}${d.count > 0 ? ` · ${d.km.toFixed(1)} กม. (${d.count} กิจกรรม)` : ""}`}
-                  className={`h-[11px] w-[11px] rounded-sm ${intensityClass(d.km)}`}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+    <div className="flex items-center justify-between rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+      <h2 className="font-medium">ความสม่ำเสมอ</h2>
+      <div className="flex gap-4 text-xs text-neutral-500">
+        <span>
+          ติดต่อกัน <span className="font-medium text-neutral-200">{streaks.current}</span> วัน
+        </span>
+        <span>
+          สูงสุด <span className="font-medium text-neutral-200">{streaks.longest}</span> วัน
+        </span>
       </div>
     </div>
   );

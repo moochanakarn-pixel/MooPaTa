@@ -376,7 +376,7 @@ export default async function DashboardPage({
           <TrendChart weeks={weeklyBuckets} />
         </div>
 
-        <ActivityHeatmap days={heatmapDays} streaks={streaks} />
+        <ActivityHeatmap streaks={streaks} />
       </CollapsibleSection>
 
       <h2 className="mb-4 text-sm font-medium text-neutral-400">กิจกรรมล่าสุด</h2>
