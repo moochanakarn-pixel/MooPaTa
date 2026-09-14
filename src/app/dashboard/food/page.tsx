@@ -50,7 +50,9 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
     db.activity.aggregate({ where: { userId, startedAt: { gte: viewDayStart, lt: viewDayEnd } }, _sum: { durationSec: true } }),
     // How many times each food has actually been logged, all-time — the
     // basis for the "เมนูที่กินบ่อย" quick-pick list inside the add-food
-    // panel (see FoodLogView), replacing the old isFavorite-driven one.
+    // panel (see FoodLogView). isFavorite drives a separate "เมนูโปรด"
+    // section shown ahead of it in that same panel (personalFoodRows
+    // already carries isFavorite since its query has no explicit `select`).
     db.foodLog.groupBy({ by: ["foodId"], where: { userId }, _count: { _all: true } }),
   ]);
   const logCountByFoodId = new Map(foodLogCounts.map((r) => [r.foodId, r._count._all]));
@@ -88,6 +90,7 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
     typicalGrams: f.typicalGrams,
     unitLabel: f.unitLabel,
     logCount: logCountByFoodId.get(f.id) ?? 0,
+    isFavorite: f.isFavorite,
   }));
 
   let targets: DailyTargets | null = null;

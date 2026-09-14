@@ -28,6 +28,9 @@ export interface PersonalFood extends Per100g {
   // How many times this food has actually been logged, all-time — drives
   // the "เมนูที่กินบ่อย" quick-pick list in the add-food panel.
   logCount: number;
+  // Toggled at the food library (/dashboard/food/library) — drives the
+  // separate "เมนูโปรด" quick-pick list here, shown ahead of "เมนูที่กินบ่อย".
+  isFavorite: boolean;
 }
 
 export interface TodayLogEntry {
@@ -280,7 +283,22 @@ export function FoodLogView({
   // list beats generic catalog dishes the user may never make. Falls back
   // to the catalog only for someone with no logging history yet at all.
   const remainingCalories = targets ? targets.targetCalories - totals.calories : null;
-  const frequentPersonalFoods = useMemo(() => personalFoods.filter((f) => f.logCount > 0).sort((a, b) => b.logCount - a.logCount), [personalFoods]);
+  // Shown as its own "เมนูโปรด" section ahead of "เมนูที่กินบ่อย" below — a
+  // food starred at the library shows up here immediately even if it's
+  // never actually been logged yet (logCount === 0), which the frequency
+  // list below can never do on its own since it requires at least one log
+  // to appear at all. Sorted by name (not logCount) since this is a
+  // deliberately-curated list, not a ranking. Excluded from
+  // frequentPersonalFoods below so a favorite that's also frequently eaten
+  // doesn't show up twice in the same panel.
+  const favoritePersonalFoods = useMemo(
+    () => personalFoods.filter((f) => f.isFavorite).sort((a, b) => a.name.localeCompare(b.name, "th")),
+    [personalFoods]
+  );
+  const frequentPersonalFoods = useMemo(
+    () => personalFoods.filter((f) => f.logCount > 0 && !f.isFavorite).sort((a, b) => b.logCount - a.logCount),
+    [personalFoods]
+  );
   const usingFrequent = frequentPersonalFoods.length > 0;
   const suggestions = useMemo(() => {
     if (remainingCalories === null || remainingCalories <= 0) return [];
@@ -721,6 +739,29 @@ export function FoodLogView({
                   สแกนฉลาก
                 </button>
               </div>
+
+              {!query.trim() && favoritePersonalFoods.length > 0 && (
+                <div className="mb-3">
+                  <p className="mb-1 px-1 text-[11px] text-neutral-600">เมนูโปรด</p>
+                  <div className="space-y-1">
+                    {favoritePersonalFoods.map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => pickPersonal(f)}
+                        className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-sm hover:bg-neutral-800/50"
+                      >
+                        <span className="flex items-center gap-1.5 text-neutral-200">
+                          <span className="text-amber-400">★</span>
+                          {f.name}
+                        </span>
+                        <span className="text-xs text-neutral-500">
+                          {Math.round(macrosForGrams(f, f.typicalGrams).calories)} kcal/{referenceQuantityLabel(f.unitLabel)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {!query.trim() && suggestions.length > 0 && (
                 <div className="mb-1">
