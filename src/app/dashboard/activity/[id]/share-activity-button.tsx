@@ -14,17 +14,27 @@ const STYLE_OPTIONS = [
 ] as const;
 type Style = (typeof STYLE_OPTIONS)[number]["value"];
 
+const POSITION_OPTIONS = [
+  { value: "top", label: "บน" },
+  { value: "center", label: "กลาง" },
+  { value: "bottom", label: "ล่าง" },
+] as const;
+type Pos = (typeof POSITION_OPTIONS)[number]["value"];
+
 // A small sheet in front of the plain "download the PNG" link this replaced
 // — lets the user preview & pick a card style + transparent background (see
 // src/app/api/share/[id]/route.tsx's ?style/?bg) before saving, so a
 // story/reel background photo can go underneath it instead of the card
-// always carrying its own dark backdrop.
+// always carrying its own dark backdrop. ?pos picks where the details
+// block sits vertically — most useful together with a transparent
+// background, to leave the rest of the frame free for the photo underneath.
 export function ShareActivityButton({ activityId }: { activityId: string }) {
   const [open, setOpen] = useState(false);
   const [bg, setBg] = useState<Bg>("card");
   const [style, setStyle] = useState<Style>("grid");
+  const [pos, setPos] = useState<Pos>("center");
 
-  const href = `/api/share/${activityId}?bg=${bg}&style=${style}`;
+  const href = `/api/share/${activityId}?bg=${bg}&style=${style}&pos=${pos}`;
 
   // Same debounce-then-swap pattern as summary-configurator.tsx's preview —
   // avoids re-running the actual next/og image generation on every click
@@ -83,13 +93,28 @@ export function ShareActivityButton({ activityId }: { activityId: string }) {
             </div>
 
             <p className="mb-1.5 text-xs text-neutral-500">พื้นหลัง</p>
-            <div className="mb-4 flex gap-2 rounded-xl bg-neutral-950 p-1">
+            <div className="mb-3 flex gap-2 rounded-xl bg-neutral-950 p-1">
               {BG_OPTIONS.map((o) => (
                 <button
                   key={o.value}
                   onClick={() => setBg(o.value)}
                   className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition ${
                     bg === o.value ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+
+            <p className="mb-1.5 text-xs text-neutral-500">ตำแหน่งรายละเอียด</p>
+            <div className="mb-4 flex gap-2 rounded-xl bg-neutral-950 p-1">
+              {POSITION_OPTIONS.map((o) => (
+                <button
+                  key={o.value}
+                  onClick={() => setPos(o.value)}
+                  className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition ${
+                    pos === o.value ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
                   }`}
                 >
                   {o.label}

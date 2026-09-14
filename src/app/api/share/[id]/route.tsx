@@ -11,6 +11,7 @@ import {
 import { buildRoutePath, extractStravaPolyline, routeGeometryToSvgDataUri } from "@/lib/polyline";
 import { getSessionUserId } from "@/lib/session";
 import { loadShareFonts } from "@/lib/share-fonts";
+import { loadMascotLogoDataUri } from "@/lib/share-logo";
 
 // Generates a story-ratio (1080x1920) share card PNG for one activity —
 // distance, pace/speed, time, heart rate, and a route sketch — for the user
@@ -29,6 +30,20 @@ import { loadShareFonts } from "@/lib/share-fonts";
 // different use cases: grid for a detailed record of the activity, hero for
 // a quick centered flex that reads at a glance (closer to what most people
 // actually post to a story).
+//
+// ?pos=top|center|bottom picks where the whole details block (badges, name,
+// hero number, sub-stats/route, stat grid) sits vertically in the frame —
+// as one group, not the header separately pinned to the top and a stat grid
+// separately pinned to the bottom like before. Combined with ?bg=transparent
+// this is what makes the card usable as an Instagram/Line-story sticker:
+// pick top or bottom to leave the rest of the frame free for the photo
+// underneath to show through. Defaults to "center". The header logo itself
+// always stays pinned top-left regardless of this — it's a small brand mark,
+// not part of "the details."
+const POSITIONS = ["top", "center", "bottom"] as const;
+type Position = (typeof POSITIONS)[number];
+const POSITION_JUSTIFY: Record<Position, string> = { top: "flex-start", center: "center", bottom: "flex-end" };
+
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const userId = await getSessionUserId();
   if (!userId) {
@@ -38,6 +53,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const searchParams = new URL(req.url).searchParams;
   const transparent = searchParams.get("bg") === "transparent";
   const cardStyle = searchParams.get("style") === "hero" ? "hero" : "grid";
+  const posParam = searchParams.get("pos");
+  const pos: Position = (POSITIONS as readonly string[]).includes(posParam ?? "") ? (posParam as Position) : "center";
 
   const [user, activity] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
@@ -154,14 +171,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   });
 
   let fonts;
+  let mascotLogo: string;
   try {
-    fonts = await loadShareFonts();
+    [fonts, mascotLogo] = await Promise.all([loadShareFonts(), loadMascotLogoDataUri()]);
   } catch (err) {
-    // Most likely the bundled .ttf files are missing or corrupted (e.g. a
-    // checkout that mangled them). Say so plainly rather than 500-ing.
-    console.error("Share card: font load failed", err);
+    // Most likely the bundled .ttf/.png files are missing or corrupted
+    // (e.g. a checkout that mangled them). Say so plainly rather than 500-ing.
+    console.error("Share card: asset load failed", err);
     return new Response(
-      `Share card unavailable: could not load fonts (${err instanceof Error ? err.message : String(err)})`,
+      `Share card unavailable: could not load fonts/logo (${err instanceof Error ? err.message : String(err)})`,
       { status: 500 }
     );
   }
@@ -189,45 +207,40 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           fontFamily: "Noto Sans Thai",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 16,
-              background: "linear-gradient(135deg, #fc4c02, #ff8a3d)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 30,
-              fontWeight: 700,
-              color: "white",
-            }}
-          >
-            M
-          </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>MooPaTa</span>
-            <span style={{ fontSize: 20, color: "#a3a3a3", textShadow }}>{dateLabel}</span>
-          </div>
+        {/* Just the mascot mark, no "MooPaTa" wordmark next to it — the
+            details block below (badges/name/numbers/stat grid) is the whole
+            point of the card, this is only a small brand corner. Stays
+            pinned top-left regardless of ?pos: it's not part of "the
+            details" whose position is selectable. */}
+        <div style={{ display: "flex" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={mascotLogo} width={72} height={72} style={{ borderRadius: 18 }} />
         </div>
 
-        {/* Everything below the header centers together as one block in the
-            remaining space, so the composition stays balanced whether or
-            not there's a route to draw. Hero style additionally centers
-            everything horizontally too, instead of grid's left alignment —
-            the one visual choice that does the most to make it read as a
-            different, sparser card rather than just "grid with less stuff." */}
+        {/* Everything that makes up "the details" — badges, name, hero
+            number, sub-stats/route, and (grid style) the full stat grid —
+            now moves together as one group, positioned via ?pos instead of
+            the old layout where the header sat fixed at the top and the
+            stat grid sat fixed at the bottom regardless of how much content
+            was in between. Hero style additionally centers everything
+            horizontally too, instead of grid's left alignment — the one
+            visual choice that does the most to make it read as a different,
+            sparser card rather than just "grid with less stuff." */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             flex: 1,
-            justifyContent: "center",
+            justifyContent: POSITION_JUSTIFY[pos],
             alignItems: cardStyle === "hero" ? "center" : "stretch",
             gap: 28,
+            marginTop: 40,
           }}
         >
+          <span style={{ fontSize: 22, color: "#a3a3a3", textShadow, textAlign: cardStyle === "hero" ? "center" : "left" }}>
+            {dateLabel}
+          </span>
+
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: cardStyle === "hero" ? "center" : "flex-start" }}>
             <div
               style={{
@@ -300,30 +313,34 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
               <img src={routeImg} width={520} height={520} />
             </div>
           )}
-        </div>
 
-        {cardStyle === "grid" && statItems.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 22,
-              borderTop: `2px solid ${transparent ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.12)"}`,
-              paddingTop: 32,
-            }}
-          >
-            {statRows.map((row, i) => (
-              <div key={i} style={{ display: "flex", gap: 32 }}>
-                {row.map((s) => (
-                  <div key={s.label} style={{ display: "flex", flexDirection: "column", width: 288 }}>
-                    <span style={{ fontSize: 36, fontWeight: 700, color: "white", textShadow }}>{s.value}</span>
-                    <span style={{ fontSize: 20, color: "#a3a3a3", textShadow }}>{s.label}</span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
+          {/* Part of the same group now instead of a separate flex:1
+              sibling pinned to the physical bottom of the frame — moves
+              together with everything above when ?pos changes. */}
+          {cardStyle === "grid" && statItems.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 22,
+                borderTop: `2px solid ${transparent ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.12)"}`,
+                paddingTop: 32,
+                marginTop: 12,
+              }}
+            >
+              {statRows.map((row, i) => (
+                <div key={i} style={{ display: "flex", gap: 32 }}>
+                  {row.map((s) => (
+                    <div key={s.label} style={{ display: "flex", flexDirection: "column", width: 288 }}>
+                      <span style={{ fontSize: 36, fontWeight: 700, color: "white", textShadow }}>{s.value}</span>
+                      <span style={{ fontSize: 20, color: "#a3a3a3", textShadow }}>{s.label}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     ),
     {
