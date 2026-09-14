@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
-import { INTENSITIES, MAX_DURATION_MIN, optionalNonNegative, optionalRpe, parseExercises } from "@/lib/activity-validation";
+import {
+  INTENSITIES,
+  MAX_DURATION_MIN,
+  computeAvgSpeedMs,
+  optionalNonNegative,
+  optionalRpe,
+  parseExercises,
+} from "@/lib/activity-validation";
 
 // Edits a manually-logged activity in place — restricted to provider:
 // "MANUAL" because this form only knows the manual field set (type/duration/
@@ -68,6 +75,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         startedAt,
         durationSec: Math.round(durationMin * 60),
         distanceMeters: distanceKm !== null ? distanceKm * 1000 : null,
+        avgSpeedMs: computeAvgSpeedMs(distanceKm, durationMin),
         avgHeartRate,
         maxHeartRate,
         calories,

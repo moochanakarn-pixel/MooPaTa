@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
-import { INTENSITIES, MAX_DURATION_MIN, optionalNonNegative, optionalRpe, parseExercises } from "@/lib/activity-validation";
+import {
+  INTENSITIES,
+  MAX_DURATION_MIN,
+  computeAvgSpeedMs,
+  optionalNonNegative,
+  optionalRpe,
+  parseExercises,
+} from "@/lib/activity-validation";
 
 // Logs an activity Strava doesn't track (football, badminton, ...) into the
 // same Activity table synced activities use — provider=MANUAL with a random
@@ -55,6 +62,7 @@ export async function POST(req: NextRequest) {
       startedAt,
       durationSec: Math.round(durationMin * 60),
       distanceMeters: distanceKm !== null ? distanceKm * 1000 : null,
+      avgSpeedMs: computeAvgSpeedMs(distanceKm, durationMin),
       avgHeartRate,
       maxHeartRate,
       calories,

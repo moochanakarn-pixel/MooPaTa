@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { optionalNonNegative, optionalRpe, parseExercises } from "./activity-validation";
+import { computeAvgSpeedMs, optionalNonNegative, optionalRpe, parseExercises } from "./activity-validation";
 
 describe("parseExercises", () => {
   it("returns an empty array when the field wasn't sent at all", () => {
@@ -129,5 +129,23 @@ describe("optionalRpe", () => {
     expect(optionalRpe(11)).toBeNaN(); // above 10
     expect(optionalRpe(8.5)).toBeNaN(); // not an integer
     expect(optionalRpe("abc")).toBeNaN();
+  });
+});
+
+describe("computeAvgSpeedMs", () => {
+  it("derives m/s from distance and duration (5.02 km in 40 min)", () => {
+    // 5.02 km / (40 * 60) s = 2.0916... m/s
+    expect(computeAvgSpeedMs(5.02, 40)).toBeCloseTo(2.0917, 3);
+  });
+
+  it("returns null when distance wasn't provided", () => {
+    expect(computeAvgSpeedMs(null, 40)).toBeNull();
+  });
+
+  it("returns null for zero or negative distance/duration", () => {
+    expect(computeAvgSpeedMs(0, 40)).toBeNull();
+    expect(computeAvgSpeedMs(-1, 40)).toBeNull();
+    expect(computeAvgSpeedMs(5, 0)).toBeNull();
+    expect(computeAvgSpeedMs(5, -1)).toBeNull();
   });
 });

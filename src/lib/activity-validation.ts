@@ -82,3 +82,15 @@ export function optionalRpe(value: unknown): number | null {
   const n = Number(value);
   return Number.isInteger(n) && n >= 1 && n <= 10 ? n : NaN;
 }
+
+// Manual entries always have durationMin (required) and often distanceKm
+// (optional) but nothing ever wrote avgSpeedMs from those two — so
+// activitySpeedValue() (src/lib/format.ts) had nothing to show and
+// "เพซเฉลี่ย"/"ความเร็วเฉลี่ย" silently rendered "-" even when both inputs
+// needed to derive it were right there. maxSpeedMs stays uncomputed
+// (returned as-is by callers) since there's no per-second data to derive a
+// max from, only a single average over the whole duration.
+export function computeAvgSpeedMs(distanceKm: number | null, durationMin: number): number | null {
+  if (distanceKm === null || distanceKm <= 0 || durationMin <= 0) return null;
+  return (distanceKm * 1000) / (durationMin * 60);
+}
