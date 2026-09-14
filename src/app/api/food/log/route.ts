@@ -105,7 +105,41 @@ export async function POST(req: NextRequest) {
 
     let food;
     if (existingByName) {
-      food = existingByName;
+      // A previous entry under this exact name can have been created on a
+      // different unit basis than what THIS submission implies — e.g. an
+      // earlier AI-import whose "ปริมาณ" column didn't parse as a real
+      // weight stored it as a "หน่วย" (count-based) food, with
+      // caloriesPer100g actually meaning "per whole serving" — and a later,
+      // cleaner AI-import for the same dish name correctly parses a real
+      // gram amount this time. Reusing the old row's per-100g values as-is
+      // in that case silently applies the wrong denominator to the fresh
+      // `grams` amount below (a per-serving "หน่วย" value times an actual
+      // gram count inflates calories by ~100x — this is exactly the bug
+      // that produced a 171,000 kcal noodle entry from a correctly-parsed
+      // "450 ก." import, once a name collided with an earlier bad import).
+      // Detected via a unitLabel mismatch and fixed by updating the
+      // existing food to the fresh submission's values instead of keeping
+      // the stale, structurally-incompatible ones. A same-unit re-import
+      // (the common case — just logging the same dish again) still leaves
+      // the food's stored macros untouched, keeping the "edit nutrition
+      // values only at the library page" rule (see CLAUDE.md) intact,
+      // since nothing here fires unless the unit itself disagrees.
+      if (existingByName.unitLabel !== unitLabel) {
+        food = await db.food.update({
+          where: { id: existingByName.id },
+          data: {
+            caloriesPer100g,
+            proteinPer100g,
+            carbPer100g,
+            fatPer100g,
+            unitLabel,
+            typicalGrams: source === "CUSTOM" ? grams : existingByName.typicalGrams,
+            ...micronutrients,
+          },
+        });
+      } else {
+        food = existingByName;
+      }
     } else if (barcode) {
       // Barcode foods are additionally deduped via the (userId, barcode)
       // unique constraint — upsert makes this atomic, so two racing
