@@ -28,6 +28,53 @@ const INPUT_CLASS =
   "w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
 const LABEL_CLASS = "mb-1 block text-xs text-neutral-500";
 
+// Whole-session RPE — Borg/talk-test framing (how hard is it to breathe/
+// talk right now), same scale most watch apps show. A `title` tooltip
+// alone doesn't work on mobile (no hover), so RpeLevelsGuide below renders
+// this as a tappable <details> reference next to the field instead.
+const RPE_CARDIO_LEVELS: { level: string; label: string; desc: string }[] = [
+  { level: "10", label: "หนักสุดขีด", desc: "รู้สึกเหมือนจะหายใจไม่ออก พูดไม่ได้เลยสักคำ" },
+  { level: "9", label: "เกือบสุด", desc: "พูดได้ไม่เกิน 2-3 คำ หายใจหอบมาก" },
+  { level: "8", label: "หนักมากเป็นพิเศษ", desc: "พูดแทบไม่ออก หายใจหนักและลำบากมาก" },
+  { level: "7", label: "ลำบากมาก", desc: "พูดได้แค่ประโยคสั้น ๆ ทีละประโยค" },
+  { level: "6", label: "ท้าทาย", desc: "หายใจหอบชัดเจน พูดประโยคยาว ๆ ลำบาก" },
+  { level: "5", label: "หนัก", desc: "หายใจถี่ขึ้น ยังสนทนาต่อได้ถ้าฝืนหน่อย" },
+  { level: "4", label: "ค่อนข้างหนัก", desc: "หายใจแรงขึ้นแต่ยังคุมได้ สนทนาได้แต่ต้องใช้ความพยายาม" },
+  { level: "3", label: "ปานกลาง", desc: "รักษาจังหวะนี้ได้เป็นชั่วโมง พูดคุย/อ่านหนังสือไปด้วยได้สบาย" },
+  { level: "2", label: "เบา", desc: "หายใจแทบไม่ต่างจากปกติ พูดคุยได้สบาย ๆ" },
+  { level: "1", label: "เบามาก", desc: "แทบไม่รู้สึกออกแรงเลย เหมือนกำลังพักผ่อน" },
+];
+
+// Per-set RPE — reps-in-reserve framing (how many more reps could you have
+// done), a different scale from the cardio one above on purpose (see
+// ExerciseSet.rpe's schema comment).
+const RPE_LIFT_LEVELS: { level: string; label: string; desc: string }[] = [
+  { level: "10", label: "ยกไม่ไหวแล้ว", desc: "ทำจนสุดแรง ไม่เหลือแม้แต่ครั้งเดียว" },
+  { level: "9", label: "เกือบสุด", desc: "เหลือแรงอีกแค่ 1 ครั้ง" },
+  { level: "8", label: "หนัก", desc: "เหลือแรงอีกประมาณ 2 ครั้ง" },
+  { level: "7", label: "ค่อนข้างหนัก", desc: "เหลือแรงอีกประมาณ 3 ครั้ง" },
+  { level: "5-6", label: "ปานกลาง", desc: "เหลือแรงอีก 4-6 ครั้ง" },
+  { level: "1-4", label: "เบา", desc: "ยังไหวอีกเยอะ เช่น เซ็ทวอร์มอัพ" },
+];
+
+function RpeLevelsGuide({ title, levels }: { title: string; levels: { level: string; label: string; desc: string }[] }) {
+  return (
+    <details className="mt-1.5 rounded-lg border border-neutral-800 bg-neutral-900/60 p-2.5">
+      <summary className="cursor-pointer text-[11px] font-medium text-neutral-400">{title}</summary>
+      <div className="mt-2 space-y-1.5">
+        {levels.map((l) => (
+          <div key={l.level} className="flex gap-2 text-[11px]">
+            <span className="w-8 flex-none text-right font-bold tabular-nums text-neutral-300">{l.level}</span>
+            <span className="text-neutral-400">
+              <span className="font-medium text-neutral-300">{l.label}</span> — {l.desc}
+            </span>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 // A ready-made prompt for pasting a workout screenshot (Huawei Health,
 // Apple Health, Garmin, ...) into an external AI chat — same zero-API-cost
 // pattern as food's/InBody's "นำเข้าจาก AI" (import-meal-panel.tsx,
@@ -505,17 +552,20 @@ export function LogActivityForm({
                 value={rpe}
                 onChange={(e) => setRpe(e.target.value)}
                 placeholder="เช่น 7"
-                title="ระดับความเหนื่อยของกิจกรรมนี้โดยรวม (หายใจ/พูดคุยได้แค่ไหน) — คนละแบบกับ RPE รายเซ็ทของท่าเวทด้านล่าง"
                 className={INPUT_CLASS}
               />
+              <RpeLevelsGuide title="แต่ละระดับหมายถึงอะไร?" levels={RPE_CARDIO_LEVELS} />
             </div>
           </div>
         </div>
 
         <div className="border-t border-neutral-800 pt-4">
-          <p className="mb-3 text-xs text-neutral-500">
+          <p className="mb-1 text-xs text-neutral-500">
             ท่าออกกำลังกาย (ไม่บังคับ) — สำหรับเวทเทรนนิ่ง/แคลิสเธนิกส์ ใส่ทีละท่าพร้อมเซ็ท/ครั้ง/น้ำหนักที่ใช้
           </p>
+          <div className="mb-3">
+            <RpeLevelsGuide title="RPE ของแต่ละเซ็ทหมายถึงอะไร?" levels={RPE_LIFT_LEVELS} />
+          </div>
           {/* Only offered while the list is still empty — repeating an
               entire previous session only makes sense as a starting point,
               not something that should ever silently clobber rows the
