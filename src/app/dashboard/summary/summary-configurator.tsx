@@ -37,14 +37,20 @@ export function SummaryConfigurator() {
   const [customDate, setCustomDate] = useState(todayKey());
   const [fields, setFields] = useState<FieldOption[]>(DEFAULT_FIELDS);
   const [dragSrc, setDragSrc] = useState<number | null>(null);
+  // Same idea as the activity share card's ?bg=transparent option (its
+  // ShareActivityButton bottom sheet) — drop this card's own gradient so it
+  // can be dropped onto an IG/Line story photo too, instead of always
+  // carrying its own backdrop.
+  const [transparent, setTransparent] = useState(false);
 
   const date = dateMode === "today" ? todayKey() : dateMode === "yesterday" ? yesterdayKey() : customDate;
 
   const href = useMemo(() => {
     const enabled = fields.filter((f) => f.enabled).map((f) => f.id);
     const params = new URLSearchParams({ date, fields: enabled.join(",") });
+    if (transparent) params.set("bg", "transparent");
     return `/api/share/daily-summary?${params.toString()}`;
-  }, [date, fields]);
+  }, [date, fields, transparent]);
 
   // Re-rendering the card (a real Satori/next-og image generation, not
   // free) on every single toggle click or drag-over event would mean
@@ -118,6 +124,33 @@ export function SummaryConfigurator() {
       </div>
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+        <h2 className="mb-3 font-medium">พื้นหลัง</h2>
+        <div className="flex gap-2 rounded-xl bg-neutral-900 p-1">
+          {(
+            [
+              [false, "ทึบ"],
+              [true, "โปร่งใส"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={label}
+              onClick={() => setTransparent(value)}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                transparent === value ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {transparent && (
+          <p className="mt-3 text-xs text-neutral-500">
+            เอาไปวางทับรูปพื้นหลังอื่นต่อได้ เช่น สติกเกอร์ใน IG/Line story
+          </p>
+        )}
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <h2 className="mb-1 font-medium">ข้อมูลที่จะแสดง</h2>
         <p className="mb-3 text-xs text-neutral-500">ลากที่จุดซ้ายเพื่อจัดลำดับ กดสวิตช์เพื่อเปิด/ปิดรายการ</p>
         <ul className="space-y-2">
@@ -164,7 +197,14 @@ export function SummaryConfigurator() {
       {anyEnabled && (
         <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
           <h2 className="mb-3 font-medium">ตัวอย่าง</h2>
-          <div className="relative mx-auto aspect-[9/16] w-full max-w-[220px] overflow-hidden rounded-xl bg-neutral-900">
+          {/* Checkerboard backdrop makes a transparent PNG's transparency
+              actually visible in the preview, instead of it just looking
+              identical to a solid-dark card — same pattern as the activity
+              share card's own preview (share-activity-button.tsx). */}
+          <div
+            className="relative mx-auto aspect-[9/16] w-full max-w-[220px] overflow-hidden rounded-xl"
+            style={{ backgroundImage: "repeating-conic-gradient(#3f3f46 0% 25%, #27272a 0% 50%)", backgroundSize: "16px 16px" }}
+          >
             {previewLoading && (
               <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500">
                 กำลังโหลดตัวอย่าง...

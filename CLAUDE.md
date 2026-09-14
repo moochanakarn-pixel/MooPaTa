@@ -256,6 +256,20 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     ในหน้า configurator ไม่ใช่จาก "วันนี้" เสมอไป** (`buildWeekDots` แยกจาก `buildDayCounts` ใน
     `src/lib/streak.ts` เพราะอันนั้น anchor ที่ "วันนี้" เสมอ ใช้กับ streak card/heatmap ในหน้า
     เชิงลึกที่เป็นปัจจุบันเท่านั้น — การ์ดนี้เลือกดูวันในอดีตได้ด้วยจาก date picker)
+  - **`?bg=transparent` เหมือนการ์ดแชร์กิจกรรมเดี่ยว** — เพิ่มตามคำขอผู้ใช้ในรอบถัดมา (เดิมมีแค่การ์ด
+    กิจกรรมเดี่ยวที่ทำได้) เลือกได้จากแถบ "พื้นหลัง" (ทึบ/โปร่งใส) ในหน้า configurator
+    (`summary-configurator.tsx`, เก็บ state `transparent` แยกจาก `fields`, ต่อ query param
+    `bg=transparent` เข้า href เดียวกับที่ preview/ปุ่มดาวน์โหลดใช้อยู่แล้ว) พรีวิวใช้ checkerboard
+    backdrop (`repeating-conic-gradient`, browser CSS ธรรมดา ไม่ใช่ satori เลยไม่ติดข้อจำกัด
+    conic-gradient ของ satori ด้านบน) แบบเดียวกับที่ `ShareActivityButton` ใช้อยู่แล้วสำหรับการ์ด
+    กิจกรรมเดี่ยว แทนที่จะเป็น `bg-neutral-900` ทึบเดิมซึ่งมองไม่เห็นความโปร่งใสจริง — ที่ route เอง
+    element ที่มีตัวอักษรทุกจุด (header ชื่อ+วันที่, badge "สรุปผลประจำวัน", ทุก label/ตัวเลขในแต่ละ
+    บล็อก, footer domain) ต้องมี `textShadow` ตามกฎเดียวกับการ์ดกิจกรรมเดี่ยว (ค่าคงที่
+    `0 2px 10px rgba(0,0,0,0.85)` ตอน transparent, `"none"` ตอนปกติ — **ห้าม `undefined`** เจอ satori
+    crash แบบเดียวกันมาแล้วที่การ์ดกิจกรรมเดี่ยว) — บล็อกที่ห่อด้วย `cardStyle`/`rowCardStyle`
+    (`src/lib/share-card-styles.ts`) มีพื้นหลังโปร่งแสงของตัวเองอยู่แล้ว (`rgba(255,255,255,0.045)`)
+    เลยยังคงใส่ shadow ให้ตัวอักษรข้างในด้วยเผื่อกรณีพื้นหลังนั้นไม่พอคอนทราสต์กับรูปที่วางทับ
+    (สอดคล้องกับสิ่งที่การ์ดกิจกรรมเดี่ยวทำ ไม่ได้พึ่งพื้นหลังการ์ดอย่างเดียว)
 - **การ์ดแชร์กิจกรรมเดี่ยว** (`/api/share/[id]/route.tsx`, ปุ่ม "แชร์" ที่หน้ารายละเอียดกิจกรรม เปิด
   `ShareActivityButton` เป็น bottom sheet ให้เลือกก่อนดาวน์โหลด แทนที่จะดาวน์โหลดทันทีแบบเดิม):
   - **`?bg=transparent`** — next/og คืน PNG แบบมี alpha channel ในตัวอยู่แล้ว (ไม่ต้องพึ่ง lib เพิ่ม)
