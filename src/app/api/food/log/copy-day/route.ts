@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
-import { localDateKey } from "@/lib/streak";
-
-function parseDateKey(v: unknown): Date | null {
-  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
-  const [y, m, d] = v.split("-").map(Number);
-  const date = new Date(y, m - 1, d, 12, 0, 0, 0);
-  if (Number.isNaN(date.getTime()) || date.getMonth() !== m - 1) return null;
-  return date;
-}
+import { parseBackfillLoggedAt } from "@/lib/streak";
 
 // Copies every food logged on one day onto another — "คัดลอกเมื่อวานทั้งหมด"
 // for a day that mostly repeats what was eaten before, instead of
 // re-adding each item by hand. Each copied row points at the same Food
 // as its source (not a duplicate Food row), same as the single-entry
-// repeat endpoint.
+// repeat endpoint. Both dates go through parseBackfillLoggedAt (same
+// validation POST /api/food/log, its /repeat endpoint, and POST
+// /api/water/log already use) rather than a separate hand-rolled parser —
+// that one also enforces "not more than 1 year in the past," which a
+// once-separate copy of this date parsing here used to skip entirely.
+// Both dates are required for this endpoint, so parseBackfillLoggedAt's
+// "wasn't sent at all" `undefined` case is rejected the same as `null`.
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) {
@@ -23,12 +21,9 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const fromDate = parseDateKey(body.fromDate);
-  const toDate = parseDateKey(body.toDate);
+  const fromDate = parseBackfillLoggedAt(body.fromDate);
+  const toDate = parseBackfillLoggedAt(body.toDate);
   if (!fromDate || !toDate) {
-    return NextResponse.json({ error: "invalid_date" }, { status: 400 });
-  }
-  if (localDateKey(toDate) > localDateKey(new Date())) {
     return NextResponse.json({ error: "invalid_date" }, { status: 400 });
   }
 

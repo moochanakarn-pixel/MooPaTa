@@ -106,7 +106,9 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
       </div>
       {!isGramUnit(trimmedUnitLabel) && (
         <p className="text-xs text-amber-400">
-          เปลี่ยนหน่วยแล้วต้องกรอกค่าพลังงาน/แมโครใหม่ให้ตรงกับ &quot;{refLabel}&quot; ด้านล่างด้วย
+          เปลี่ยนหน่วยแล้วต้องกรอกค่าพลังงาน/แมโครใหม่ให้ตรงกับ &quot;{refLabel}&quot; ด้านล่างด้วย —
+          และแก้ &quot;ปริมาณที่กินปกติ&quot; ด้านล่างสุดด้วย เพราะตัวเลขเดิมยังนับเป็นกรัมอยู่ ถ้าไม่แก้จะถูกตีความเป็นจำนวน{" "}
+          {trimmedUnitLabel} แทน ทำให้แคลอรี่ที่แนะนำผิดเพี้ยนไปมาก
         </p>
       )}
       <div className="grid grid-cols-4 gap-2">
@@ -136,7 +138,7 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
           min="0"
           value={typicalGrams}
           onChange={(e) => setTypicalGrams(e.target.value)}
-          className={`${INPUT_CLASS} w-28`}
+          className={`${!isGramUnit(trimmedUnitLabel) ? INPUT_CLASS.replace("border-neutral-800", "border-amber-700") : INPUT_CLASS} w-28`}
         />
       </div>
       {error && <p className="text-xs text-red-400">{error}</p>}
