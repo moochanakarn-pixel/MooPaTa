@@ -84,6 +84,20 @@ function emptyExerciseRow(): ExerciseRow {
   return { id: nextRowId++, name: "", sets: [emptySetRow(), emptySetRow(), emptySetRow()] };
 }
 
+// Turns a set-history shape (ExerciseSetSummary from exercise-stats.ts, or
+// the equivalent per-set entries on a LastWorkoutSession) into editable
+// SetRows with fresh ids — shared by useLastTime (one exercise) and
+// useLastWorkout (a whole session) below so the two "prefill from history"
+// paths can't drift apart on how a set turns into form state.
+function toSetRows(sets: { reps: number; weightKg: number | null; rpe: number | null }[]): SetRow[] {
+  return sets.map((s) => ({
+    id: nextRowId++,
+    reps: String(s.reps),
+    weightKg: s.weightKg !== null ? String(s.weightKg) : "",
+    rpe: s.rpe !== null ? String(s.rpe) : "",
+  }));
+}
+
 // Compact "15×5kg (RPE 8), 14×5kg (RPE 8), 10×4kg (RPE 9)" summary for the
 // "ครั้งก่อน" hint — bodyweight sets (weightKg null) show as just "N ครั้ง"
 // with no "×weight", and a set logged without RPE just omits that part.
@@ -260,14 +274,7 @@ export function LogActivityForm({
     );
   }
   function useLastTime(exerciseId: number, stat: ExerciseStat) {
-    updateExercise(exerciseId, {
-      sets: stat.latestSets.map((s) => ({
-        id: nextRowId++,
-        reps: String(s.reps),
-        weightKg: s.weightKg !== null ? String(s.weightKg) : "",
-        rpe: s.rpe !== null ? String(s.rpe) : "",
-      })),
-    });
+    updateExercise(exerciseId, { sets: toSetRows(stat.latestSets) });
   }
 
   // Prefills every exercise and every set from the last logged session in
@@ -281,16 +288,7 @@ export function LogActivityForm({
   function useLastWorkout() {
     if (!lastWorkoutSession) return;
     setExercises(
-      lastWorkoutSession.exercises.map((ex) => ({
-        id: nextRowId++,
-        name: ex.name,
-        sets: ex.sets.map((s) => ({
-          id: nextRowId++,
-          reps: String(s.reps),
-          weightKg: s.weightKg !== null ? String(s.weightKg) : "",
-          rpe: s.rpe !== null ? String(s.rpe) : "",
-        })),
-      }))
+      lastWorkoutSession.exercises.map((ex) => ({ id: nextRowId++, name: ex.name, sets: toSetRows(ex.sets) }))
     );
   }
 

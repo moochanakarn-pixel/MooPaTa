@@ -133,4 +133,18 @@ describe("parseActivityText", () => {
     const parsed = parseActivityText("แพลงก์ | 1 | 30");
     expect(parsed.exercises).toEqual([{ name: "แพลงก์", sets: [{ reps: 30, weightKg: null, rpe: null }] }]);
   });
+
+  it("does not shift RPE into weightKg for a bodyweight set with a blank weight column but an RPE value (regression)", () => {
+    // Blindly filtering out every empty cell (not just leading/trailing
+    // ones from markdown "| a | b |" padding) used to collapse the blank
+    // weight column here, shifting "9" from the RPE column into weightKg
+    // and losing the RPE entirely.
+    const parsed = parseActivityText("ดึงข้อ | 1 | 8 |  | 9");
+    expect(parsed.exercises).toEqual([{ name: "ดึงข้อ", sets: [{ reps: 8, weightKg: null, rpe: 9 }] }]);
+  });
+
+  it("still strips a genuine leading/trailing pipe from markdown table padding", () => {
+    const parsed = parseActivityText("| ดันไหล่ดัมเบล | 1 | 15 | 5 | 8 |");
+    expect(parsed.exercises).toEqual([{ name: "ดันไหล่ดัมเบล", sets: [{ reps: 15, weightKg: 5, rpe: 8 }] }]);
+  });
 });

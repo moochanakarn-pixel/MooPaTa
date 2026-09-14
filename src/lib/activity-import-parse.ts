@@ -105,10 +105,16 @@ function matchType(line: string): string | null {
 // per-set exertion reading, which is the common case.
 function parseExerciseSetLine(line: string): { name: string; reps: number; weightKg: number | null; rpe: number | null } | null {
   if (!line.includes("|")) return null;
-  const cells = line
-    .split("|")
-    .map((c) => c.trim())
-    .filter((c) => c.length > 0);
+  const cells = line.split("|").map((c) => c.trim());
+  // Drop only a leading/trailing empty cell — markdown table rows are
+  // often written "| a | b | c |" with leading/trailing pipes, which
+  // split() turns into leading/trailing empty strings. A *middle* empty
+  // cell must stay put: a bodyweight set with an RPE noted looks like
+  // "ชื่อท่า | 1 | 8 |  | 9" (blank weight column), and filtering out
+  // every empty cell instead of just the outer ones would collapse that
+  // down and shift the RPE value into weightKg's slot.
+  if (cells[0] === "") cells.shift();
+  if (cells[cells.length - 1] === "") cells.pop();
   if (cells.length < 3) return null;
   const name = cells[0].replace(/^[*#\-\d.]+/, "").trim();
   const reps = firstNumber(cells[2]);
