@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getExerciseStats } from "@/lib/exercise-stats";
+import { getExerciseStats, getLastWorkoutSession } from "@/lib/exercise-stats";
 import { getSessionUserId } from "@/lib/session";
 import { LogActivityForm, type LogActivityInitial } from "../../../log-activity/log-activity-form";
 
@@ -19,12 +19,13 @@ export default async function EditActivityPage({ params }: { params: { id: strin
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
-  const [activity, exerciseStats, user] = await Promise.all([
+  const [activity, exerciseStats, lastWorkoutSession, user] = await Promise.all([
     db.activity.findUnique({
       where: { id: params.id },
       include: { exercises: { orderBy: { order: "asc" }, include: { sets: { orderBy: { order: "asc" } } } } },
     }),
     getExerciseStats(userId, params.id),
+    getLastWorkoutSession(userId, params.id),
     db.user.findUnique({ where: { id: userId }, select: { weightKg: true } }),
   ]);
   if (!activity || activity.userId !== userId || activity.provider !== "MANUAL") notFound();
@@ -71,6 +72,7 @@ export default async function EditActivityPage({ params }: { params: { id: strin
         activityId={activity.id}
         initial={initial}
         exerciseStats={exerciseStats}
+        lastWorkoutSession={lastWorkoutSession}
         userWeightKg={user?.weightKg ?? null}
       />
     </main>

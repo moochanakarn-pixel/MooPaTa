@@ -18,10 +18,15 @@ export interface ParsedActivity {
   // 1-10) — a watch's own summary screen often shows this directly, same
   // zero-formula "just read it off the source" approach as the other
   // fields here. Distinct from per-set weight-training RPE (reps-in-reserve
-  // framing), which this parser doesn't attempt to read — see
-  // parseExerciseLine's comment.
+  // framing) below.
   rpe: number | null;
-  exercises: { name: string; sets: number; reps: number; weightKg: number | null }[];
+  // One entry per set actually performed (not one aggregate row per
+  // exercise) — the prompt asks the AI to list every set on its own line,
+  // so a pyramid/drop set (15x5kg, 14x5kg, 10x4kg) comes back as three
+  // distinct rows sharing one exercise name instead of one row with a
+  // "sets" count and a single reps/weight assumed uniform across all of
+  // them. See parseExerciseSetLine's comment for the row format.
+  exercises: { name: string; sets: { reps: number; weightKg: number | null; rpe: number | null }[] }[];
 }
 
 // "[\d,]*" (rather than plain "\d*") lets the integer part carry thousands
@@ -88,12 +93,17 @@ function matchType(line: string): string | null {
   return /ทั่วไป|workout|ออกกำลังกาย/i.test(line) ? "Workout" : null;
 }
 
-// A "ชื่อท่า | เซ็ท | ครั้ง | น้ำหนัก" row from the exercise list the prompt
-// asks for — same pipe-table convention as the food import, minus the
-// header-detection complexity (fixed 3-4 column order here, since it's a
+// A "ชื่อท่า | เซ็ทที่ | ครั้ง | น้ำหนัก | RPE" row from the exercise list the
+// prompt asks for — same pipe-table convention as the food import, minus
+// the header-detection complexity (fixed column order here, since it's a
 // format MooPaTa itself dictates in the prompt rather than something an AI
-// free-forms on its own).
-function parseExerciseLine(line: string): { name: string; sets: number; reps: number; weightKg: number | null } | null {
+// free-forms on its own). One row per set actually performed, not one row
+// per exercise — cells[1] (the set number) is purely informational for
+// whoever's reading the raw text; this parser only uses row order, not
+// that value, to build each exercise's sets array. RPE (cells[4]) is
+// optional — the AI is told to skip it when a screenshot doesn't show a
+// per-set exertion reading, which is the common case.
+function parseExerciseSetLine(line: string): { name: string; reps: number; weightKg: number | null; rpe: number | null } | null {
   if (!line.includes("|")) return null;
   const cells = line
     .split("|")
@@ -101,11 +111,11 @@ function parseExerciseLine(line: string): { name: string; sets: number; reps: nu
     .filter((c) => c.length > 0);
   if (cells.length < 3) return null;
   const name = cells[0].replace(/^[*#\-\d.]+/, "").trim();
-  const sets = firstNumber(cells[1]);
   const reps = firstNumber(cells[2]);
   const weightKg = cells[3] !== undefined ? firstNumber(cells[3]) : null;
-  if (!name || sets === null || reps === null) return null;
-  return { name, sets: Math.round(sets), reps: Math.round(reps), weightKg };
+  const rpe = cells[4] !== undefined ? firstNumber(cells[4]) : null;
+  if (!name || reps === null) return null;
+  return { name, reps: Math.round(reps), weightKg, rpe: rpe !== null ? Math.round(rpe) : null };
 }
 
 export function parseActivityText(text: string): ParsedActivity {
@@ -125,10 +135,23 @@ export function parseActivityText(text: string): ParsedActivity {
     .map((l) => l.trim())
     .filter(Boolean);
 
+  // Keyed by trimmed+lowercased name (same normalization getExerciseStats
+  // uses) so sets for one exercise fold into a single entry regardless of
+  // whether the AI's rows for it are consecutive or interleaved with
+  // another exercise's — a Map preserves the order each name first
+  // appeared in, which is what result.exercises ends up ordered by.
+  const exercisesByName = new Map<string, { name: string; sets: { reps: number; weightKg: number | null; rpe: number | null }[] }>();
+
   for (const line of lines) {
-    const exercise = parseExerciseLine(line);
-    if (exercise) {
-      result.exercises.push(exercise);
+    const setRow = parseExerciseSetLine(line);
+    if (setRow) {
+      const key = setRow.name.toLowerCase();
+      let ex = exercisesByName.get(key);
+      if (!ex) {
+        ex = { name: setRow.name, sets: [] };
+        exercisesByName.set(key, ex);
+      }
+      ex.sets.push({ reps: setRow.reps, weightKg: setRow.weightKg, rpe: setRow.rpe });
       continue;
     }
 
@@ -147,5 +170,6 @@ export function parseActivityText(text: string): ParsedActivity {
     }
   }
 
+  result.exercises = Array.from(exercisesByName.values());
   return result;
 }

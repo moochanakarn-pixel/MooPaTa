@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getExerciseStats } from "@/lib/exercise-stats";
+import { getExerciseStats, getLastWorkoutSession } from "@/lib/exercise-stats";
 import { getSessionUserId } from "@/lib/session";
 import { LogActivityForm } from "./log-activity-form";
 
@@ -9,8 +9,9 @@ export default async function LogActivityPage() {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
-  const [exerciseStats, user] = await Promise.all([
+  const [exerciseStats, lastWorkoutSession, user] = await Promise.all([
     getExerciseStats(userId),
+    getLastWorkoutSession(userId),
     db.user.findUnique({ where: { id: userId }, select: { weightKg: true } }),
   ]);
 
@@ -31,7 +32,7 @@ export default async function LogActivityPage() {
         บันทึกกิจกรรมอะไรก็ได้ เช่น วิ่ง ปั่นจักรยาน เตะบอล ตีแบด ยกเวท — จะเข้าไปนับรวมในสถิติ ปฏิทิน และปรับเป้าน้ำ/แมโครวันนี้ให้อัตโนมัติ
       </p>
 
-      <LogActivityForm exerciseStats={exerciseStats} userWeightKg={user?.weightKg ?? null} />
+      <LogActivityForm exerciseStats={exerciseStats} lastWorkoutSession={lastWorkoutSession} userWeightKg={user?.weightKg ?? null} />
     </main>
   );
 }

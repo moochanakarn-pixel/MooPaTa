@@ -62,22 +62,75 @@ describe("parseActivityText", () => {
     expect(parsed.exercises).toEqual([]);
   });
 
-  it("parses the weight-training exercise table appended after the main fields", () => {
+  it("parses one row per set, grouped by exercise name, from the table appended after the main fields", () => {
     const text = `ประเภท: เวทเทรนนิ่ง
 ระยะเวลา: 60
 
 ท่า:
-ดันไหล่ดัมเบล | 3 | 12 | 20
-สควอท | 4 | 8 | 60`;
+ดันไหล่ดัมเบล | 1 | 12 | 20
+ดันไหล่ดัมเบล | 2 | 12 | 20
+สควอท | 1 | 8 | 60`;
     const parsed = parseActivityText(text);
     expect(parsed.exercises).toEqual([
-      { name: "ดันไหล่ดัมเบล", sets: 3, reps: 12, weightKg: 20 },
-      { name: "สควอท", sets: 4, reps: 8, weightKg: 60 },
+      {
+        name: "ดันไหล่ดัมเบล",
+        sets: [
+          { reps: 12, weightKg: 20, rpe: null },
+          { reps: 12, weightKg: 20, rpe: null },
+        ],
+      },
+      { name: "สควอท", sets: [{ reps: 8, weightKg: 60, rpe: null }] },
     ]);
   });
 
-  it("leaves weightKg null for a bodyweight exercise row with no 4th column", () => {
-    const parsed = parseActivityText("แพลงก์ | 3 | 1");
-    expect(parsed.exercises).toEqual([{ name: "แพลงก์", sets: 3, reps: 1, weightKg: null }]);
+  it("keeps each set's own reps/weight for a pyramid/drop set instead of one uniform row", () => {
+    const text = `ท่า:
+ดันไหล่ดัมเบล | 1 | 15 | 5
+ดันไหล่ดัมเบล | 2 | 14 | 5
+ดันไหล่ดัมเบล | 3 | 10 | 4`;
+    const parsed = parseActivityText(text);
+    expect(parsed.exercises).toEqual([
+      {
+        name: "ดันไหล่ดัมเบล",
+        sets: [
+          { reps: 15, weightKg: 5, rpe: null },
+          { reps: 14, weightKg: 5, rpe: null },
+          { reps: 10, weightKg: 4, rpe: null },
+        ],
+      },
+    ]);
+  });
+
+  it("reads an optional 5th-column RPE per set", () => {
+    const text = `ท่า:
+ดันไหล่ดัมเบล | 1 | 15 | 5 | 8
+ดันไหล่ดัมเบล | 2 | 10 | 4 | 9`;
+    const parsed = parseActivityText(text);
+    expect(parsed.exercises).toEqual([
+      {
+        name: "ดันไหล่ดัมเบล",
+        sets: [
+          { reps: 15, weightKg: 5, rpe: 8 },
+          { reps: 10, weightKg: 4, rpe: 9 },
+        ],
+      },
+    ]);
+  });
+
+  it("groups sets for the same exercise even when rows are interleaved with another exercise", () => {
+    const text = `ท่า:
+ดันไหล่ดัมเบล | 1 | 12 | 20
+สควอท | 1 | 8 | 60
+ดันไหล่ดัมเบล | 2 | 10 | 20`;
+    const parsed = parseActivityText(text);
+    expect(parsed.exercises).toEqual([
+      { name: "ดันไหล่ดัมเบล", sets: [{ reps: 12, weightKg: 20, rpe: null }, { reps: 10, weightKg: 20, rpe: null }] },
+      { name: "สควอท", sets: [{ reps: 8, weightKg: 60, rpe: null }] },
+    ]);
+  });
+
+  it("leaves weightKg null for a bodyweight exercise row with no weight column", () => {
+    const parsed = parseActivityText("แพลงก์ | 1 | 30");
+    expect(parsed.exercises).toEqual([{ name: "แพลงก์", sets: [{ reps: 30, weightKg: null, rpe: null }] }]);
   });
 });

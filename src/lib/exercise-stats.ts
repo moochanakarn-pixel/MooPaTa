@@ -114,6 +114,49 @@ export async function getExerciseStats(userId: string, excludeActivityId?: strin
   return Array.from(stats.values()).map(({ _latestExerciseId, ...rest }) => rest);
 }
 
+export interface LastWorkoutSession {
+  activityId: string;
+  startedAtMs: number;
+  exercises: { name: string; sets: ExerciseSetSummary[] }[];
+}
+
+// The most recently logged activity that has at least one exercise
+// attached — used by the "ทำซ้ำทั้งวันจากครั้งก่อน" button in
+// log-activity-form.tsx, a one-tap way to prefill an entire workout (every
+// exercise, every set) instead of repeating "ใช้ค่านี้" once per exercise.
+// Unlike getExerciseStats (which folds by exercise *name* across many
+// sessions), this returns one whole *session* as-is, in the order its
+// exercises/sets were originally entered — that's the shape a "repeat this
+// day" action needs, not a per-name rollup.
+//
+// `excludeActivityId` — same reasoning as getExerciseStats: pass the
+// activity currently being edited so it never offers to "repeat" itself.
+export async function getLastWorkoutSession(userId: string, excludeActivityId?: string): Promise<LastWorkoutSession | null> {
+  const activity = await db.activity.findFirst({
+    where: {
+      userId,
+      exercises: { some: {} },
+      ...(excludeActivityId ? { id: { not: excludeActivityId } } : {}),
+    },
+    orderBy: { startedAt: "desc" },
+    select: {
+      id: true,
+      startedAt: true,
+      exercises: {
+        orderBy: { order: "asc" },
+        select: { name: true, sets: { orderBy: { order: "asc" }, select: { reps: true, weightKg: true, rpe: true } } },
+      },
+    },
+  });
+  if (!activity) return null;
+
+  return {
+    activityId: activity.id,
+    startedAtMs: activity.startedAt.getTime(),
+    exercises: activity.exercises.map((ex) => ({ name: ex.name, sets: ex.sets })),
+  };
+}
+
 // Total weight actually moved across every logged set, all-time — Σ weight ×
 // reps. Used by the achievements page as an accumulating milestone, the
 // same shape as the running "ระยะทางสะสม" ladder, but one that rewards total

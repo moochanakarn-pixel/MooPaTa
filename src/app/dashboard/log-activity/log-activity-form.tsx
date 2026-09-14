@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { parseActivityText } from "@/lib/activity-import-parse";
 import { estimateCalories, type Intensity } from "@/lib/calorie-estimate";
-import type { ExerciseStat } from "@/lib/exercise-stats";
+import type { ExerciseStat, LastWorkoutSession } from "@/lib/exercise-stats";
 import { formatActivityDate } from "@/lib/format";
 
 const TYPES = [
@@ -45,9 +45,11 @@ const AI_PROMPT_TEMPLATE = `อ่านค่าจากรูปสรุป�
 หัวใจสูงสุด: [bpm]
 ระดับความเหนื่อย: [RPE 1-10 ถ้ารูปมีบอกไว้]
 
-ถ้าเป็นเวทเทรนนิ่ง ให้ใส่รายการท่าต่อท้ายด้วย บรรทัดละท่า รูปแบบ "ชื่อท่า | เซ็ท | ครั้ง | น้ำหนัก(กก.)":
+ถ้าเป็นเวทเทรนนิ่ง ให้ใส่รายการท่าต่อท้ายด้วย หนึ่งบรรทัดต่อหนึ่งเซ็ทที่ทำจริง (ถ้าท่าเดียวกันทำหลายเซ็ทที่ตัวเลขต่างกัน ให้แยกคนละบรรทัด อย่ารวมเป็นค่าเดียว) รูปแบบ "ชื่อท่า | เซ็ทที่ | ครั้ง | น้ำหนัก(กก.) | RPE" (คอลัมน์ RPE ใส่แค่ถ้ารูปบอกไว้ ไม่งั้นเว้นว่าง):
 ท่า:
-ดันไหล่ดัมเบล | 3 | 12 | 20`;
+ดันไหล่ดัมเบล | 1 | 15 | 5 | 8
+ดันไหล่ดัมเบล | 2 | 14 | 5 | 8
+ดันไหล่ดัมเบล | 3 | 10 | 4 | 9`;
 
 function toDatetimeLocal(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -120,11 +122,13 @@ export function LogActivityForm({
   activityId,
   initial,
   exerciseStats = [],
+  lastWorkoutSession = null,
   userWeightKg = null,
 }: {
   activityId?: string;
   initial?: LogActivityInitial;
   exerciseStats?: ExerciseStat[];
+  lastWorkoutSession?: LastWorkoutSession | null;
   userWeightKg?: number | null;
 }) {
   const router = useRouter();
@@ -197,22 +201,20 @@ export function LogActivityForm({
     if (parsed.maxHeartRate !== null) setMaxHeartRate(String(parsed.maxHeartRate));
     if (parsed.rpe !== null) setRpe(String(parsed.rpe));
     if (parsed.exercises.length > 0) {
+      // parseActivityText already gives one entry per set actually
+      // performed (see activity-import-parse.ts), so a pyramid/drop set
+      // comes through with its real per-set reps/weight/RPE — no
+      // expansion/guessing needed here, just a straight mapping.
       setExercises((rows) => [
         ...rows,
-        // The AI-import table still gives one uniform reps/weight per
-        // exercise (see activity-import-parse.ts) — expanded here into N
-        // identical set rows, each individually editable afterward for
-        // anyone whose sets actually varied (a pyramid/drop set). Per-set
-        // RPE isn't part of that table either (same reasoning), so it
-        // starts blank on every expanded row.
         ...parsed.exercises.map((e) => ({
           id: nextRowId++,
           name: e.name,
-          sets: Array.from({ length: e.sets }, () => ({
+          sets: e.sets.map((s) => ({
             id: nextRowId++,
-            reps: String(e.reps),
-            weightKg: e.weightKg !== null ? String(e.weightKg) : "",
-            rpe: "",
+            reps: String(s.reps),
+            weightKg: s.weightKg !== null ? String(s.weightKg) : "",
+            rpe: s.rpe !== null ? String(s.rpe) : "",
           })),
         })),
       ]);
@@ -266,6 +268,30 @@ export function LogActivityForm({
         rpe: s.rpe !== null ? String(s.rpe) : "",
       })),
     });
+  }
+
+  // Prefills every exercise and every set from the last logged session in
+  // one tap, instead of adding each exercise row by hand and then hitting
+  // "ใช้ค่านี้" once per row — worth it for anyone whose routine repeats
+  // close to the same exercises/sets from one session to the next (a
+  // pattern the request that prompted this feature showed clearly). Only
+  // offered while the exercise list is still empty (see the button's own
+  // guard below) — same "confirm before applying, never silently
+  // overwrite in-progress input" rule as useLastTime above.
+  function useLastWorkout() {
+    if (!lastWorkoutSession) return;
+    setExercises(
+      lastWorkoutSession.exercises.map((ex) => ({
+        id: nextRowId++,
+        name: ex.name,
+        sets: ex.sets.map((s) => ({
+          id: nextRowId++,
+          reps: String(s.reps),
+          weightKg: s.weightKg !== null ? String(s.weightKg) : "",
+          rpe: s.rpe !== null ? String(s.rpe) : "",
+        })),
+      }))
+    );
   }
 
   async function save() {
@@ -492,6 +518,25 @@ export function LogActivityForm({
           <p className="mb-3 text-xs text-neutral-500">
             ท่าออกกำลังกาย (ไม่บังคับ) — สำหรับเวทเทรนนิ่ง/แคลิสเธนิกส์ ใส่ทีละท่าพร้อมเซ็ท/ครั้ง/น้ำหนักที่ใช้
           </p>
+          {/* Only offered while the list is still empty — repeating an
+              entire previous session only makes sense as a starting point,
+              not something that should ever silently clobber rows the
+              user already added by hand. */}
+          {exercises.length === 0 && lastWorkoutSession && (
+            <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-neutral-800/50 px-3 py-2 text-xs text-neutral-400">
+              <span>
+                ทำซ้ำทั้งวันจากครั้งก่อน ({formatActivityDate(new Date(lastWorkoutSession.startedAtMs))}) —{" "}
+                {lastWorkoutSession.exercises.length} ท่า
+              </span>
+              <button
+                type="button"
+                onClick={useLastWorkout}
+                className="flex-none rounded border border-neutral-700 px-2 py-1 font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800"
+              >
+                ใช้ค่านี้
+              </button>
+            </div>
+          )}
           {exercises.length > 0 && (
             <div className="mb-2 space-y-2">
               {exercises.map((r) => {

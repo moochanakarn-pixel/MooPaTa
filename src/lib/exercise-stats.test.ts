@@ -8,11 +8,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // is what the existing real-MariaDB + curl/Playwright workflow in
 // CLAUDE.md still verifies for a feature that touches this.
 const findManyMock = vi.fn();
+const findFirstMock = vi.fn();
 vi.mock("./db", () => ({
-  db: { exerciseSet: { findMany: (...args: unknown[]) => findManyMock(...args) } },
+  db: {
+    exerciseSet: { findMany: (...args: unknown[]) => findManyMock(...args) },
+    activity: { findFirst: (...args: unknown[]) => findFirstMock(...args) },
+  },
 }));
 
-const { getExerciseStats, getTotalLiftVolumeKg } = await import("./exercise-stats");
+const { getExerciseStats, getTotalLiftVolumeKg, getLastWorkoutSession } = await import("./exercise-stats");
 
 // One ExerciseSet row, as the query's `select` shape returns it. Sets that
 // belong to the same logged session (Exercise row) share `exerciseId` — a
@@ -32,6 +36,7 @@ function set(
 
 beforeEach(() => {
   findManyMock.mockReset();
+  findFirstMock.mockReset();
 });
 
 describe("getExerciseStats", () => {
@@ -132,6 +137,69 @@ describe("getExerciseStats", () => {
     await getExerciseStats("u1");
     const whereArg = findManyMock.mock.calls[0][0].where;
     expect(whereArg.exercise.activityId).toBeUndefined();
+  });
+});
+
+describe("getLastWorkoutSession", () => {
+  it("returns null when the user has no activity with any exercise logged", async () => {
+    findFirstMock.mockResolvedValue(null);
+    expect(await getLastWorkoutSession("u1")).toBeNull();
+  });
+
+  it("returns the whole session — every exercise, every set, in entry order — not folded by name", async () => {
+    findFirstMock.mockResolvedValue({
+      id: "a3",
+      startedAt: new Date("2026-02-01"),
+      exercises: [
+        {
+          name: "ดันไหล่ดัมเบล",
+          sets: [
+            { reps: 15, weightKg: 5, rpe: 8 },
+            { reps: 14, weightKg: 5, rpe: 8 },
+            { reps: 10, weightKg: 4, rpe: 9 },
+          ],
+        },
+        { name: "สควอท", sets: [{ reps: 8, weightKg: 60, rpe: null }] },
+      ],
+    });
+    const session = await getLastWorkoutSession("u1");
+    expect(session).toEqual({
+      activityId: "a3",
+      startedAtMs: new Date("2026-02-01").getTime(),
+      exercises: [
+        {
+          name: "ดันไหล่ดัมเบล",
+          sets: [
+            { reps: 15, weightKg: 5, rpe: 8 },
+            { reps: 14, weightKg: 5, rpe: 8 },
+            { reps: 10, weightKg: 4, rpe: 9 },
+          ],
+        },
+        { name: "สควอท", sets: [{ reps: 8, weightKg: 60, rpe: null }] },
+      ],
+    });
+  });
+
+  it("queries only activities that have at least one exercise, ordered most-recent-first", async () => {
+    findFirstMock.mockResolvedValue(null);
+    await getLastWorkoutSession("u1");
+    const args = findFirstMock.mock.calls[0][0];
+    expect(args.where.exercises).toEqual({ some: {} });
+    expect(args.orderBy).toEqual({ startedAt: "desc" });
+  });
+
+  it("passes excludeActivityId through, so an activity being edited never offers to repeat itself", async () => {
+    findFirstMock.mockResolvedValue(null);
+    await getLastWorkoutSession("u1", "a2");
+    const whereArg = findFirstMock.mock.calls[0][0].where;
+    expect(whereArg.id).toEqual({ not: "a2" });
+  });
+
+  it("omits the id filter entirely when no excludeActivityId is given", async () => {
+    findFirstMock.mockResolvedValue(null);
+    await getLastWorkoutSession("u1");
+    const whereArg = findFirstMock.mock.calls[0][0].where;
+    expect(whereArg.id).toBeUndefined();
   });
 });
 
