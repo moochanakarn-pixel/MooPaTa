@@ -88,7 +88,7 @@ export default async function DashboardPage({
     thisMonthAgg,
     lastMonthAgg,
     thisMonthActivities,
-    todayActivityAgg,
+    todayActivities,
     todayFoodLogs,
     todayWaterAgg,
     recentWeightLogs,
@@ -129,9 +129,9 @@ export default async function DashboardPage({
         where: { userId, startedAt: { gte: thisMonthStart } },
         select: { id: true, type: true, distanceMeters: true, avgSpeedMs: true, elevationGainM: true, durationSec: true, calories: true },
       }),
-      db.activity.aggregate({
+      db.activity.findMany({
         where: { userId, startedAt: { gte: todayStart } },
-        _sum: { durationSec: true, calories: true },
+        select: { durationSec: true, calories: true },
       }),
       db.foodLog.findMany({
         where: { userId, loggedAt: { gte: todayStart } },
@@ -168,11 +168,7 @@ export default async function DashboardPage({
   const latestBodyComposition = isProfileComplete(nutritionProfile) ? await getLatestBodyComposition(userId) : null;
   const macroPrefs = { proteinGPerKg: user?.proteinGPerKg, fatPercentOfCalories: user?.fatPercentOfCalories };
   const healthTargets = isProfileComplete(nutritionProfile)
-    ? applyActivityBonus(
-        computeTargets(nutritionProfile, latestBodyComposition, macroPrefs),
-        todayActivityAgg._sum.durationSec ?? 0,
-        todayActivityAgg._sum.calories ?? 0
-      )
+    ? applyActivityBonus(computeTargets(nutritionProfile, latestBodyComposition, macroPrefs), todayActivities)
     : null;
   const todayFoodTotals = todayFoodLogs.reduce(
     (acc, l) => {

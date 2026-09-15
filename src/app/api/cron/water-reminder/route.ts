@@ -95,7 +95,9 @@ export async function POST(req: NextRequest) {
       goalRateKgPerWeek: user.goalRateKgPerWeek,
     };
     const targetMl = isProfileComplete(profile)
-      ? applyActivityBonus(computeTargets(profile, await getLatestBodyComposition(userId)), todayActivityAgg._sum.durationSec ?? 0).waterMl
+      ? applyActivityBonus(computeTargets(profile, await getLatestBodyComposition(userId)), [
+          { durationSec: todayActivityAgg._sum.durationSec ?? 0, calories: null },
+        ]).waterMl
       : DEFAULT_TARGET_ML;
 
     // Linear pacing across the user's own window: at the start they're

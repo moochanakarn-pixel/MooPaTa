@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  activityCalorieBonusKcal,
+  activityIntensityMultiplier,
   activityMacroBonus,
   activityWaterBonusMl,
   applyActivityBonus,
@@ -196,7 +196,7 @@ describe("activity-based bonuses", () => {
 
   it("applyActivityBonus keeps targetCalories internally consistent with the macro bonus", () => {
     const base = computeTargets(baseProfile);
-    const withBonus = applyActivityBonus(base, 60 * 60); // 1 hour logged today
+    const withBonus = applyActivityBonus(base, [{ durationSec: 60 * 60, calories: null }]); // 1 hour logged today, no calories
     const bonus = activityMacroBonus(60 * 60);
     expect(withBonus.targetCalories).toBe(base.targetCalories + bonus.carbG * 4 + bonus.proteinG * 4);
     expect(withBonus.carbG).toBe(base.carbG + bonus.carbG);
@@ -204,42 +204,85 @@ describe("activity-based bonuses", () => {
     expect(withBonus.waterMl).toBe(base.baseWaterMl + activityWaterBonusMl(60 * 60));
   });
 
-  it("applyActivityBonus with no third argument behaves exactly as before (backward compatible)", () => {
+  it("applyActivityBonus with an empty activity list behaves exactly like zero duration", () => {
     const base = computeTargets(baseProfile);
-    const withoutArg = applyActivityBonus(base, 45 * 60);
-    const withZero = applyActivityBonus(base, 45 * 60, 0);
-    expect(withoutArg).toEqual(withZero);
-    expect(withoutArg.calorieBonusKcal).toBe(0);
+    const withEmpty = applyActivityBonus(base, []);
+    expect(withEmpty.carbBonusG).toBe(0);
+    expect(withEmpty.proteinBonusG).toBe(0);
+    expect(withEmpty.waterBonusMl).toBe(0);
+    expect(withEmpty.intensityMultiplier).toBe(1);
+    expect(withEmpty.targetCalories).toBe(base.targetCalories);
   });
 
-  it("activityCalorieBonusKcal credits 30% of logged calories, capped at 250 kcal", () => {
-    expect(activityCalorieBonusKcal(0)).toBe(0);
-    expect(activityCalorieBonusKcal(335)).toBeCloseTo(100.5); // weight-training example from the app
-    expect(activityCalorieBonusKcal(1000)).toBe(250); // capped, not 300
+  it("activityIntensityMultiplier is 1 (neutral) with no calories, too-short duration, or exactly-baseline calories", () => {
+    expect(activityIntensityMultiplier(30 * 60, null)).toBe(1);
+    expect(activityIntensityMultiplier(30 * 60, 0)).toBe(1);
+    expect(activityIntensityMultiplier(2 * 60, 500)).toBe(1); // under the 5-min noise-guard floor
+    expect(activityIntensityMultiplier(30 * 60, 150)).toBe(1); // exactly 5 kcal/min baseline
   });
 
-  it("logged calories only ever add on top of the duration-only bonus, never replace or subtract from it", () => {
-    const base = computeTargets(baseProfile);
-    const durationOnly = applyActivityBonus(base, 30 * 60); // 30 min, no calories logged
-    const withCalories = applyActivityBonus(base, 30 * 60, 335); // same 30 min, but calories logged this time
-
-    // Same duration, but the version with logged calories is strictly
-    // bigger — the missing-calories case (durationOnly) is never worse off.
-    expect(withCalories.targetCalories).toBeGreaterThan(durationOnly.targetCalories);
-    expect(withCalories.carbBonusG).toBeGreaterThan(durationOnly.carbBonusG);
-    expect(withCalories.proteinBonusG).toBe(durationOnly.proteinBonusG); // protein bonus is duration-only, untouched
-    expect(withCalories.calorieBonusKcal).toBe(101); // Math.round(335 * 0.3)
-
-    // Still internally consistent: targetCalories - base still equals
-    // carbBonusG*4 + proteinBonusG*4 even with the calorie top-up folded in.
-    const bonusKcal = withCalories.targetCalories - base.targetCalories;
-    expect(bonusKcal).toBe(withCalories.carbBonusG * 4 + withCalories.proteinBonusG * 4);
+  it("activityIntensityMultiplier scales up for higher-than-baseline kcal/min, clamped at 1.5x", () => {
+    // 700 kcal / 60 min ≈ 11.67 kcal/min → raw 2.33x, clamped to 1.5x
+    expect(activityIntensityMultiplier(60 * 60, 700)).toBe(1.5);
+    // 300 kcal / 30 min = 10 kcal/min → raw 2x, clamped to 1.5x
+    expect(activityIntensityMultiplier(30 * 60, 300)).toBe(1.5);
   });
 
-  it("activity with calories logged but zero duration still gets the calorie top-up (edge case, shouldn't happen but shouldn't crash either)", () => {
+  it("activityIntensityMultiplier scales down for lower-than-baseline kcal/min, clamped at 0.75x", () => {
+    // 180 kcal / 60 min = 3 kcal/min → raw 0.6x, clamped to 0.75x
+    expect(activityIntensityMultiplier(60 * 60, 180)).toBe(0.75);
+  });
+
+  it("a low-intensity activity's bonus lands below the duration-only floor — the core reason this replaced the additive design", () => {
     const base = computeTargets(baseProfile);
-    const result = applyActivityBonus(base, 0, 335);
-    expect(result.carbBonusG).toBe(25); // Math.round(100.5 / 4) — no duration blocks, just the calorie top-up
-    expect(result.calorieBonusKcal).toBe(101); // Math.round(335 * 0.3)
+    const durationOnly = applyActivityBonus(base, [{ durationSec: 60 * 60, calories: null }]); // 1 hour, no calories
+    const lowIntensity = applyActivityBonus(base, [{ durationSec: 60 * 60, calories: 180 }]); // slow walk, well under baseline
+
+    expect(lowIntensity.intensityMultiplier).toBe(0.75);
+    expect(lowIntensity.carbBonusG).toBeLessThan(durationOnly.carbBonusG);
+    expect(lowIntensity.targetCalories).toBeLessThan(durationOnly.targetCalories);
+  });
+
+  it("a high-intensity activity's bonus lands above the duration-only floor, capped rather than tracking calories 1:1", () => {
+    const base = computeTargets(baseProfile);
+    const durationOnly = applyActivityBonus(base, [{ durationSec: 60 * 60, calories: null }]); // 1 hour, no calories
+    const highIntensity = applyActivityBonus(base, [{ durationSec: 60 * 60, calories: 700 }]); // hard cycling session
+
+    expect(highIntensity.intensityMultiplier).toBe(1.5);
+    expect(highIntensity.carbBonusG).toBeGreaterThan(durationOnly.carbBonusG);
+    // Still internally consistent: targetCalories - base equals the
+    // multiplied-and-capped carb/protein grams exactly, even at the ceiling.
+    const bonusKcal = highIntensity.targetCalories - base.targetCalories;
+    expect(bonusKcal).toBe(highIntensity.carbBonusG * 4 + highIntensity.proteinBonusG * 4);
+  });
+
+  it("day-level multiplier is duration-weighted across multiple activities, not a flat average", () => {
+    const base = computeTargets(baseProfile);
+    // 55 minutes at baseline (1x) + 5 minutes at max intensity (1.5x) should
+    // land close to 1x, not the midpoint (1.25x) a flat average would give.
+    const result = applyActivityBonus(base, [
+      { durationSec: 55 * 60, calories: 55 * 5 }, // exactly baseline
+      { durationSec: 5 * 60, calories: 5 * 20 }, // 20 kcal/min, way above baseline → clamped 1.5x
+    ]);
+    expect(result.intensityMultiplier).toBeGreaterThan(1);
+    expect(result.intensityMultiplier).toBeLessThan(1.1);
+  });
+
+  it("an activity with no calories logged contributes multiplier=1 at its own duration weight, mixed in with tracked activities", () => {
+    const base = computeTargets(baseProfile);
+    const result = applyActivityBonus(base, [
+      { durationSec: 30 * 60, calories: null }, // untracked, no watch
+      { durationSec: 30 * 60, calories: 300 }, // tracked, well above baseline → 1.5x
+    ]);
+    // Equal duration weight between 1x and 1.5x → exactly the midpoint.
+    expect(result.intensityMultiplier).toBeCloseTo(1.25);
+  });
+
+  it("water bonus is unaffected by intensity — it stays purely duration-based", () => {
+    const base = computeTargets(baseProfile);
+    const lowIntensity = applyActivityBonus(base, [{ durationSec: 60 * 60, calories: 180 }]);
+    const highIntensity = applyActivityBonus(base, [{ durationSec: 60 * 60, calories: 700 }]);
+    expect(lowIntensity.waterMl).toBe(highIntensity.waterMl);
+    expect(lowIntensity.waterBonusMl).toBe(activityWaterBonusMl(60 * 60));
   });
 });

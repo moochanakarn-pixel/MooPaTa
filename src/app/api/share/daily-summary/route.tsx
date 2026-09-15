@@ -139,8 +139,6 @@ export async function GET(req: NextRequest) {
     { calories: 0, proteinG: 0, carbG: 0, fatG: 0 }
   );
   const waterMl = waterAgg._sum.ml ?? 0;
-  const activityDurationSec = activities.reduce((s, a) => s + a.durationSec, 0);
-  const activityCaloriesLogged = activities.reduce((s, a) => s + (a.calories ?? 0), 0);
 
   const profile = {
     weightKg: user.weightKg,
@@ -158,8 +156,7 @@ export async function GET(req: NextRequest) {
     const macroPrefs = { proteinGPerKg: user.proteinGPerKg, fatPercentOfCalories: user.fatPercentOfCalories };
     const today = applyActivityBonus(
       computeTargets(profile, latestBodyComposition, macroPrefs),
-      activityDurationSec,
-      activityCaloriesLogged
+      activities.map((a) => ({ durationSec: a.durationSec, calories: a.calories }))
     );
     targetCalories = today.targetCalories;
     targetWaterMl = today.waterMl;

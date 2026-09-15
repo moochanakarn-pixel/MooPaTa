@@ -288,9 +288,13 @@ export function activityWaterBonusMl(totalActivityDurationSecToday: number): num
 // Bumps carb/protein targets on days with logged exercise — roughly 15g
 // carbs (glycogen replenishment) and 5g protein per 30 minutes, same
 // block-based shape as the water bonus and capped for the same reason.
-// Deliberately duration-only (not intensity-weighted): Strava-synced
-// activities don't carry a comparable intensity signal, and this way one
-// formula covers synced and manually-logged activity alike.
+// The block count itself is still duration-only (an activity with no
+// calories logged at all still gets a sensible bonus — Activity.calories
+// is optional, and plenty of manually-typed activities have no watch
+// behind them), but each block's grams get scaled by intensityMultiplier
+// (see below) so 30 minutes of sitting on a bike doing nothing and 30
+// minutes of an all-out interval session no longer grant the exact same
+// bonus just because they share a duration.
 const CARB_BONUS_G_PER_BLOCK = 15;
 const PROTEIN_BONUS_G_PER_BLOCK = 5;
 const MAX_CARB_BONUS_G = 90;
@@ -302,36 +306,66 @@ export interface ActivityMacroBonus {
   proteinG: number;
 }
 
-export function activityMacroBonus(totalActivityDurationSecToday: number): ActivityMacroBonus {
+export function activityMacroBonus(totalActivityDurationSecToday: number, intensityMultiplier = 1): ActivityMacroBonus {
   const blocks = Math.floor(totalActivityDurationSecToday / ACTIVITY_BLOCK_SECONDS);
   return {
-    carbG: Math.min(blocks * CARB_BONUS_G_PER_BLOCK, MAX_CARB_BONUS_G),
-    proteinG: Math.min(blocks * PROTEIN_BONUS_G_PER_BLOCK, MAX_PROTEIN_BONUS_G),
+    carbG: Math.min(Math.round(blocks * CARB_BONUS_G_PER_BLOCK * intensityMultiplier), MAX_CARB_BONUS_G),
+    proteinG: Math.min(Math.round(blocks * PROTEIN_BONUS_G_PER_BLOCK * intensityMultiplier), MAX_PROTEIN_BONUS_G),
   };
 }
 
-// Optional real-world top-up on top of the duration-only bonus above: when
-// today's activities have Activity.calories logged (typed in, or read off
-// a watch via AI-import), credit back a damped fraction of it instead of
-// ignoring it — watch calorie estimates run high on average and there's no
-// way to verify them independently, so this is never 1:1, and it's capped
-// so one big or mistyped number can't blow out the day's target.
-// Deliberately additive-only on top of the duration-only floor above
-// (never subtracts): an activity with no calories logged still gets
-// exactly the same bonus as before, so nothing regresses for the common
-// case of missing data (Activity.calories is optional, and plenty of
-// manually-typed activities have no watch behind them at all). A fuller
-// "adjust up OR down vs. what this duration+intensity should have burned"
-// version would need per-activity type/intensity data threaded through
-// every caller (dashboard/nutrition/food pages, daily-summary share card)
-// instead of a single daily kcal sum — left for later if this simpler
-// version proves worth it.
-const CALORIE_BONUS_RETURN_RATE = 0.3;
-const MAX_CALORIE_BONUS_KCAL = 250;
+// How much harder (or easier) a single activity was than a "moderate"
+// baseline, derived from its own Activity.calories/durationSec — this is
+// what lets two activities of the same duration end up with different
+// bonuses. BASELINE_KCAL_PER_MIN is its own calibration point, deliberately
+// NOT the same as the ~2.67kcal/min the block constants above imply
+// (15g carb + 5g protein = 80kcal per 30-min block) — that rate was tuned
+// as "how generous the bonus should feel," never as a real calorie-burn
+// estimate, so reusing it as the intensity baseline would call a genuinely
+// easy walk "high intensity." 5kcal/min instead approximates a moderate
+// jog/brisk effort (consistent with the MET table calorie-estimate feature
+// already in the app, src/lib/calorie-estimate.ts, for a person in the
+// 65-75kg range around METs 4-6). Clamped to 0.75x-1.5x, not 0x-Nx: even a
+// very light activity still keeps most of its duration-only bonus (this is
+// a modifier on "did you move," not a gate on whether you get any bonus at
+// all), and even a very calorie-dense activity can't multiply the bonus
+// past 1.5x, since watch-reported calories are known to run high and
+// aren't independently verifiable. Below MIN_DURATION_FOR_INTENSITY_SEC the
+// kcal/min ratio is too noisy to trust (a 2-minute activity with a rounded
+// calorie count can produce wild ratios), so it falls back to 1x same as
+// having no calories logged at all.
+const BASELINE_KCAL_PER_MIN = 5;
+const INTENSITY_MULTIPLIER_MIN = 0.75;
+const INTENSITY_MULTIPLIER_MAX = 1.5;
+const MIN_DURATION_FOR_INTENSITY_SEC = 5 * 60;
 
-export function activityCalorieBonusKcal(loggedCaloriesToday: number): number {
-  if (loggedCaloriesToday <= 0) return 0;
-  return Math.min(loggedCaloriesToday * CALORIE_BONUS_RETURN_RATE, MAX_CALORIE_BONUS_KCAL);
+export function activityIntensityMultiplier(durationSec: number, calories: number | null): number {
+  if (calories === null || calories <= 0 || durationSec < MIN_DURATION_FOR_INTENSITY_SEC) return 1;
+  const kcalPerMin = calories / (durationSec / 60);
+  const raw = kcalPerMin / BASELINE_KCAL_PER_MIN;
+  return Math.min(INTENSITY_MULTIPLIER_MAX, Math.max(INTENSITY_MULTIPLIER_MIN, raw));
+}
+
+export interface ActivityBonusActivity {
+  durationSec: number;
+  calories: number | null;
+}
+
+// One activity's own duration is its weight in today's average — a 5-minute
+// activity with an inflated kcal/min ratio shouldn't sway the whole day's
+// multiplier as much as the 55-minute session next to it. An activity with
+// no calories logged contributes multiplier=1 at its own duration's weight,
+// same as the single-activity fallback above, so a day with a mix of
+// watch-tracked and manually-typed (no calories) activities lands somewhere
+// sensible in between rather than one side silently winning.
+function averageIntensityMultiplier(activities: ActivityBonusActivity[]): number {
+  const totalDurationSec = activities.reduce((sum, a) => sum + a.durationSec, 0);
+  if (totalDurationSec <= 0) return 1;
+  const weightedSum = activities.reduce(
+    (sum, a) => sum + activityIntensityMultiplier(a.durationSec, a.calories) * a.durationSec,
+    0
+  );
+  return weightedSum / totalDurationSec;
 }
 
 export interface TodayTargets extends NutritionTargets {
@@ -339,42 +373,37 @@ export interface TodayTargets extends NutritionTargets {
   waterBonusMl: number;
   carbBonusG: number;
   proteinBonusG: number;
-  // Portion of carbBonusG above that came from activityCalorieBonusKcal
-  // rather than the duration blocks — 0 whenever nothing was logged today.
-  // Exposed so the UI can explain *why* the bonus is bigger than the
-  // duration alone would suggest, instead of just showing a number that
-  // doesn't obviously follow from "X minutes today".
-  calorieBonusKcal: number;
+  // Today's duration-weighted average activityIntensityMultiplier, 1 when
+  // nothing was logged or nothing had usable calories — exposed so the UI
+  // can explain *why* the bonus is bigger/smaller than the duration alone
+  // would suggest, instead of just showing a number that doesn't obviously
+  // follow from "X minutes today".
+  intensityMultiplier: number;
 }
 
 // Applies today's activity bonus on top of the profile's base targets —
 // shared by the nutrition page (which shows the bonus breakdown) and the
 // food log page (which compares "eaten so far" against it), so both always
-// agree on what today's actual target is. Calories move with the macro
-// bonus so the two stay internally consistent — the calorie top-up is
-// folded into carbBonusG (carbs are already the flexible "fuel" macro the
-// duration-only bonus bumps) rather than added to targetCalories as an
-// untracked kcal source, so targetCalories keeps summing to its own macros
-// exactly like before.
-export function applyActivityBonus(
-  targets: NutritionTargets,
-  activityDurationSecToday: number,
-  loggedCaloriesToday = 0
-): TodayTargets {
-  const macroBonus = activityMacroBonus(activityDurationSecToday);
-  const waterBonusMl = activityWaterBonusMl(activityDurationSecToday);
-  const calorieBonusKcal = activityCalorieBonusKcal(loggedCaloriesToday);
-  const carbBonusG = Math.round(macroBonus.carbG + calorieBonusKcal / 4);
-  const bonusKcal = carbBonusG * 4 + macroBonus.proteinG * 4;
+// agree on what today's actual target is. Takes per-activity data (not a
+// flat daily duration/calorie sum) because the intensity multiplier has to
+// be computed per activity — mixing two different activities' calories
+// into one raw total before dividing by total duration would blur a short
+// intense session and a long easy one into a single misleading average.
+export function applyActivityBonus(targets: NutritionTargets, activitiesToday: ActivityBonusActivity[]): TodayTargets {
+  const totalDurationSec = activitiesToday.reduce((sum, a) => sum + a.durationSec, 0);
+  const intensityMultiplier = averageIntensityMultiplier(activitiesToday);
+  const macroBonus = activityMacroBonus(totalDurationSec, intensityMultiplier);
+  const waterBonusMl = activityWaterBonusMl(totalDurationSec);
+  const bonusKcal = macroBonus.carbG * 4 + macroBonus.proteinG * 4;
   return {
     ...targets,
     targetCalories: targets.targetCalories + bonusKcal,
-    carbG: targets.carbG + carbBonusG,
+    carbG: targets.carbG + macroBonus.carbG,
     proteinG: targets.proteinG + macroBonus.proteinG,
     waterMl: targets.baseWaterMl + waterBonusMl,
     waterBonusMl,
-    carbBonusG,
+    carbBonusG: macroBonus.carbG,
     proteinBonusG: macroBonus.proteinG,
-    calorieBonusKcal: Math.round(calorieBonusKcal),
+    intensityMultiplier,
   };
 }
