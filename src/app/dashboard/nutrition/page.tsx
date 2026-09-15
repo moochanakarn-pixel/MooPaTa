@@ -209,7 +209,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
     // per-day map instead of a separate aggregate query.
     db.activity.findMany({
       where: { userId, startedAt: { gte: trendStart } },
-      select: { startedAt: true, durationSec: true },
+      select: { startedAt: true, durationSec: true, calories: true },
     }),
     db.waterLog.findMany({
       where: { userId, loggedAt: { gte: lastWeekStart } },
@@ -276,13 +276,20 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
     caloriesByDay.set(key, (caloriesByDay.get(key) ?? 0) + macrosForGrams(log.food, log.grams).calories);
   }
   const durationByDay = new Map<string, number>();
+  // Separate map from caloriesByDay above — that one is calories *eaten*
+  // (from FoodLog), this one is calories *burned* per Activity.calories,
+  // fed into applyActivityBonus's optional third argument.
+  const activityCaloriesByDay = new Map<string, number>();
   for (const act of trendActivities) {
     const key = dayKey(act.startedAt);
     durationByDay.set(key, (durationByDay.get(key) ?? 0) + act.durationSec);
+    if (act.calories !== null) {
+      activityCaloriesByDay.set(key, (activityCaloriesByDay.get(key) ?? 0) + act.calories);
+    }
   }
 
   const activityDurationTodaySec = durationByDay.get(dayKey(todayStart)) ?? 0;
-  const targets = applyActivityBonus(baseTargets, activityDurationTodaySec);
+  const targets = applyActivityBonus(baseTargets, activityDurationTodaySec, activityCaloriesByDay.get(dayKey(todayStart)) ?? 0);
   const todayCaloriesEaten = caloriesByDay.get(dayKey(todayStart)) ?? 0;
 
   const thisWeekEnd = new Date(thisWeekStart);
@@ -312,7 +319,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
     const d = new Date(trendStart);
     d.setDate(d.getDate() + i);
     const key = dayKey(d);
-    const dayTarget = applyActivityBonus(baseTargets, durationByDay.get(key) ?? 0);
+    const dayTarget = applyActivityBonus(baseTargets, durationByDay.get(key) ?? 0, activityCaloriesByDay.get(key) ?? 0);
     return {
       label: d.toLocaleDateString("th-TH", { day: "numeric", month: "short" }),
       calories: caloriesByDay.get(key) ?? 0,
@@ -411,6 +418,9 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
           <p className="mt-4 text-xs text-neutral-500">
             ปรับเพิ่มจากกิจกรรมวันนี้ ({formatDuration(activityDurationTodaySec)}): คาร์บ +{targets.carbBonusG} ก. ·
             โปรตีน +{targets.proteinBonusG} ก.
+            {targets.calorieBonusKcal > 0 && (
+              <span> (รวมโบนัส +{targets.calorieBonusKcal} kcal จากแคลอรี่ที่บันทึกไว้ในกิจกรรมวันนี้ด้วย)</span>
+            )}
           </p>
         )}
       </div>

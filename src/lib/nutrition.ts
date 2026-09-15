@@ -310,30 +310,71 @@ export function activityMacroBonus(totalActivityDurationSecToday: number): Activ
   };
 }
 
+// Optional real-world top-up on top of the duration-only bonus above: when
+// today's activities have Activity.calories logged (typed in, or read off
+// a watch via AI-import), credit back a damped fraction of it instead of
+// ignoring it — watch calorie estimates run high on average and there's no
+// way to verify them independently, so this is never 1:1, and it's capped
+// so one big or mistyped number can't blow out the day's target.
+// Deliberately additive-only on top of the duration-only floor above
+// (never subtracts): an activity with no calories logged still gets
+// exactly the same bonus as before, so nothing regresses for the common
+// case of missing data (Activity.calories is optional, and plenty of
+// manually-typed activities have no watch behind them at all). A fuller
+// "adjust up OR down vs. what this duration+intensity should have burned"
+// version would need per-activity type/intensity data threaded through
+// every caller (dashboard/nutrition/food pages, daily-summary share card)
+// instead of a single daily kcal sum — left for later if this simpler
+// version proves worth it.
+const CALORIE_BONUS_RETURN_RATE = 0.3;
+const MAX_CALORIE_BONUS_KCAL = 250;
+
+export function activityCalorieBonusKcal(loggedCaloriesToday: number): number {
+  if (loggedCaloriesToday <= 0) return 0;
+  return Math.min(loggedCaloriesToday * CALORIE_BONUS_RETURN_RATE, MAX_CALORIE_BONUS_KCAL);
+}
+
 export interface TodayTargets extends NutritionTargets {
   waterMl: number;
   waterBonusMl: number;
   carbBonusG: number;
   proteinBonusG: number;
+  // Portion of carbBonusG above that came from activityCalorieBonusKcal
+  // rather than the duration blocks — 0 whenever nothing was logged today.
+  // Exposed so the UI can explain *why* the bonus is bigger than the
+  // duration alone would suggest, instead of just showing a number that
+  // doesn't obviously follow from "X minutes today".
+  calorieBonusKcal: number;
 }
 
 // Applies today's activity bonus on top of the profile's base targets —
 // shared by the nutrition page (which shows the bonus breakdown) and the
 // food log page (which compares "eaten so far" against it), so both always
 // agree on what today's actual target is. Calories move with the macro
-// bonus so the two stay internally consistent.
-export function applyActivityBonus(targets: NutritionTargets, activityDurationSecToday: number): TodayTargets {
+// bonus so the two stay internally consistent — the calorie top-up is
+// folded into carbBonusG (carbs are already the flexible "fuel" macro the
+// duration-only bonus bumps) rather than added to targetCalories as an
+// untracked kcal source, so targetCalories keeps summing to its own macros
+// exactly like before.
+export function applyActivityBonus(
+  targets: NutritionTargets,
+  activityDurationSecToday: number,
+  loggedCaloriesToday = 0
+): TodayTargets {
   const macroBonus = activityMacroBonus(activityDurationSecToday);
   const waterBonusMl = activityWaterBonusMl(activityDurationSecToday);
-  const bonusKcal = macroBonus.carbG * 4 + macroBonus.proteinG * 4;
+  const calorieBonusKcal = activityCalorieBonusKcal(loggedCaloriesToday);
+  const carbBonusG = Math.round(macroBonus.carbG + calorieBonusKcal / 4);
+  const bonusKcal = carbBonusG * 4 + macroBonus.proteinG * 4;
   return {
     ...targets,
     targetCalories: targets.targetCalories + bonusKcal,
-    carbG: targets.carbG + macroBonus.carbG,
+    carbG: targets.carbG + carbBonusG,
     proteinG: targets.proteinG + macroBonus.proteinG,
     waterMl: targets.baseWaterMl + waterBonusMl,
     waterBonusMl,
-    carbBonusG: macroBonus.carbG,
+    carbBonusG,
     proteinBonusG: macroBonus.proteinG,
+    calorieBonusKcal: Math.round(calorieBonusKcal),
   };
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  activityCalorieBonusKcal,
   activityMacroBonus,
   activityWaterBonusMl,
   applyActivityBonus,
@@ -201,5 +202,44 @@ describe("activity-based bonuses", () => {
     expect(withBonus.carbG).toBe(base.carbG + bonus.carbG);
     expect(withBonus.proteinG).toBe(base.proteinG + bonus.proteinG);
     expect(withBonus.waterMl).toBe(base.baseWaterMl + activityWaterBonusMl(60 * 60));
+  });
+
+  it("applyActivityBonus with no third argument behaves exactly as before (backward compatible)", () => {
+    const base = computeTargets(baseProfile);
+    const withoutArg = applyActivityBonus(base, 45 * 60);
+    const withZero = applyActivityBonus(base, 45 * 60, 0);
+    expect(withoutArg).toEqual(withZero);
+    expect(withoutArg.calorieBonusKcal).toBe(0);
+  });
+
+  it("activityCalorieBonusKcal credits 30% of logged calories, capped at 250 kcal", () => {
+    expect(activityCalorieBonusKcal(0)).toBe(0);
+    expect(activityCalorieBonusKcal(335)).toBeCloseTo(100.5); // weight-training example from the app
+    expect(activityCalorieBonusKcal(1000)).toBe(250); // capped, not 300
+  });
+
+  it("logged calories only ever add on top of the duration-only bonus, never replace or subtract from it", () => {
+    const base = computeTargets(baseProfile);
+    const durationOnly = applyActivityBonus(base, 30 * 60); // 30 min, no calories logged
+    const withCalories = applyActivityBonus(base, 30 * 60, 335); // same 30 min, but calories logged this time
+
+    // Same duration, but the version with logged calories is strictly
+    // bigger — the missing-calories case (durationOnly) is never worse off.
+    expect(withCalories.targetCalories).toBeGreaterThan(durationOnly.targetCalories);
+    expect(withCalories.carbBonusG).toBeGreaterThan(durationOnly.carbBonusG);
+    expect(withCalories.proteinBonusG).toBe(durationOnly.proteinBonusG); // protein bonus is duration-only, untouched
+    expect(withCalories.calorieBonusKcal).toBe(101); // Math.round(335 * 0.3)
+
+    // Still internally consistent: targetCalories - base still equals
+    // carbBonusG*4 + proteinBonusG*4 even with the calorie top-up folded in.
+    const bonusKcal = withCalories.targetCalories - base.targetCalories;
+    expect(bonusKcal).toBe(withCalories.carbBonusG * 4 + withCalories.proteinBonusG * 4);
+  });
+
+  it("activity with calories logged but zero duration still gets the calorie top-up (edge case, shouldn't happen but shouldn't crash either)", () => {
+    const base = computeTargets(baseProfile);
+    const result = applyActivityBonus(base, 0, 335);
+    expect(result.carbBonusG).toBe(25); // Math.round(100.5 / 4) — no duration blocks, just the calorie top-up
+    expect(result.calorieBonusKcal).toBe(101); // Math.round(335 * 0.3)
   });
 });

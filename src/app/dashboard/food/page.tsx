@@ -47,7 +47,10 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
       where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } },
       orderBy: [{ loggedAt: "asc" }, { id: "asc" }],
     }),
-    db.activity.aggregate({ where: { userId, startedAt: { gte: viewDayStart, lt: viewDayEnd } }, _sum: { durationSec: true } }),
+    db.activity.aggregate({
+      where: { userId, startedAt: { gte: viewDayStart, lt: viewDayEnd } },
+      _sum: { durationSec: true, calories: true },
+    }),
     // How many times each food has actually been logged, all-time — the
     // basis for the "เมนูที่กินบ่อย" quick-pick list inside the add-food
     // panel (see FoodLogView). isFavorite drives a separate "เมนูโปรด"
@@ -58,6 +61,7 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
   const logCountByFoodId = new Map(foodLogCounts.map((r) => [r.foodId, r._count._all]));
 
   const activityDurationViewDaySec = viewDayActivityAgg._sum.durationSec ?? 0;
+  const activityCaloriesViewDay = viewDayActivityAgg._sum.calories ?? 0;
   const waterLogs: WaterLogEntry[] = viewDayWaterRows.map((w) => ({ id: w.id, ml: w.ml, loggedAtMs: w.loggedAt.getTime() }));
 
   const todayLogs: TodayLogEntry[] = viewDayLogRows.map((l) => {
@@ -108,7 +112,11 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
     if (isProfileComplete(profile)) {
       const latestBodyComposition = await getLatestBodyComposition(userId);
       const macroPrefs = { proteinGPerKg: user.proteinGPerKg, fatPercentOfCalories: user.fatPercentOfCalories };
-      const t = applyActivityBonus(computeTargets(profile, latestBodyComposition, macroPrefs), activityDurationViewDaySec);
+      const t = applyActivityBonus(
+        computeTargets(profile, latestBodyComposition, macroPrefs),
+        activityDurationViewDaySec,
+        activityCaloriesViewDay
+      );
       targets = {
         targetCalories: t.targetCalories,
         proteinG: t.proteinG,

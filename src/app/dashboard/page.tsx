@@ -131,7 +131,7 @@ export default async function DashboardPage({
       }),
       db.activity.aggregate({
         where: { userId, startedAt: { gte: todayStart } },
-        _sum: { durationSec: true },
+        _sum: { durationSec: true, calories: true },
       }),
       db.foodLog.findMany({
         where: { userId, loggedAt: { gte: todayStart } },
@@ -168,7 +168,11 @@ export default async function DashboardPage({
   const latestBodyComposition = isProfileComplete(nutritionProfile) ? await getLatestBodyComposition(userId) : null;
   const macroPrefs = { proteinGPerKg: user?.proteinGPerKg, fatPercentOfCalories: user?.fatPercentOfCalories };
   const healthTargets = isProfileComplete(nutritionProfile)
-    ? applyActivityBonus(computeTargets(nutritionProfile, latestBodyComposition, macroPrefs), todayActivityAgg._sum.durationSec ?? 0)
+    ? applyActivityBonus(
+        computeTargets(nutritionProfile, latestBodyComposition, macroPrefs),
+        todayActivityAgg._sum.durationSec ?? 0,
+        todayActivityAgg._sum.calories ?? 0
+      )
     : null;
   const todayFoodTotals = todayFoodLogs.reduce(
     (acc, l) => {

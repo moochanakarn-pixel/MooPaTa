@@ -140,6 +140,7 @@ export async function GET(req: NextRequest) {
   );
   const waterMl = waterAgg._sum.ml ?? 0;
   const activityDurationSec = activities.reduce((s, a) => s + a.durationSec, 0);
+  const activityCaloriesLogged = activities.reduce((s, a) => s + (a.calories ?? 0), 0);
 
   const profile = {
     weightKg: user.weightKg,
@@ -155,7 +156,11 @@ export async function GET(req: NextRequest) {
   if (isProfileComplete(profile)) {
     const latestBodyComposition = await getLatestBodyComposition(userId);
     const macroPrefs = { proteinGPerKg: user.proteinGPerKg, fatPercentOfCalories: user.fatPercentOfCalories };
-    const today = applyActivityBonus(computeTargets(profile, latestBodyComposition, macroPrefs), activityDurationSec);
+    const today = applyActivityBonus(
+      computeTargets(profile, latestBodyComposition, macroPrefs),
+      activityDurationSec,
+      activityCaloriesLogged
+    );
     targetCalories = today.targetCalories;
     targetWaterMl = today.waterMl;
   }
