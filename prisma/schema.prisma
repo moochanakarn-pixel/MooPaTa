@@ -316,6 +316,19 @@ model Activity {
   // activity type but entered manually or via AI-import (from a watch's
   // own exertion readout) — no formula derives it in-app.
   rpe                Int?
+  // Free-text summary for manual/AI-import entry — a workout screenshot
+  // (Zepp/Garmin/Huawei/...) usually shows several metrics with no matching
+  // structured column here (training effect, VO2max estimate, heart-rate
+  // zone breakdown, muscle groups worked, movement-quality scores, ...);
+  // rather than chase a new dedicated column per fitness-app metric
+  // (endless, and most won't repeat across brands), the AI-import prompt
+  // asks for a one-line summary of whatever's left over and this holds it.
+  // Truncated to 500 chars on save (src/lib/activity-validation.ts's
+  // optionalNotes) rather than rejecting an over-length request outright —
+  // unlike the numeric fields nearby, a clipped summary is a low-stakes,
+  // recoverable loss (the user can just shorten and re-save), not silent
+  // data corruption the way a misread number would be.
+  notes              String?   @db.VarChar(500)
   kudosCount         Int?
   achievementCount   Int?
   prCount            Int?

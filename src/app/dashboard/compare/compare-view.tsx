@@ -5,6 +5,7 @@ import { activityColor } from "@/lib/activity-colors";
 import {
   activitySpeedValue,
   activityTypeLabel,
+  cadenceUnitLabel,
   formatDistanceKm,
   formatDuration,
   formatElevationM,
@@ -119,7 +120,11 @@ export function CompareView({ activities, unit }: { activities: CompareActivity[
       : null;
   const elevationDiff = a && b && a.elevationGainM && b.elevationGainM ? a.elevationGainM - b.elevationGainM : null;
   const hrDiff = a && b && a.avgHeartRate && b.avgHeartRate ? a.avgHeartRate - b.avgHeartRate : null;
-  const cadenceDiff = a && b && a.avgCadence && b.avgCadence ? a.avgCadence - b.avgCadence : null;
+  // Cadence's unit depends on activity type (spm for running, rpm for
+  // cycling — see cadenceUnitLabel's comment) same as pace/speed above, so
+  // a diff only makes sense when both sides are the same type; comparing a
+  // run's cadence against a ride's would silently subtract spm from rpm.
+  const cadenceDiff = a && b && a.type === b.type && a.avgCadence && b.avgCadence ? a.avgCadence - b.avgCadence : null;
   const caloriesDiff = a && b && a.calories && b.calories ? a.calories - b.calories : null;
 
   return (
@@ -187,9 +192,13 @@ export function CompareView({ activities, unit }: { activities: CompareActivity[
           />
           <Row
             label="เคเดนซ์เฉลี่ย"
-            aValue={a.avgCadence ? `${Math.round(a.avgCadence)} rpm` : "-"}
-            bValue={b.avgCadence ? `${Math.round(b.avgCadence)} rpm` : "-"}
-            deltaText={cadenceDiff !== null ? `${cadenceDiff > 0 ? "+" : ""}${Math.round(cadenceDiff)} rpm` : undefined}
+            aValue={a.avgCadence ? `${Math.round(a.avgCadence)} ${cadenceUnitLabel(a.type)}` : "-"}
+            bValue={b.avgCadence ? `${Math.round(b.avgCadence)} ${cadenceUnitLabel(b.type)}` : "-"}
+            deltaText={
+              cadenceDiff !== null
+                ? `${cadenceDiff > 0 ? "+" : ""}${Math.round(cadenceDiff)} ${cadenceUnitLabel(a.type)}`
+                : undefined
+            }
           />
           <Row
             label="แคลอรี่"

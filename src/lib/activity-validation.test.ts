@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeAvgSpeedMs, optionalNonNegative, optionalRpe, parseExercises } from "./activity-validation";
+import { computeAvgSpeedMs, optionalNonNegative, optionalNotes, optionalRpe, parseExercises } from "./activity-validation";
 
 describe("parseExercises", () => {
   it("returns an empty array when the field wasn't sent at all", () => {
@@ -147,5 +147,26 @@ describe("computeAvgSpeedMs", () => {
     expect(computeAvgSpeedMs(-1, 40)).toBeNull();
     expect(computeAvgSpeedMs(5, 0)).toBeNull();
     expect(computeAvgSpeedMs(5, -1)).toBeNull();
+  });
+});
+
+describe("optionalNotes", () => {
+  it("returns null when not provided, blank, or the wrong type", () => {
+    expect(optionalNotes(undefined)).toBeNull();
+    expect(optionalNotes(null)).toBeNull();
+    expect(optionalNotes("")).toBeNull();
+    expect(optionalNotes("   ")).toBeNull();
+    expect(optionalNotes(42)).toBeNull();
+  });
+
+  it("trims and returns the text as-is when within the limit", () => {
+    expect(optionalNotes("  Training Effect: 2.1 (ดี)  ")).toBe("Training Effect: 2.1 (ดี)");
+  });
+
+  it("clips to 500 chars rather than rejecting an over-length note", () => {
+    const long = "a".repeat(600);
+    const result = optionalNotes(long);
+    expect(result).toHaveLength(500);
+    expect(result).toBe("a".repeat(500));
   });
 });

@@ -94,3 +94,13 @@ export function computeAvgSpeedMs(distanceKm: number | null, durationMin: number
   if (distanceKm === null || distanceKm <= 0 || durationMin <= 0) return null;
   return (distanceKm * 1000) / (durationMin * 60);
 }
+
+// Activity.notes — free text, capped to the column's 500-char limit
+// (schema.prisma's comment on the field explains why a clip rather than a
+// whole-request rejection here, unlike the numeric optional fields above).
+export const MAX_NOTES_LENGTH = 500;
+export function optionalNotes(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed.slice(0, MAX_NOTES_LENGTH);
+}

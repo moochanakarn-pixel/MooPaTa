@@ -64,6 +64,18 @@ export function activitySpeedValue(type: string, metersPerSec?: number | null, u
   return formatSpeedKmh(metersPerSec, unit);
 }
 
+// Cadence's unit depends on the activity the same way pace/speed does
+// (activitySpeedValue above) — cycling cadence is pedal revolutions per
+// minute (rpm), everything else (running, walking) counts steps per minute
+// (spm). Every display site used to hardcode "rpm" unconditionally, a
+// leftover from when avgCadence only ever came from Strava-synced cycling
+// activities — harmless while dormant, but wrong the moment a manually
+// logged/AI-imported run started populating the same field with a spm
+// reading labeled as rpm.
+export function cadenceUnitLabel(type: string): string {
+  return type === "Ride" ? "rpm" : "spm";
+}
+
 export function formatElevationM(meters?: number | null, unit: UnitSystem = "METRIC"): string {
   if (meters === null || meters === undefined) return "-";
   if (unit === "IMPERIAL") return `${Math.round(meters * 3.28084)} ฟุต`;

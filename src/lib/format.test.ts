@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   activitySpeedValue,
   activityTypeLabel,
+  cadenceUnitLabel,
   formatDistanceKm,
   formatDuration,
   formatPace,
@@ -62,6 +63,18 @@ describe("activitySpeedValue — the per-type dispatcher", () => {
   it("falls back to km/h speed for every other type", () => {
     for (const type of ["Ride", "Walk", "WeightTraining", "Football", "Badminton", "Workout", "SomeUnknownType"]) {
       expect(activitySpeedValue(type, 20 / 3.6)).toBe(formatSpeedKmh(20 / 3.6));
+    }
+  });
+});
+
+describe("cadenceUnitLabel", () => {
+  it("uses rpm for cycling", () => {
+    expect(cadenceUnitLabel("Ride")).toBe("rpm");
+  });
+
+  it("uses spm for everything else, not just running", () => {
+    for (const type of ["Run", "Walk", "WeightTraining", "Football", "Workout", "SomeUnknownType"]) {
+      expect(cadenceUnitLabel(type)).toBe("spm");
     }
   });
 });

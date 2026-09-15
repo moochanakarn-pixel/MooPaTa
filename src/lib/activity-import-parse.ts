@@ -14,12 +14,24 @@ export interface ParsedActivity {
   calories: number | null;
   avgHeartRate: number | null;
   maxHeartRate: number | null;
+  // Steps/min for anything but cycling, pedal rpm for cycling — see
+  // cadenceUnitLabel's comment in src/lib/format.ts. Read off the source
+  // screenshot as-is; nothing here converts between the two.
+  avgCadence: number | null;
   // Whole-session RPE (Rate of Perceived Exertion, Borg/talk-test framing,
   // 1-10) — a watch's own summary screen often shows this directly, same
   // zero-formula "just read it off the source" approach as the other
   // fields here. Distinct from per-set weight-training RPE (reps-in-reserve
   // framing) below.
   rpe: number | null;
+  // Free-text catch-all for whatever a watch app's export shows that has no
+  // structured field of its own (training effect, VO2max estimate, HR zone
+  // breakdown, muscle groups worked, movement-quality scores, ...) — see
+  // Activity.notes's comment in schema.prisma for why this exists instead
+  // of a dedicated column per metric. Unlike every field above, this one is
+  // text, not a number, so it's parsed separately from FIELD_MATCHERS below
+  // rather than through firstNumber.
+  notes: string | null;
   // One entry per set actually performed (not one aggregate row per
   // exercise) — the prompt asks the AI to list every set on its own line,
   // so a pyramid/drop set (15x5kg, 14x5kg, 10x4kg) comes back as three
@@ -44,18 +56,27 @@ function firstNumber(line: string): number | null {
 // body-composition-import-parse.ts's FIELD_MATCHERS: more specific
 // keywords first, so e.g. "หัวใจสูงสุด" (contains no "เฉลี่ย") never gets
 // misread by a looser matcher placed before it.
-const FIELD_MATCHERS: { key: Exclude<keyof ParsedActivity, "type" | "exercises">; test: (l: string) => boolean }[] = [
+const FIELD_MATCHERS: {
+  key: Exclude<keyof ParsedActivity, "type" | "exercises" | "notes">;
+  test: (l: string) => boolean;
+}[] = [
   { key: "maxHeartRate", test: (l) => /หัวใจสูงสุด|max.*heart|heart.*max/i.test(l) },
   { key: "avgHeartRate", test: (l) => /หัวใจเฉลี่ย|avg.*heart|average.*heart|heart.*avg/i.test(l) },
   { key: "durationMin", test: (l) => /ระยะเวลา|duration/i.test(l) },
   { key: "distanceKm", test: (l) => /ระยะทาง|distance/i.test(l) },
   { key: "calories", test: (l) => /แคลอรี่|แคลอรี|calor/i.test(l) },
+  { key: "avgCadence", test: (l) => /เคเดนซ์|cadence/i.test(l) },
   // Whole-session RPE — checked after calories/heart-rate/etc. so a line
   // that happens to also mention those keywords already got claimed first;
   // in practice the prompt asks for RPE on its own line so this rarely
   // matters in ordering, but kept last since it's the newest field.
   { key: "rpe", test: (l) => /ระดับความเหนื่อย|^rpe|\brpe\b/i.test(l) },
 ];
+
+// "หมายเหตุ: ..." / "โน้ต: ..." / "note: ..." — the one free-text field
+// among all these, so it can't go through FIELD_MATCHERS' firstNumber path
+// above. Matched and stripped separately in parseActivityText's loop.
+const NOTES_LINE = /^(?:หมายเหตุ|โน้ต|note)s?\s*[:\-]\s*(.*)$/i;
 
 // "HH:MM:SS" duration text (Huawei/Apple Health's own format) -> total
 // minutes, rounded. Requires all three groups — a bare two-group "45:30"
@@ -132,7 +153,9 @@ export function parseActivityText(text: string): ParsedActivity {
     calories: null,
     avgHeartRate: null,
     maxHeartRate: null,
+    avgCadence: null,
     rpe: null,
+    notes: null,
     exercises: [],
   };
 
@@ -164,6 +187,18 @@ export function parseActivityText(text: string): ParsedActivity {
     if (result.type === null && /ประเภท|^type/i.test(line)) {
       result.type = matchType(line);
       continue;
+    }
+
+    if (result.notes === null) {
+      const notesMatch = line.match(NOTES_LINE);
+      if (notesMatch) {
+        // "-" is the prompt's own placeholder for "not present in the
+        // image" (same convention every other field uses), not literal
+        // note text.
+        const value = notesMatch[1].trim();
+        if (value && value !== "-") result.notes = value.slice(0, 500);
+        continue;
+      }
     }
 
     for (const matcher of FIELD_MATCHERS) {

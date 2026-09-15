@@ -4,6 +4,7 @@ import { getExerciseStats } from "@/lib/exercise-stats";
 import {
   activitySpeedValue,
   activityTypeLabel,
+  cadenceUnitLabel,
   formatDistanceParts,
   formatDuration,
   formatElevationM,
@@ -139,7 +140,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     statItems.push({ value: `${Math.round(activity.maxHeartRate)} bpm`, label: "หัวใจสูงสุด" });
   }
   if (activity.avgCadence) {
-    statItems.push({ value: `${Math.round(activity.avgCadence)} rpm`, label: "เคเดนซ์เฉลี่ย" });
+    statItems.push({ value: `${Math.round(activity.avgCadence)} ${cadenceUnitLabel(activity.type)}`, label: "เคเดนซ์เฉลี่ย" });
   }
   if (activity.calories) {
     statItems.push({ value: `${Math.round(activity.calories)} kcal`, label: "แคลอรี่" });

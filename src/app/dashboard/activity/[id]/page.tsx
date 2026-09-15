@@ -6,6 +6,7 @@ import { getSessionUserId } from "@/lib/session";
 import {
   activitySpeedValue,
   activityTypeLabel,
+  cadenceUnitLabel,
   formatActivityDate,
   formatDistanceKm,
   formatDuration,
@@ -174,7 +175,10 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
         />
         <Stat label="แคลอรี่" value={activity.calories ? `${Math.round(activity.calories)} kcal` : "-"} />
         <Stat label="ระดับความเหนื่อย (RPE)" value={activity.rpe !== null ? `${activity.rpe}/10` : "-"} />
-        <Stat label="เคเดนซ์เฉลี่ย" value={activity.avgCadence ? `${Math.round(activity.avgCadence)} rpm` : "-"} />
+        <Stat
+          label="เคเดนซ์เฉลี่ย"
+          value={activity.avgCadence ? `${Math.round(activity.avgCadence)} ${cadenceUnitLabel(activity.type)}` : "-"}
+        />
         <Stat label="กำลังเฉลี่ย" value={activity.avgWatts ? `${Math.round(activity.avgWatts)} W` : "-"} />
         <Stat label="พลังงาน" value={activity.kilojoules ? `${Math.round(activity.kilojoules)} kJ` : "-"} />
         <Stat label="Suffer Score" value={activity.sufferScore ? String(activity.sufferScore) : "-"} />
@@ -196,6 +200,13 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
           }
         />
       </div>
+
+      {activity.notes && (
+        <div className="mt-6 rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
+          <h2 className="mb-2 font-medium">หมายเหตุ</h2>
+          <p className="whitespace-pre-wrap text-sm text-neutral-300">{activity.notes}</p>
+        </div>
+      )}
 
       {activity.exercises.length > 0 && (
         <div className="mt-8">

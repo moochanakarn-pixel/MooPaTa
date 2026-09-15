@@ -6,6 +6,7 @@ import {
   MAX_DURATION_MIN,
   computeAvgSpeedMs,
   optionalNonNegative,
+  optionalNotes,
   optionalRpe,
   parseExercises,
 } from "@/lib/activity-validation";
@@ -33,7 +34,9 @@ export async function POST(req: NextRequest) {
   const avgHeartRate = optionalNonNegative(body.avgHeartRate);
   const maxHeartRate = optionalNonNegative(body.maxHeartRate);
   const calories = optionalNonNegative(body.calories);
+  const avgCadence = optionalNonNegative(body.avgCadence);
   const rpe = optionalRpe(body.rpe);
+  const notes = optionalNotes(body.notes);
   const exercises = parseExercises(body.exercises);
 
   if (!type) {
@@ -45,7 +48,7 @@ export async function POST(req: NextRequest) {
   if (Number.isNaN(startedAt.getTime())) {
     return NextResponse.json({ error: "invalid_date" }, { status: 400 });
   }
-  if ([distanceKm, avgHeartRate, maxHeartRate, calories, rpe].some((n) => n !== null && Number.isNaN(n))) {
+  if ([distanceKm, avgHeartRate, maxHeartRate, calories, avgCadence, rpe].some((n) => n !== null && Number.isNaN(n))) {
     return NextResponse.json({ error: "invalid_optional_field" }, { status: 400 });
   }
   if (exercises === null) {
@@ -66,7 +69,9 @@ export async function POST(req: NextRequest) {
       avgHeartRate,
       maxHeartRate,
       calories,
+      avgCadence,
       rpe,
+      notes,
       raw: intensity ? { manualIntensity: intensity } : {},
       exercises: {
         create: exercises.map((ex, i) => ({

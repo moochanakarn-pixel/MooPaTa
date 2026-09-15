@@ -83,16 +83,18 @@ function RpeLevelsGuide({ title, levels }: { title: string; levels: { level: str
 // asking for it unconditionally is simpler than trying to have the AI
 // decide whether to include it — an unused "ท่า:" section is just ignored
 // by parseActivityText for a cardio activity.
-const AI_PROMPT_TEMPLATE = `อ่านค่าจากรูปสรุปกิจกรรมที่แนบมาให้หน่อย (จากแอพนาฬิกา/สายรัดข้อมือ เช่น Huawei Health, Apple Health, Garmin) แล้วตอบกลับมาแค่บรรทัดเหล่านี้เป๊ะๆ ไม่ต้องมีคำอธิบายอื่นแทรก (ค่าไหนไม่มีในรูปให้ใส่ "-" แทน):
+const AI_PROMPT_TEMPLATE = `อ่านค่าจากรูปสรุปกิจกรรมที่แนบมาให้หน่อย (จากแอพนาฬิกา/สายรัดข้อมือ เช่น Huawei Health, Apple Health, Garmin, Zepp) แล้วตอบกลับมาแค่บรรทัดเหล่านี้เป๊ะๆ ไม่ต้องมีคำอธิบายอื่นแทรก (ค่าไหนไม่มีในรูปให้ใส่ "-" แทน):
 ประเภท: [วิ่ง/ปั่นจักรยาน/เดิน/ว่ายน้ำ/เวทเทรนนิ่ง/ฟุตบอล/แบดมินตัน/อื่นๆ]
 ระยะเวลา: [เช่น 02:53:39 หรือจำนวนนาที]
 ระยะทาง: [กม.]
 แคลอรี่: [kcal]
 หัวใจเฉลี่ย: [bpm]
 หัวใจสูงสุด: [bpm]
+เคเดนซ์เฉลี่ย: [spm ถ้าวิ่ง/เดิน หรือ rpm ถ้าปั่นจักรยาน]
 ระดับความเหนื่อย: [RPE 1-10 ถ้ารูปมีบอกไว้]
+หมายเหตุ: [สรุปข้อมูลอื่นที่มีในรูปแต่ไม่ตรงกับหัวข้อด้านบนเป็นประโยคสั้นๆ บรรทัดเดียว เช่น Training Effect, VO2max, โซนหัวใจ, กล้ามเนื้อที่ใช้ — ถ้าไม่มีข้อมูลอื่นเหลือให้ใส่ "-"]
 
-ถ้าเป็นเวทเทรนนิ่ง ให้ใส่รายการท่าต่อท้ายด้วย หนึ่งบรรทัดต่อหนึ่งเซ็ทที่ทำจริง (ถ้าท่าเดียวกันทำหลายเซ็ทที่ตัวเลขต่างกัน ให้แยกคนละบรรทัด อย่ารวมเป็นค่าเดียว) รูปแบบ "ชื่อท่า | เซ็ทที่ | ครั้ง | น้ำหนัก(กก.) | RPE" (คอลัมน์ RPE ใส่แค่ถ้ารูปบอกไว้ ไม่งั้นเว้นว่าง):
+ถ้าเป็นเวทเทรนนิ่ง ให้ใส่รายการท่าต่อท้ายด้วย หนึ่งบรรทัดต่อหนึ่งเซ็ทที่ทำจริง (ถ้าท่าเดียวกันทำหลายเซ็ทที่ตัวเลขต่างกัน ให้แยกคนละบรรทัด อย่ารวมเป็นค่าเดียว) รูปแบบ "ชื่อท่า | เซ็ทที่ | ครั้ง | น้ำหนัก(กก.) | RPE" (คอลัมน์ RPE ใส่แค่ถ้ารูปบอกไว้ ไม่งั้นเว้นว่าง — ถ้ารูปไม่ได้บอกน้ำหนักที่ยกไว้เลย เช่นนาฬิกาที่นับได้แค่จำนวนครั้งจากการเคลื่อนไหว ให้เว้นคอลัมน์น้ำหนักว่างไว้เช่นกัน):
 ท่า:
 ดันไหล่ดัมเบล | 1 | 15 | 5 | 8
 ดันไหล่ดัมเบล | 2 | 14 | 5 | 8
@@ -167,7 +169,9 @@ export interface LogActivityInitial {
   avgHeartRate: string;
   maxHeartRate: string;
   calories: string;
+  avgCadence: string;
   rpe: string;
+  notes: string;
   exercises: { name: string; sets: { reps: string; weightKg: string; rpe: string }[] }[];
 }
 
@@ -202,7 +206,9 @@ export function LogActivityForm({
   const [avgHeartRate, setAvgHeartRate] = useState(initial?.avgHeartRate ?? "");
   const [maxHeartRate, setMaxHeartRate] = useState(initial?.maxHeartRate ?? "");
   const [calories, setCalories] = useState(initial?.calories ?? "");
+  const [avgCadence, setAvgCadence] = useState(initial?.avgCadence ?? "");
   const [rpe, setRpe] = useState(initial?.rpe ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
   const [exercises, setExercises] = useState<ExerciseRow[]>(
     () =>
       initial?.exercises.map((e) => ({
@@ -260,7 +266,9 @@ export function LogActivityForm({
     if (parsed.calories !== null) setCalories(String(parsed.calories));
     if (parsed.avgHeartRate !== null) setAvgHeartRate(String(parsed.avgHeartRate));
     if (parsed.maxHeartRate !== null) setMaxHeartRate(String(parsed.maxHeartRate));
+    if (parsed.avgCadence !== null) setAvgCadence(String(parsed.avgCadence));
     if (parsed.rpe !== null) setRpe(String(parsed.rpe));
+    if (parsed.notes !== null) setNotes(parsed.notes);
     if (parsed.exercises.length > 0) {
       // parseActivityText already gives one entry per set actually
       // performed (see activity-import-parse.ts), so a pyramid/drop set
@@ -288,7 +296,9 @@ export function LogActivityForm({
       parsed.calories !== null ||
       parsed.avgHeartRate !== null ||
       parsed.maxHeartRate !== null ||
+      parsed.avgCadence !== null ||
       parsed.rpe !== null ||
+      parsed.notes !== null ||
       parsed.exercises.length > 0;
     if (!gotAnything) {
       setImportNotice("อ่านค่าไม่ได้เลย ลองวางข้อความใหม่ หรือดูว่าตรงกับตัวอย่างมั้ย");
@@ -369,7 +379,9 @@ export function LogActivityForm({
         avgHeartRate: avgHeartRate.trim() || undefined,
         maxHeartRate: maxHeartRate.trim() || undefined,
         calories: calories.trim() || undefined,
+        avgCadence: avgCadence.trim() || undefined,
         rpe: rpe.trim() || undefined,
+        notes: notes.trim() || undefined,
         exercises: namedExercises.map((r) => ({
           name: r.name.trim(),
           sets: r.sets.map((s) => ({
@@ -428,7 +440,7 @@ export function LogActivityForm({
           <textarea
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
-            placeholder={`ประเภท: วิ่ง\nระยะเวลา: 02:53:39\nระยะทาง: 5.2\nแคลอรี่: 350\nหัวใจเฉลี่ย: 130\nหัวใจสูงสุด: 165\nระดับความเหนื่อย: 7`}
+            placeholder={`ประเภท: วิ่ง\nระยะเวลา: 02:53:39\nระยะทาง: 5.2\nแคลอรี่: 350\nหัวใจเฉลี่ย: 130\nหัวใจสูงสุด: 165\nเคเดนซ์เฉลี่ย: 168\nระดับความเหนื่อย: 7\nหมายเหตุ: -`}
             rows={7}
             className={`${INPUT_CLASS} resize-y font-mono text-xs`}
           />
@@ -544,6 +556,17 @@ export function LogActivityForm({
               />
             </div>
             <div>
+              <label className={LABEL_CLASS}>เคเดนซ์เฉลี่ย (spm/rpm)</label>
+              <input
+                type="number"
+                min="0"
+                value={avgCadence}
+                onChange={(e) => setAvgCadence(e.target.value)}
+                placeholder="spm ถ้าวิ่ง/เดิน, rpm ถ้าปั่นจักรยาน"
+                className={INPUT_CLASS}
+              />
+            </div>
+            <div>
               <label className={LABEL_CLASS}>ระดับความเหนื่อย (RPE 1-10)</label>
               <input
                 type="number"
@@ -556,6 +579,17 @@ export function LogActivityForm({
               />
               <RpeLevelsGuide title="แต่ละระดับหมายถึงอะไร?" levels={RPE_CARDIO_LEVELS} />
             </div>
+          </div>
+          <div className="mt-3">
+            <label className={LABEL_CLASS}>หมายเหตุ (ไม่บังคับ)</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="ข้อมูลอื่นจากแอพนาฬิกาที่ไม่มีช่องกรอกเฉพาะ เช่น Training Effect, VO2max, โซนหัวใจ, กล้ามเนื้อที่ใช้"
+              maxLength={500}
+              rows={2}
+              className={`${INPUT_CLASS} resize-y`}
+            />
           </div>
         </div>
 

@@ -147,4 +147,33 @@ describe("parseActivityText", () => {
     const parsed = parseActivityText("| ดันไหล่ดัมเบล | 1 | 15 | 5 | 8 |");
     expect(parsed.exercises).toEqual([{ name: "ดันไหล่ดัมเบล", sets: [{ reps: 15, weightKg: 5, rpe: 8 }] }]);
   });
+
+  it("reads เคเดนซ์เฉลี่ย (avgCadence) in Thai and English", () => {
+    expect(parseActivityText("เคเดนซ์เฉลี่ย: 168").avgCadence).toBe(168);
+    expect(parseActivityText("Cadence: 90").avgCadence).toBe(90);
+  });
+
+  it("reads a หมายเหตุ line as free-text notes", () => {
+    const parsed = parseActivityText("หมายเหตุ: Training Effect 2.1 (ดี), VO2max 47");
+    expect(parsed.notes).toBe("Training Effect 2.1 (ดี), VO2max 47");
+  });
+
+  it("also matches the English 'note'/'notes' keyword", () => {
+    expect(parseActivityText("note: heart rate zone breakdown mostly aerobic").notes).toBe(
+      "heart rate zone breakdown mostly aerobic"
+    );
+  });
+
+  it("treats a bare '-' notes answer as no note (the prompt's own placeholder for 'not present')", () => {
+    expect(parseActivityText("หมายเหตุ: -").notes).toBeNull();
+  });
+
+  it("leaves weightKg null for a set row whose weight column is the watch's own '--' placeholder", () => {
+    // A watch that only counts reps via motion sensing (no load cell) marks
+    // the weight column "--" rather than leaving it blank — same outcome as
+    // an explicitly empty cell: firstNumber finds no digit in "--" either
+    // way, so no special-casing was actually needed here.
+    const parsed = parseActivityText("สควอทบาร์เบล | 1 | 10 | --");
+    expect(parsed.exercises).toEqual([{ name: "สควอทบาร์เบล", sets: [{ reps: 10, weightKg: null, rpe: null }] }]);
+  });
 });
