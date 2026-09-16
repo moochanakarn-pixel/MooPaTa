@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import { RegisterServiceWorker } from "./register-sw";
 import "./globals.css";
 
@@ -30,12 +32,17 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="th" className={fontSans.variable}>
+    <html lang={locale} className={fontSans.variable}>
       <body className="min-h-screen bg-neutral-950 font-sans text-neutral-100 antialiased">
-        {children}
-        <RegisterServiceWorker />
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          {children}
+          <RegisterServiceWorker />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

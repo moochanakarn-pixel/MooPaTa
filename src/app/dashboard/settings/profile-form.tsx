@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-neutral-800 bg-neutral-900 px-2.5 py-1.5 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
@@ -11,6 +12,7 @@ const INPUT_CLASS =
 // way to set them at all until this. Uploaded photo takes priority over
 // the Google one for display (see the dashboard header) once set.
 export function ProfileForm({ initialName, hasCustomAvatar }: { initialName: string | null; hasCustomAvatar: boolean }) {
+  const t = useTranslations("settings.profile");
   const router = useRouter();
   const [name, setName] = useState(initialName ?? "");
   const [savingName, setSavingName] = useState(false);
@@ -29,7 +31,7 @@ export function ProfileForm({ initialName, hasCustomAvatar }: { initialName: str
     });
     setSavingName(false);
     if (res.ok) router.refresh();
-    else setError("บันทึกชื่อไม่สำเร็จ ลองใหม่อีกครั้ง");
+    else setError(t("saveNameFailed"));
   }
 
   async function uploadAvatar(file: File) {
@@ -43,7 +45,7 @@ export function ProfileForm({ initialName, hasCustomAvatar }: { initialName: str
       setCacheBust((v) => v + 1);
       router.refresh();
     } else {
-      setError("อัปโหลดรูปไม่สำเร็จ — ใช้ไฟล์ jpg/png/webp ขนาดไม่เกิน 4MB");
+      setError(t("uploadFailed"));
     }
   }
 
@@ -54,7 +56,7 @@ export function ProfileForm({ initialName, hasCustomAvatar }: { initialName: str
       setCacheBust((v) => v + 1);
       router.refresh();
     } else {
-      setError("ลบรูปไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setError(t("removeFailed"));
     }
   }
 
@@ -75,7 +77,7 @@ export function ProfileForm({ initialName, hasCustomAvatar }: { initialName: str
               <path d="M5 20c0-4 3-6 7-6s7 2 7 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           )}
-          {uploadingAvatar && <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-[9px] text-white">กำลังอัปโหลด</span>}
+          {uploadingAvatar && <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-[9px] text-white">{t("uploading")}</span>}
         </button>
         <input
           ref={fileInput}
@@ -90,21 +92,21 @@ export function ProfileForm({ initialName, hasCustomAvatar }: { initialName: str
         />
         {hasCustomAvatar && (
           <button onClick={removeAvatar} className="text-[11px] text-neutral-600 hover:text-red-400">
-            ลบรูป
+            {t("removePhoto")}
           </button>
         )}
       </div>
 
       <div className="flex-1 space-y-2">
-        <label className="block text-xs text-neutral-500">ชื่อที่แสดง</label>
+        <label className="block text-xs text-neutral-500">{t("displayName")}</label>
         <div className="flex gap-2">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="ชื่อของคุณ" maxLength={60} className={INPUT_CLASS} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("namePlaceholder")} maxLength={60} className={INPUT_CLASS} />
           <button
             onClick={saveName}
             disabled={savingName || !name.trim() || name.trim() === (initialName ?? "")}
             className="flex-none rounded-lg bg-lime-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-lime-500 disabled:opacity-50"
           >
-            {savingName ? "..." : "บันทึก"}
+            {savingName ? "..." : t("save")}
           </button>
         </div>
         {error && <p className="text-xs text-red-400">{error}</p>}

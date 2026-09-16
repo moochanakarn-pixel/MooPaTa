@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export interface HealthFlagsInitial {
   highCholesterol: boolean;
@@ -39,6 +40,7 @@ function FlagToggle({
 // checkup — used only to surface rule-based dietary warnings on the food
 // page (src/lib/health-flags.ts), never to diagnose anything.
 export function HealthFlagsForm({ initial }: { initial: HealthFlagsInitial }) {
+  const t = useTranslations("settings.healthFlagsForm");
   const router = useRouter();
   const [highCholesterol, setHighCholesterol] = useState(initial.highCholesterol);
   const [highUricAcid, setHighUricAcid] = useState(initial.highUricAcid);
@@ -61,7 +63,7 @@ export function HealthFlagsForm({ initial }: { initial: HealthFlagsInitial }) {
       setSaved({ highCholesterol, highUricAcid });
       router.refresh();
     } else {
-      setError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setError(t("saveFailed"));
     }
   }
 
@@ -70,14 +72,14 @@ export function HealthFlagsForm({ initial }: { initial: HealthFlagsInitial }) {
       <FlagToggle
         checked={highCholesterol}
         onChange={setHighCholesterol}
-        label="คอเลสเตอรอล/LDL สูง"
-        hint="แสดงยอดคอเลสเตอรอลที่กินวันนี้เทียบเพดาน 300 มก. ที่หน้าบันทึกอาหาร"
+        label={t("cholesterol.label")}
+        hint={t("cholesterol.hint")}
       />
       <FlagToggle
         checked={highUricAcid}
         onChange={setHighUricAcid}
-        label="กรดยูริกสูง"
-        hint="เตือนเมื่อบันทึกอาหารที่มีพิวรีนสูง เช่น เครื่องใน เนื้อแดง อาหารทะเลบางชนิด เบียร์"
+        label={t("uricAcid.label")}
+        hint={t("uricAcid.hint")}
       />
 
       {error && <p className="text-xs text-red-400">{error}</p>}
@@ -88,13 +90,11 @@ export function HealthFlagsForm({ initial }: { initial: HealthFlagsInitial }) {
           disabled={saving}
           className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-500 disabled:opacity-50"
         >
-          {saving ? "กำลังบันทึก..." : "บันทึก"}
+          {saving ? t("saving") : t("save")}
         </button>
       )}
 
-      <p className="text-xs text-neutral-600">
-        เป็นแค่การเตือนคร่าว ๆ ตามหลักการทั่วไป ไม่ใช่คำวินิจฉัยทางการแพทย์ — ควรปรึกษาแพทย์ควบคู่ไปด้วย
-      </p>
+      <p className="text-xs text-neutral-600">{t("disclaimer")}</p>
     </div>
   );
 }

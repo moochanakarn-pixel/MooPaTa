@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   ACTIVITY_LEVEL_LABEL,
   GOAL_LABEL,
@@ -25,6 +26,7 @@ const INPUT_CLASS =
 const LABEL_CLASS = "mb-1 block text-xs text-neutral-500";
 
 export function NutritionProfileForm({ initial }: { initial: NutritionProfileInitial }) {
+  const t = useTranslations("settings.nutritionProfileForm");
   const router = useRouter();
   const [weightKg, setWeightKg] = useState(initial.weightKg?.toString() ?? "");
   const [heightCm, setHeightCm] = useState(initial.heightCm?.toString() ?? "");
@@ -39,7 +41,7 @@ export function NutritionProfileForm({ initial }: { initial: NutritionProfileIni
   async function save() {
     setError(null);
     if (!weightKg || !heightCm || !age || !sex || !activityLevel) {
-      setError("กรอกข้อมูลให้ครบทุกช่องก่อนบันทึก");
+      setError(t("fillAllFields"));
       return;
     }
     setSaving(true);
@@ -60,7 +62,7 @@ export function NutritionProfileForm({ initial }: { initial: NutritionProfileIni
     if (res.ok) {
       router.refresh();
     } else {
-      setError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setError(t("saveFailed"));
     }
   }
 
@@ -68,31 +70,31 @@ export function NutritionProfileForm({ initial }: { initial: NutritionProfileIni
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className={LABEL_CLASS}>น้ำหนัก (กก.)</label>
+          <label className={LABEL_CLASS}>{t("weightKg")}</label>
           <input type="number" min="1" step="0.1" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className={INPUT_CLASS} />
         </div>
         <div>
-          <label className={LABEL_CLASS}>ส่วนสูง (ซม.)</label>
+          <label className={LABEL_CLASS}>{t("heightCm")}</label>
           <input type="number" min="1" step="0.1" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className={INPUT_CLASS} />
         </div>
         <div>
-          <label className={LABEL_CLASS}>อายุ (ปี)</label>
+          <label className={LABEL_CLASS}>{t("age")}</label>
           <input type="number" min="1" value={age} onChange={(e) => setAge(e.target.value)} className={INPUT_CLASS} />
         </div>
         <div>
-          <label className={LABEL_CLASS}>เพศ</label>
+          <label className={LABEL_CLASS}>{t("sex")}</label>
           <select value={sex} onChange={(e) => setSex(e.target.value as NutritionSex)} className={INPUT_CLASS}>
-            <option value="">เลือก</option>
-            <option value="MALE">ชาย</option>
-            <option value="FEMALE">หญิง</option>
+            <option value="">{t("select")}</option>
+            <option value="MALE">{t("male")}</option>
+            <option value="FEMALE">{t("female")}</option>
           </select>
         </div>
       </div>
 
       <div>
-        <label className={LABEL_CLASS}>ระดับกิจกรรม</label>
+        <label className={LABEL_CLASS}>{t("activityLevel")}</label>
         <select value={activityLevel} onChange={(e) => setActivityLevel(e.target.value as ActivityLevel)} className={INPUT_CLASS}>
-          <option value="">เลือก</option>
+          <option value="">{t("select")}</option>
           {(Object.keys(ACTIVITY_LEVEL_LABEL) as ActivityLevel[]).map((level) => (
             <option key={level} value={level}>
               {ACTIVITY_LEVEL_LABEL[level]}
@@ -103,7 +105,7 @@ export function NutritionProfileForm({ initial }: { initial: NutritionProfileIni
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className={LABEL_CLASS}>เป้าหมาย</label>
+          <label className={LABEL_CLASS}>{t("goal")}</label>
           <select value={goal} onChange={(e) => setGoal(e.target.value as NutritionGoal)} className={INPUT_CLASS}>
             {(Object.keys(GOAL_LABEL) as NutritionGoal[]).map((g) => (
               <option key={g} value={g}>
@@ -114,7 +116,7 @@ export function NutritionProfileForm({ initial }: { initial: NutritionProfileIni
         </div>
         {goal !== "MAINTAIN" && (
           <div>
-            <label className={LABEL_CLASS}>อัตรา (กก./สัปดาห์)</label>
+            <label className={LABEL_CLASS}>{t("goalRate")}</label>
             <input
               type="number"
               min="0.1"
@@ -135,7 +137,7 @@ export function NutritionProfileForm({ initial }: { initial: NutritionProfileIni
         disabled={saving}
         className="rounded-lg bg-[#fc4c02] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:opacity-50"
       >
-        {saving ? "กำลังบันทึก..." : "บันทึกโปรไฟล์"}
+        {saving ? t("saving") : t("saveProfile")}
       </button>
     </div>
   );

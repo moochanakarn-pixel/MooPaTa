@@ -23,6 +23,11 @@ model User {
   // only ever served back through the auth-gated GET /api/avatar route.
   avatarPath    String?    @db.VarChar(255)
   unitSystem    UnitSystem @default(METRIC)
+  // UI display language — separate from unitSystem (a user could want km
+  // with English labels, or miles with Thai labels). Default TH since the
+  // app started Thai-only; a new EN-preferring signup gets seeded from the
+  // moopata_locale cookie at signup time instead (see src/lib/locale.ts).
+  locale        Locale     @default(TH)
   monthlyGoalKm Float? // distance goal for the current calendar month, always stored in km
   createdAt     DateTime   @default(now())
 
@@ -163,6 +168,11 @@ model AuthToken {
 enum UnitSystem {
   METRIC // km
   IMPERIAL // miles
+}
+
+enum Locale {
+  TH
+  EN
 }
 
 enum Sex {

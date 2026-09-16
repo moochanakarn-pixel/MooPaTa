@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { encryptToken } from "@/lib/crypto";
 import { exchangeGoogleCode } from "@/lib/providers/google";
 import { createSession, getSessionUserId } from "@/lib/session";
+import { LOCALE_COOKIE, isAppLocale } from "@/lib/locale";
 
 const STATE_COOKIE = "google_oauth_state";
 const LINK_COOKIE = "google_oauth_link_user";
@@ -125,10 +126,16 @@ export async function GET(req: NextRequest) {
   // those on every subsequent login would silently revert that choice
   // back to whatever Google reports, contradicting the override this
   // feature is meant to allow.
+  // Same signup-time cookie seeding as /api/auth/signup — pre-login there's
+  // only the landing-page switcher's cookie to go on, since there's no User
+  // row yet to have set a real preference on.
+  const cookieLocale = cookies().get(LOCALE_COOKIE)?.value;
+  const seedLocale = isAppLocale(cookieLocale) ? (cookieLocale === "en" ? "EN" : "TH") : undefined;
+
   const user = existing
     ? await db.user.findUniqueOrThrow({ where: { id: existing.userId } })
     : await db.user.create({
-        data: { name: profile.name, avatarUrl: profile.avatarUrl },
+        data: { name: profile.name, avatarUrl: profile.avatarUrl, ...(seedLocale ? { locale: seedLocale } : {}) },
       });
 
   await db.providerConnection.upsert({

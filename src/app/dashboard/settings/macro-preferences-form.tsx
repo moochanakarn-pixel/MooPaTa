@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   FAT_PERCENT_MAX,
   FAT_PERCENT_MIN,
@@ -32,6 +33,7 @@ export interface MacroPreferencesInitial {
 const LABEL_CLASS = "mb-1 block text-xs text-neutral-500";
 
 export function MacroPreferencesForm({ initial }: { initial: MacroPreferencesInitial }) {
+  const t = useTranslations("settings.macroPreferencesForm");
   const router = useRouter();
   const proteinMin = initial.usedBodyComposition ? PROTEIN_G_PER_KG_LBM_MIN : PROTEIN_G_PER_KG_MIN;
   const proteinMax = initial.usedBodyComposition ? PROTEIN_G_PER_KG_LBM_MAX : PROTEIN_G_PER_KG_MAX;
@@ -64,7 +66,7 @@ export function MacroPreferencesForm({ initial }: { initial: MacroPreferencesIni
     if (res.ok) {
       router.refresh();
     } else {
-      setError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setError(t("saveFailed"));
     }
   }
 
@@ -76,17 +78,17 @@ export function MacroPreferencesForm({ initial }: { initial: MacroPreferencesIni
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-neutral-500">
-        ปรับได้เฉพาะโปรตีนกับไขมัน — คาร์บคำนวณจากแคลอรี่ที่เหลือให้เองเสมอ รวมกันได้ 100% ทุกครั้งไม่ว่าจะปรับตรงไหน
-        และปรับได้เต็มช่วงก็ยังอยู่ในเกณฑ์ที่ปลอดภัย
-      </p>
+      <p className="text-xs text-neutral-500">{t("intro")}</p>
 
       <div>
         <div className="mb-1 flex items-center justify-between">
           <label className={LABEL_CLASS}>
-            โปรตีน ({proteinGPerKg.toFixed(1)} ก./กก.{initial.usedBodyComposition ? "มวลกล้ามเนื้อ" : "น้ำหนักตัว"})
+            {t("proteinLabel", {
+              value: proteinGPerKg.toFixed(1),
+              basis: initial.usedBodyComposition ? t("leanMass") : t("bodyweight"),
+            })}
           </label>
-          <span className="text-xs tabular-nums text-neutral-400">~{preview.proteinG} ก./วัน</span>
+          <span className="text-xs tabular-nums text-neutral-400">{t("perDay", { value: preview.proteinG })}</span>
         </div>
         <input
           type="range"
@@ -98,15 +100,15 @@ export function MacroPreferencesForm({ initial }: { initial: MacroPreferencesIni
           className="w-full accent-[#fc4c02]"
         />
         <div className="flex justify-between text-[10px] text-neutral-600">
-          <span>เน้นคาร์บมากกว่า</span>
-          <span>เน้นกล้ามเนื้อมากกว่า</span>
+          <span>{t("moreCarb")}</span>
+          <span>{t("moreMuscle")}</span>
         </div>
       </div>
 
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <label className={LABEL_CLASS}>ไขมัน ({Math.round(fatPercent * 100)}% ของแคลอรี่)</label>
-          <span className="text-xs tabular-nums text-neutral-400">~{preview.fatG} ก./วัน</span>
+          <label className={LABEL_CLASS}>{t("fatLabel", { percent: Math.round(fatPercent * 100) })}</label>
+          <span className="text-xs tabular-nums text-neutral-400">{t("perDay", { value: preview.fatG })}</span>
         </div>
         <input
           type="range"
@@ -118,33 +120,33 @@ export function MacroPreferencesForm({ initial }: { initial: MacroPreferencesIni
           className="w-full accent-[#fc4c02]"
         />
         <div className="flex justify-between text-[10px] text-neutral-600">
-          <span>เน้นคาร์บมากกว่า</span>
-          <span>เน้นไขมันมากกว่า</span>
+          <span>{t("moreCarb")}</span>
+          <span>{t("moreFat")}</span>
         </div>
       </div>
 
       <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-3 text-xs">
-        <p className="mb-2 text-neutral-500">ประมาณการต่อวัน (ตัวเลขจริงดูได้ที่หน้าเชิงลึกหลังบันทึก)</p>
+        <p className="mb-2 text-neutral-500">{t("dailyEstimate")}</p>
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
-            <p className="font-semibold text-sky-400">{preview.proteinG} ก.</p>
-            <p className="text-neutral-600">โปรตีน</p>
+            <p className="font-semibold text-sky-400">{t("grams", { value: preview.proteinG })}</p>
+            <p className="text-neutral-600">{t("protein")}</p>
           </div>
           <div>
-            <p className="font-semibold text-amber-400">{preview.fatG} ก.</p>
-            <p className="text-neutral-600">ไขมัน</p>
+            <p className="font-semibold text-amber-400">{t("grams", { value: preview.fatG })}</p>
+            <p className="text-neutral-600">{t("fat")}</p>
           </div>
           <div>
-            <p className="font-semibold text-emerald-400">{preview.carbG} ก.</p>
-            <p className="text-neutral-600">คาร์บ</p>
+            <p className="font-semibold text-emerald-400">{t("grams", { value: preview.carbG })}</p>
+            <p className="text-neutral-600">{t("carb")}</p>
           </div>
         </div>
       </div>
 
       <ul className="list-disc space-y-1 pl-4 text-xs text-neutral-500">
-        <li>ค่าเริ่มต้นเหมาะกับคนส่วนใหญ่อยู่แล้ว ไม่ปรับก็ได้</li>
-        <li>อยากได้พลังงานจากคาร์บเยอะขึ้น (เช่น เน้นวิ่ง/คาร์ดิโอ) → ลดไขมันลง คาร์บจะเพิ่มให้เองอัตโนมัติ</li>
-        <li>อยากเน้นสร้าง/รักษามวลกล้ามเนื้อ → เพิ่มโปรตีนขึ้น</li>
+        <li>{t("tip1")}</li>
+        <li>{t("tip2")}</li>
+        <li>{t("tip3")}</li>
       </ul>
 
       {error && <p className="text-xs text-red-400">{error}</p>}
@@ -155,7 +157,7 @@ export function MacroPreferencesForm({ initial }: { initial: MacroPreferencesIni
           disabled={saving}
           className="rounded-lg bg-[#fc4c02] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:opacity-50"
         >
-          {saving ? "กำลังบันทึก..." : "บันทึก"}
+          {saving ? t("saving") : t("save")}
         </button>
         {(initial.proteinGPerKg !== null || initial.fatPercentOfCalories !== null) && (
           <button
@@ -163,7 +165,7 @@ export function MacroPreferencesForm({ initial }: { initial: MacroPreferencesIni
             disabled={saving}
             className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300 transition hover:border-neutral-600 disabled:opacity-50"
           >
-            ใช้ค่าแนะนำอัตโนมัติ
+            {t("useDefault")}
           </button>
         )}
       </div>

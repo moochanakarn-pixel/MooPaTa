@@ -36,7 +36,7 @@
 | `Food` | เทมเพลตอาหารของผู้ใช้แต่ละคน (per-100g macros) — มา ได้จากแคตตาล็อกในตัว/บาร์โค้ด(ปิดใช้แล้ว)/label/พิมพ์เอง ดู "ระบบอาหาร/ไดอารี่" ด้านล่าง |
 | `FoodLog` | หนึ่งรายการที่กินจริง (อ้าง `Food` + grams + เวลา + มื้อ) — ไม่เคยถูกลบทิ้งเวลาลบอาหารออกจากคลัง |
 | `ProviderConnection` | OAuth token ของ Google sign-in (เข้ารหัส AES-256-GCM ด้วย `src/lib/crypto.ts`) — แถว `provider: STRAVA` เก่ายังอยู่ในข้อมูลของบัญชีที่เคยเชื่อมไว้ แต่ไม่มีการเชื่อมใหม่/sync ใหม่แล้ว |
-| `Activity` / `ActivityDetail` / `Exercise` / `ExerciseSet` | กิจกรรมออกกำลังกาย — ของเก่า normalize มาจาก Strava (`provider: STRAVA`, เก็บไว้เฉย ๆ ไม่ sync ต่อแล้ว), ของใหม่ทั้งหมดเป็น `provider: MANUAL` ที่ผู้ใช้พิมพ์เอง + รายละเอียดเก่าที่เคยโหลดแบบ lazy จาก Strava (splits/streams/weather, เฉพาะ activity เก่า) + ท่าเวทสำหรับ activity แบบ manual (`Exercise` = ชื่อท่า, แต่ละท่ามี `ExerciseSet[]` เก็บ reps/น้ำหนัก/RPE แยกทีละเซ็ท รองรับพีระมิด/drop set ที่แต่ละเซ็ทไม่เท่ากัน) — `Activity.rpe` กับ `ExerciseSet.rpe` เป็น RPE คนละความหมายกัน (ดู "### 5. อื่น ๆ" ด้านล่าง) |
+| `Activity` / `ActivityDetail` / `Exercise` / `ExerciseSet` | กิจกรรมออกกำลังกาย — ของเก่า normalize มาจาก Strava (`provider: STRAVA`, เก็บไว้เฉย ๆ ไม่ sync ต่อแล้ว), ของใหม่ทั้งหมดเป็น `provider: MANUAL` ที่ผู้ใช้พิมพ์เอง + รายละเอียดเก่าที่เคยโหลดแบบ lazy จาก Strava (splits/streams/weather, เฉพาะ activity เก่า) + ท่าเวทสำหรับ activity แบบ manual (`Exercise` = ชื่อท่า, แต่ละท่ามี `ExerciseSet[]` เก็บ reps/น้ำหนัก/RPE แยกทีละเซ็ท รองรับพีระมิด/drop set ที่แต่ละเซ็ทไม่เท่ากัน) — `Activity.rpe` กับ `ExerciseSet.rpe` เป็น RPE คนละความหมายกัน (ดู "### 6. อื่น ๆ" ด้านล่าง) |
 | `WaterLog` / `WeightLog` | บันทึกน้ำ/น้ำหนักรายครั้ง — log น้ำหนักใหม่จะอัปเดต `User.weightKg` ด้วย |
 | `BodyCompositionLog` | ผลตรวจ InBody/เครื่องวัดองค์ประกอบร่างกายแบบเป็นครั้ง ๆ (ไม่ใช่ทุกวัน) — เฉพาะ `weightKg` บังคับ ที่เหลือ optional ตาม field ที่เครื่องแต่ละรุ่นมี |
 | `PushSubscription` | Web Push subscription ต่ออุปกรณ์ (มีแถว = เปิดแจ้งเตือนสำหรับเครื่องนั้น) |
@@ -363,7 +363,66 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     มีประโยชน์มากที่สุดตอนคู่กับ `?bg=transparent`: เลือก `top`/`bottom` เพื่อเว้นพื้นที่เฟรมส่วนที่เหลือ
     ให้รูปพื้นหลังโชว์ผ่านได้เต็ม ๆ แบบสติกเกอร์ IG/Line story — เลือกได้จาก sheet เดียวกับ style/bg
 
-### 5. อื่น ๆ
+### 5. ภาษา (i18n) — เริ่มมีแล้ว แต่แปลแค่บางหน้า
+เดิมทั้งแอพเป็น Thai-only ล้วน ไม่มี i18n infra เลย ผู้ใช้ขอให้เพิ่มภาษาอังกฤษ + ปุ่มสลับภาษา — ขอบเขต
+ที่ตกลงกันคือ **วางโครงสร้าง i18n ก่อน แล้วแปลแค่ "หน้าหลัก"** (4 แท็บ bottom-nav + หน้า landing)
+ไม่ใช่ทั้ง 108 ไฟล์ที่มีข้อความไทยฝังอยู่ — ดูแผนเต็มที่ `/root/.claude/plans/dreamy-frolicking-gadget.md`
+ถ้าต้องการรายละเอียดของแต่ละ phase ที่เหลือ
+- **ใช้ `next-intl` แบบ "without i18n routing"** — ไม่มี `middleware.ts`, ไม่มี `[locale]/` segment,
+  โครงสร้าง `src/app/` ยังแบนเหมือนเดิมทั้งหมด ตั้งใจเลือกแบบนี้เพราะเป็นแอพส่วนตัวหลังบ้าน login ไม่มี
+  ความจำเป็นด้าน SEO/URL localization การย้ายทั้ง 171 ไฟล์ไปอยู่ใต้ `[locale]/` จะเป็น diff ใหญ่มากโดย
+  ไม่ได้ประโยชน์อะไรเพิ่ม
+- **แหล่งความจริงของภาษา (`src/lib/locale.ts`, `resolveLocale()`)** — login แล้ว: อ่านจาก
+  `User.locale` (enum `Locale { TH EN }`, `@default(TH)`, คอนเวนชันเดียวกับ `unitSystem`) คงอยู่ข้ามอุปกรณ์/
+  ข้าม re-login เหมือน `unitSystem` — ยังไม่ login (หน้า landing, ก่อนสมัคร): fallback ไปที่ cookie
+  `moopata_locale` (ธรรมดา ไม่ sensitive, อายุ 1 ปี) — ไม่มีทั้งคู่: default `"th"` — ห่อด้วย React's
+  `cache()` กันไม่ให้ query DB ซ้ำหลายรอบในคำขอเดียวกัน
+- **`src/i18n/request.ts`** — `getRequestConfig` เรียก `resolveLocale()` แล้ว dynamic import
+  `messages/th.json`/`messages/en.json` ตาม locale ที่ได้ — ต่อเข้ากับ `next.config.js` ผ่าน
+  `createNextIntlPlugin`
+- **`src/app/layout.tsx`** — `RootLayout` เปลี่ยนเป็น `async`, เรียก `getLocale()`/`getMessages()` แล้ว
+  set `<html lang={locale}>` แบบ dynamic (เดิม hardcode `"th"`) + ห่อ `{children}` ด้วย
+  `NextIntlClientProvider` (จำเป็นเพราะ `"use client"` component อย่าง `bottom-nav.tsx` ต้องใช้
+  `useTranslations()`, ส่วน Server Component เรียก `getTranslations()` ตรง ๆ ได้เลยไม่ต้องพึ่ง provider)
+  — **ผลข้างเคียงที่ตั้งใจรับไว้**: การอ่าน locale ผ่าน `cookies()` ทำให้ทุกหน้าที่แต่ก่อน static
+  (`/privacy`, `/terms`, `/reset-password`, `/dashboard/knowledge`) กลายเป็น dynamic render ทุก request
+  ไปด้วย (หน้าอื่นเกือบทั้งหมดเป็น dynamic อยู่แล้วจาก `getSessionUserId()`'s `cookies()` เหมือนกัน) —
+  ยอมรับได้ในสเกลแอพนี้ ไม่ใช่บั๊ก
+- **ปุ่มสลับภาษา (`LocaleToggle` ใน `settings-client.tsx`)** — โครงเดียวกับ `UnitToggle` เดิมเป๊ะ
+  (`useState` seed จาก `initial` prop → `fetch` POST → `router.refresh()`) label เป็น "ไทย"/"English"
+  ตัวอักษรตรง ๆ ไม่ผ่าน `t()` (ธรรมเนียมเดียวกับทุกแอพ: ชื่อภาษาโชว์เป็นภาษาของมันเอง ไม่แปล) —
+  **`POST /api/settings/locale` ใช้ route เดียวรองรับทั้ง 2 เคส**: login อยู่ → update `User.locale` +
+  set cookie, ไม่ login (เผื่อใช้จากหน้า landing ในอนาคต) → set แค่ cookie อย่างเดียว ไม่ error
+- **Seed ค่า locale ตอนสมัครสมาชิกจาก cookie ที่ตั้งไว้ก่อน login** — ถ้ามีคนกดปุ่มเป็นอังกฤษที่หน้า
+  landing (ตอนนั้นมีแค่ cookie ยังไม่มี `User` row) แล้วค่อยสมัครสมาชิก ถ้าไม่ทำแบบนี้ `User.locale`
+  จะ default กลับเป็น `TH` เงียบ ๆ จนกว่าจะย้อนมาตั้งใหม่ที่หน้าตั้งค่า — แก้ทั้ง 2 จุดสร้างบัญชี
+  (`/api/auth/signup`, `/api/auth/google/callback`) อ่าน cookie `moopata_locale` แล้วส่งต่อเป็น
+  `locale` ตอน `db.user.create` ถ้ามีค่าที่ใช้ได้
+- **`messages/th.json` / `messages/en.json`** — namespace ตามหน้า/component (ตอนนี้มีแค่ `common`
+  กับ `settings` — namespace อื่น `bottomNav`/`landing`/`dashboard`/`food`/`nutrition` รอ phase ถัดไป)
+  — มีเทส `messages/messages.test.ts` เทียบ key set สองไฟล์ต้องตรงกันเป๊ะ (เพิ่ม `messages/**/*.test.ts`
+  เข้า `vitest.config.mts`'s `include` เพราะปกติจะสแกนแค่ `src/**`) กัน key หายไปฝั่งใดฝั่งหนึ่งเงียบ ๆ
+  แบบเดียวกับที่เทส comma-thousands กันบั๊กคล้ายกันในพาร์เซอร์ AI-import
+- **แปลแล้ว (phase นี้): หน้าตั้งค่าทั้งหน้า** (`settings/page.tsx` + `settings-client.tsx` +
+  `profile-form.tsx`/`nutrition-profile-form.tsx`/`macro-preferences-form.tsx`/
+  `health-flags-form.tsx`/`set-password-form.tsx`) — ทดสอบจริงผ่าน MariaDB แล้ว: login แล้วสลับ EN
+  ที่หน้าตั้งค่า → เนื้อหาเปลี่ยนภาษาทันที, ลบ cookie ทดสอบใหม่ (เหลือแค่ session cookie) → ยังคง
+  โชว์อังกฤษ (พิสูจน์ว่า `User.locale` เป็นตัวตัดสิน ไม่ใช่ cookie), grep หาอักษรไทยในหน้าที่ตั้งเป็น
+  EN แล้วไม่เจอเลยสักตัว — ยังไม่แปล (Thai-only เหมือนเดิม): `ACTIVITY_LEVEL_LABEL`/`GOAL_LABEL`
+  (`src/lib/nutrition.ts`, ใช้ร่วมกับหน้าเชิงลึก/ไดอารี่ที่ยังไม่แปล เปลี่ยนแค่ในหน้าตั้งค่าจะทำให้ไม่ตรงกัน
+  ข้ามหน้า), ข้อความ success/error ที่ส่งมาจาก `/api/settings/set-password` (server ส่ง Thai string
+  ตรง ๆ, API error strings อยู่นอกขอบเขตรอบนี้)
+- **ยังไม่แปล (รอ phase ถัดไป)**: หน้า landing (`src/app/page.tsx`), `bottom-nav.tsx`, หน้าแรก
+  (`dashboard/page.tsx` + component ย่อย), ไดอารี่ (`food/page.tsx` + component ย่อย), เชิงลึก
+  (`nutrition/page.tsx` + component ย่อย) — ยังเป็นภาษาไทยล้วนเหมือนเดิมทุกจุด — ทุกหน้านอกเหนือจากนี้
+  (activity detail/records/compare/achievements/log-activity/portion-guide/knowledge, ข้อความ error
+  จาก API, AI-import prompt, อีเมล, ข้อความในรูปการ์ดแชร์ Satori) **ไม่อยู่ในแผนที่จะแปลรอบนี้เลย**
+  เป็น Thai-only ถาวรจนกว่าจะมีคนขอเพิ่ม
+- **ข้อมูลที่ผู้ใช้พิมพ์เอง (ชื่อเมนู/ชื่อกิจกรรม/ชื่อท่า/หมายเหตุ/ชื่อโปรไฟล์ ฯลฯ) ไม่ผ่านระบบแปลภาษา
+  เลยไม่ว่ากรณีใด** — เก็บ/แสดงตามที่พิมพ์ไว้เป๊ะเสมอ ระบบ i18n ครอบคลุมแค่ข้อความ UI ของแอพเอง
+  (label/ปุ่ม/หัวข้อ) เท่านั้น
+
+### 6. อื่น ๆ
 - Activity pages: `/dashboard` (list), `/dashboard/activity/[id]` (detail), `/dashboard/log-activity`
   (บันทึกเอง), `/dashboard/records`, `/dashboard/compare`, `/dashboard/achievements`,
   `/dashboard/summary` — ทำงานเหมือนกันไม่ว่า `Activity.provider` จะเป็น `STRAVA` (ของเก่า) หรือ

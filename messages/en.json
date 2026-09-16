@@ -1,0 +1,148 @@
+{
+  "common": {
+    "backToOverview": "Back to overview"
+  },
+  "settings": {
+    "title": "Settings",
+    "buildInfo": "Running version: {commit} · {date}",
+    "language": {
+      "heading": "Language",
+      "desc": "Choose the language used to display the app"
+    },
+    "displayUnit": {
+      "heading": "Display units",
+      "desc": "Choose the distance/speed unit shown throughout the app"
+    },
+    "unitToggle": {
+      "metric": "km (Metric)",
+      "imperial": "mi (Imperial)"
+    },
+    "monthlyGoal": {
+      "heading": "Monthly goal",
+      "desc": "Set a monthly distance goal to see a progress bar on the home page. Leave blank for no goal."
+    },
+    "goalInput": {
+      "km": "km",
+      "mile": "mi",
+      "perMonth": "{unit} / month",
+      "placeholder": "No goal set",
+      "saving": "Saving...",
+      "save": "Save"
+    },
+    "nutritionProfile": {
+      "heading": "Nutrition profile",
+      "desc": "Fill this in to automatically calculate your calories, macros, and daily water target. See the results on the <link>Insights</link> page."
+    },
+    "macroPreferences": {
+      "heading": "Adjust macro split"
+    },
+    "healthFlags": {
+      "heading": "Health flags",
+      "desc": "Check these based on your blood test results, so the app can warn you when logging foods to watch out for"
+    },
+    "emailLogin": {
+      "heading": "Sign in with email + password",
+      "desc": "Set a password as a backup way to sign in with email instead of tapping \"Sign in with Google\" every time"
+    },
+    "google": {
+      "heading": "Link Google account",
+      "linkedSuccess": "Google account linked successfully",
+      "errors": {
+        "denied": "You declined on Google's consent screen",
+        "invalidState": "The connection session expired — try again",
+        "noProfile": "Couldn't fetch your profile from Google",
+        "exchangeFailed": "Couldn't connect to Google (the link may have expired or already been used) — try again",
+        "sessionChanged": "Your session changed during the connection — try again",
+        "linkedElsewhere": "This Google account is already linked to a different MooPaTa account — contact support if you want to merge accounts",
+        "fallback": "Connection failed ({error})"
+      },
+      "alreadyLinked": "Google account already linked — you can sign in with the \"Sign in with Google\" button on the home page",
+      "notLinkedDesc": "Link a Google account to this account so you can sign in with the Google button without creating a new account",
+      "linkButton": "Link Google account"
+    },
+    "deleteAccount": {
+      "heading": "Delete account",
+      "desc": "Permanently delete your account and all your activity data from MooPaTa. This cannot be undone.",
+      "confirm": "Permanently delete your account? All your activity data in MooPaTa will be deleted and cannot be recovered.",
+      "deleting": "Deleting...",
+      "button": "Delete account permanently"
+    },
+    "profile": {
+      "heading": "Profile",
+      "saveNameFailed": "Couldn't save your name — try again",
+      "uploadFailed": "Couldn't upload the photo — use a jpg/png/webp file up to 4MB",
+      "removeFailed": "Couldn't remove the photo — try again",
+      "uploading": "Uploading",
+      "removePhoto": "Remove photo",
+      "displayName": "Display name",
+      "namePlaceholder": "Your name",
+      "save": "Save"
+    },
+    "nutritionProfileForm": {
+      "fillAllFields": "Fill in every field before saving",
+      "saveFailed": "Save failed — try again",
+      "weightKg": "Weight (kg)",
+      "heightCm": "Height (cm)",
+      "age": "Age (years)",
+      "sex": "Sex",
+      "select": "Select",
+      "male": "Male",
+      "female": "Female",
+      "activityLevel": "Activity level",
+      "goal": "Goal",
+      "goalRate": "Rate (kg/week)",
+      "saving": "Saving...",
+      "saveProfile": "Save profile"
+    },
+    "macroPreferencesForm": {
+      "saveFailed": "Save failed — try again",
+      "intro": "Only protein and fat can be adjusted — carbs are always calculated from the remaining calories, so it always adds up to 100% no matter where you set them, and the full adjustable range stays within a safe zone.",
+      "proteinLabel": "Protein ({value} g/kg {basis})",
+      "leanMass": "lean mass",
+      "bodyweight": "bodyweight",
+      "perDay": "~{value} g/day",
+      "moreCarb": "More carbs",
+      "moreMuscle": "More muscle focus",
+      "fatLabel": "Fat ({percent}% of calories)",
+      "moreFat": "More fat focus",
+      "dailyEstimate": "Daily estimate (see the exact numbers on the Insights page after saving)",
+      "grams": "{value} g",
+      "protein": "Protein",
+      "fat": "Fat",
+      "carb": "Carb",
+      "tip1": "The defaults already suit most people — you don't have to adjust anything",
+      "tip2": "Want more energy from carbs (e.g. focused on running/cardio)? → lower fat, carbs increase automatically",
+      "tip3": "Want to focus on building/maintaining muscle? → raise protein",
+      "saving": "Saving...",
+      "save": "Save",
+      "useDefault": "Use the recommended default"
+    },
+    "healthFlagsForm": {
+      "saveFailed": "Save failed — try again",
+      "cholesterol": {
+        "label": "High cholesterol/LDL",
+        "hint": "Shows today's cholesterol total against a 300mg ceiling on the food diary page"
+      },
+      "uricAcid": {
+        "label": "High uric acid",
+        "hint": "Warns when logging high-purine foods, e.g. organ meats, red meat, some seafood, beer"
+      },
+      "saving": "Saving...",
+      "save": "Save",
+      "disclaimer": "Just a general rule-of-thumb reminder, not a medical diagnosis — check with your doctor too"
+    },
+    "setPasswordForm": {
+      "emailTaken": "This email is already used by another account",
+      "invalidPassword": "Password must be at least 8 characters",
+      "invalidEmail": "Invalid email",
+      "genericError": "Something went wrong — try again",
+      "verified": "Verified",
+      "notVerified": "Not verified yet — check your email",
+      "changeButton": "Change email/password",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password (at least 8 characters)",
+      "saving": "Saving...",
+      "save": "Save"
+    }
+  }
+}

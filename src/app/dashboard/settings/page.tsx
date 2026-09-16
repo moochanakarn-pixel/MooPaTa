@@ -1,25 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations, getLocale } from "next-intl/server";
 import { getBuildInfo } from "@/lib/build-info";
 import { getLatestBodyComposition } from "@/lib/body-composition";
 import { db } from "@/lib/db";
 import { computeTargets, isProfileComplete } from "@/lib/nutrition";
 import { getSessionUserId } from "@/lib/session";
-import { DeleteAccountButton, GoalInput, UnitToggle } from "./settings-client";
+import { DeleteAccountButton, GoalInput, LocaleToggle, UnitToggle } from "./settings-client";
 import { NutritionProfileForm } from "./nutrition-profile-form";
 import { MacroPreferencesForm } from "./macro-preferences-form";
 import { HealthFlagsForm } from "./health-flags-form";
 import { SetPasswordForm } from "./set-password-form";
 import { ProfileForm } from "./profile-form";
-
-const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
-  denied: "คุณปฏิเสธการเชื่อมต่อที่หน้ายินยอมของ Google",
-  invalid_state: "เซสชันเชื่อมต่อหมดอายุ ลองกดใหม่อีกครั้ง",
-  no_profile: "ดึงข้อมูลโปรไฟล์จาก Google ไม่สำเร็จ",
-  exchange_failed: "เชื่อมต่อกับ Google ไม่สำเร็จ (อาจเป็นเพราะลิงก์หมดอายุหรือใช้ไปแล้ว) ลองกดใหม่อีกครั้ง",
-  session_changed: "เซสชันเปลี่ยนไประหว่างเชื่อมต่อ ลองใหม่อีกครั้ง",
-  linked_elsewhere: "บัญชี Google นี้เชื่อมกับบัญชี MooPaTa อื่นอยู่แล้ว ติดต่อผู้ดูแลถ้าต้องการรวมบัญชี",
-};
 
 export default async function SettingsPage({
   searchParams,
@@ -29,10 +21,22 @@ export default async function SettingsPage({
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
-  const [user, googleConnection] = await Promise.all([
+  const [user, googleConnection, t, tCommon, locale] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.providerConnection.findFirst({ where: { userId, provider: "GOOGLE" } }),
+    getTranslations("settings"),
+    getTranslations("common"),
+    getLocale(),
   ]);
+
+  const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
+    denied: t("google.errors.denied"),
+    invalid_state: t("google.errors.invalidState"),
+    no_profile: t("google.errors.noProfile"),
+    exchange_failed: t("google.errors.exchangeFailed"),
+    session_changed: t("google.errors.sessionChanged"),
+    linked_elsewhere: t("google.errors.linkedElsewhere"),
+  };
 
   const nutritionProfile = {
     weightKg: user?.weightKg ?? null,
@@ -71,14 +75,33 @@ export default async function SettingsPage({
         <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
           <path d="M13 4 7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        กลับไปหน้ารวม
+        {tCommon("backToOverview")}
       </Link>
 
-      <h1 className="mb-8 text-xl font-bold">ตั้งค่า</h1>
+      <h1 className="mb-8 text-xl font-bold">{t("title")}</h1>
 
       <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-        <h2 className="mb-4 font-medium">โปรไฟล์</h2>
+        <h2 className="mb-4 font-medium">{t("profile.heading")}</h2>
         <ProfileForm initialName={user?.name ?? null} hasCustomAvatar={Boolean(user?.avatarPath)} />
+      </section>
+
+      <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+        <div className="mb-3 flex items-center gap-3">
+          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-violet-500/10 text-violet-400">
+            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
+              <path
+                d="M4 8h16M4 16h16M9 4c-1.5 2.5-1.5 13.5 0 16M15 4c1.5 2.5 1.5 13.5 0 16"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+          <h2 className="font-medium">{t("language.heading")}</h2>
+        </div>
+        <p className="mb-4 text-sm text-neutral-500">{t("language.desc")}</p>
+        <LocaleToggle initial={locale === "en" ? "en" : "th"} />
       </section>
 
       <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
@@ -95,9 +118,9 @@ export default async function SettingsPage({
               <path d="M12.5 6.5 15 9M9.5 9.5 12 12M6.5 12.5 9 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           </div>
-          <h2 className="font-medium">หน่วยแสดงผล</h2>
+          <h2 className="font-medium">{t("displayUnit.heading")}</h2>
         </div>
-        <p className="mb-4 text-sm text-neutral-500">เลือกหน่วยระยะทาง/ความเร็วที่จะแสดงทั่วทั้งแอพ</p>
+        <p className="mb-4 text-sm text-neutral-500">{t("displayUnit.desc")}</p>
         <UnitToggle initial={user?.unitSystem ?? "METRIC"} />
       </section>
 
@@ -110,9 +133,9 @@ export default async function SettingsPage({
               <circle cx="12" cy="12" r="0.5" fill="currentColor" stroke="currentColor" strokeWidth="1.6" />
             </svg>
           </div>
-          <h2 className="font-medium">เป้าหมายรายเดือน</h2>
+          <h2 className="font-medium">{t("monthlyGoal.heading")}</h2>
         </div>
-        <p className="mb-4 text-sm text-neutral-500">ตั้งเป้าระยะทางต่อเดือน จะเห็น progress bar ที่หน้ารวม เว้นว่างไว้เพื่อไม่ตั้งเป้าหมาย</p>
+        <p className="mb-4 text-sm text-neutral-500">{t("monthlyGoal.desc")}</p>
         <GoalInput initialGoalKm={user?.monthlyGoalKm ?? null} unit={user?.unitSystem ?? "METRIC"} />
       </section>
 
@@ -129,13 +152,16 @@ export default async function SettingsPage({
               />
             </svg>
           </div>
-          <h2 className="font-medium">โปรไฟล์โภชนาการ</h2>
+          <h2 className="font-medium">{t("nutritionProfile.heading")}</h2>
         </div>
         <p className="mb-4 text-sm text-neutral-500">
-          กรอกไว้เพื่อคำนวณแคลอรี่ แมโคร และเป้าหมายน้ำต่อวันให้อัตโนมัติ ดูผลลัพธ์ได้ที่หน้า{" "}
-          <Link href="/dashboard/nutrition" className="text-lime-400 hover:underline">
-            โภชนาการ
-          </Link>
+          {t.rich("nutritionProfile.desc", {
+            link: (chunks) => (
+              <Link href="/dashboard/nutrition" className="text-lime-400 hover:underline">
+                {chunks}
+              </Link>
+            ),
+          })}
         </p>
         <NutritionProfileForm
           initial={{
@@ -158,7 +184,7 @@ export default async function SettingsPage({
                 <path d="M4 10h12M4 6h12M4 14h8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
             </div>
-            <h2 className="font-medium">ปรับสัดส่วนแมโคร</h2>
+            <h2 className="font-medium">{t("macroPreferences.heading")}</h2>
           </div>
           <MacroPreferencesForm initial={macroPreferencesInitial} />
         </section>
@@ -177,11 +203,9 @@ export default async function SettingsPage({
               />
             </svg>
           </div>
-          <h2 className="font-medium">ผลตรวจสุขภาพ</h2>
+          <h2 className="font-medium">{t("healthFlags.heading")}</h2>
         </div>
-        <p className="mb-4 text-sm text-neutral-500">
-          ติ๊กไว้ตามผลตรวจเลือดของคุณ เพื่อให้แอพเตือนตอนบันทึกอาหารที่ควรระวัง
-        </p>
+        <p className="mb-4 text-sm text-neutral-500">{t("healthFlags.desc")}</p>
         <HealthFlagsForm
           initial={{
             highCholesterol: user?.healthFlagHighCholesterol ?? false,
@@ -203,11 +227,9 @@ export default async function SettingsPage({
               />
             </svg>
           </div>
-          <h2 className="font-medium">เข้าสู่ระบบด้วยอีเมล+รหัสผ่าน</h2>
+          <h2 className="font-medium">{t("emailLogin.heading")}</h2>
         </div>
-        <p className="mb-4 text-sm text-neutral-500">
-          ตั้งรหัสผ่านไว้เผื่อเข้าสู่ระบบด้วยอีเมลแทนการกด &quot;เข้าสู่ระบบด้วย Google&quot; ทุกครั้ง
-        </p>
+        <p className="mb-4 text-sm text-neutral-500">{t("emailLogin.desc")}</p>
         <SetPasswordForm currentEmail={user?.email ?? null} verified={Boolean(user?.emailVerifiedAt)} />
       </section>
 
@@ -221,34 +243,30 @@ export default async function SettingsPage({
               <path fill="#EA4335" d="M12 4.77c1.76 0 3.34.6 4.58 1.79l3.44-3.44C17.94 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.6l4.02 3.09C6.25 6.87 8.89 4.77 12 4.77Z" />
             </svg>
           </div>
-          <h2 className="font-medium">เชื่อมบัญชี Google</h2>
+          <h2 className="font-medium">{t("google.heading")}</h2>
         </div>
 
         {searchParams.googleLinked && (
           <p className="mb-4 rounded-lg border border-lime-900/50 bg-lime-950/30 px-3 py-2 text-sm text-lime-300">
-            เชื่อมบัญชี Google เรียบร้อยแล้ว
+            {t("google.linkedSuccess")}
           </p>
         )}
         {searchParams.googleError && (
           <p className="mb-4 rounded-lg border border-red-900/50 bg-red-950/50 px-3 py-2 text-sm text-red-300">
-            {GOOGLE_ERROR_MESSAGES[searchParams.googleError] ?? `เชื่อมต่อไม่สำเร็จ (${searchParams.googleError})`}
+            {GOOGLE_ERROR_MESSAGES[searchParams.googleError] ?? t("google.errors.fallback", { error: searchParams.googleError })}
           </p>
         )}
 
         {googleConnection ? (
-          <p className="text-sm text-neutral-500">
-            เชื่อมบัญชี Google ไว้แล้ว — เข้าสู่ระบบด้วยปุ่ม &quot;เข้าสู่ระบบด้วย Google&quot; ที่หน้าแรกได้เลย
-          </p>
+          <p className="text-sm text-neutral-500">{t("google.alreadyLinked")}</p>
         ) : (
           <>
-            <p className="mb-4 text-sm text-neutral-500">
-              เชื่อมบัญชี Google เข้ากับบัญชีนี้ เพื่อเข้าสู่ระบบด้วยปุ่ม Google ได้โดยไม่ต้องสร้างบัญชีใหม่
-            </p>
+            <p className="mb-4 text-sm text-neutral-500">{t("google.notLinkedDesc")}</p>
             <a
               href="/api/auth/google/connect?link=1"
               className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm font-medium text-neutral-200 transition hover:bg-neutral-800"
             >
-              เชื่อมบัญชี Google
+              {t("google.linkButton")}
             </a>
           </>
         )}
@@ -267,18 +285,21 @@ export default async function SettingsPage({
               />
             </svg>
           </div>
-          <h2 className="font-medium text-red-300">ลบบัญชี</h2>
+          <h2 className="font-medium text-red-300">{t("deleteAccount.heading")}</h2>
         </div>
-        <p className="mb-4 text-sm text-neutral-500">
-          ลบบัญชีและข้อมูล activity ทั้งหมดของคุณออกจาก MooPaTa ถาวร กู้คืนไม่ได้
-        </p>
+        <p className="mb-4 text-sm text-neutral-500">{t("deleteAccount.desc")}</p>
         <DeleteAccountButton />
       </section>
 
       {build && (
         <p className="mt-8 text-center text-xs text-neutral-700" title={build.subject}>
-          เวอร์ชันที่รันอยู่: {build.commit} ·{" "}
-          {new Date(build.commitDate).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}
+          {t("buildInfo", {
+            commit: build.commit,
+            date: new Date(build.commitDate).toLocaleString(locale === "en" ? "en-US" : "th-TH", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            }),
+          })}
         </p>
       )}
     </main>

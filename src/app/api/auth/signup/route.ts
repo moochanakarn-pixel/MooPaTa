@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { createAuthToken } from "@/lib/auth-tokens";
 import { sendVerificationEmail } from "@/lib/email";
 import { isValidEmail, isValidPassword } from "@/lib/auth-validation";
+import { LOCALE_COOKIE, isAppLocale } from "@/lib/locale";
 
 const VERIFY_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -28,8 +30,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "email_taken" }, { status: 409 });
   }
 
+  // Seed from whatever the landing-page switcher already set (cookie-only,
+  // since there's no User row to persist to until now) — otherwise
+  // someone who picked English pre-signup would silently revert to the
+  // schema default (TH) until they revisit Settings.
+  const cookieLocale = cookies().get(LOCALE_COOKIE)?.value;
+  const locale = isAppLocale(cookieLocale) ? (cookieLocale === "en" ? "EN" : "TH") : undefined;
+
   const passwordHash = await hashPassword(password);
-  const user = await db.user.create({ data: { email, passwordHash } });
+  const user = await db.user.create({ data: { email, passwordHash, ...(locale ? { locale } : {}) } });
 
   const rawToken = await createAuthToken(user.id, "VERIFY_EMAIL", VERIFY_TOKEN_TTL_MS);
   const { sent } = await sendVerificationEmail(email, rawToken);
