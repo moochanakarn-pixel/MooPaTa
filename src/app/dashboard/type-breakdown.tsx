@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { activityColor } from "@/lib/activity-colors";
 import { activityTypeLabel, formatDuration } from "@/lib/format";
 
@@ -23,8 +24,8 @@ function valueFor(item: TypeShare, metric: Metric): number {
   return metric === "duration" ? item.durationSec : item.calories;
 }
 
-function formatValue(item: TypeShare, metric: Metric): string {
-  return metric === "duration" ? formatDuration(item.durationSec) : `${Math.round(item.calories).toLocaleString("th-TH")} kcal`;
+function formatValue(item: TypeShare, metric: Metric, numberLocale: string): string {
+  return metric === "duration" ? formatDuration(item.durationSec) : `${Math.round(item.calories).toLocaleString(numberLocale)} kcal`;
 }
 
 // Horizontal stacked bar of this month's activity split by activity type.
@@ -36,6 +37,9 @@ function formatValue(item: TypeShare, metric: Metric): string {
 // complete, and calories is the more direct "effort" answer where it's
 // actually been logged.
 export function TypeBreakdown({ items }: { items: TypeShare[] }) {
+  const t = useTranslations("dashboard.typeBreakdown");
+  const locale = useLocale();
+  const numberLocale = locale === "en" ? "en-US" : "th-TH";
   const [metric, setMetric] = useState<Metric>("duration");
 
   const totalDurationSec = items.reduce((sum, i) => sum + i.durationSec, 0);
@@ -52,7 +56,7 @@ export function TypeBreakdown({ items }: { items: TypeShare[] }) {
   return (
     <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
       <div className="mb-1 flex items-center justify-between">
-        <h2 className="font-medium">สัดส่วนกิจกรรมเดือนนี้</h2>
+        <h2 className="font-medium">{t("title")}</h2>
         <div className="flex gap-1 rounded-lg bg-neutral-900 p-1 text-xs">
           <button
             onClick={() => setMetric("duration")}
@@ -60,24 +64,24 @@ export function TypeBreakdown({ items }: { items: TypeShare[] }) {
               metric === "duration" ? "bg-neutral-700 text-white" : "text-neutral-500 hover:text-neutral-300"
             }`}
           >
-            เวลา
+            {t("duration")}
           </button>
           <button
             onClick={() => setMetric("calories")}
             disabled={!hasAnyCalorieData}
-            title={hasAnyCalorieData ? undefined : "ยังไม่มีกิจกรรมเดือนนี้ที่กรอกแคลอรี่ไว้"}
+            title={hasAnyCalorieData ? undefined : t("noCalorieData")}
             className={`rounded-md px-2.5 py-1 font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
               metric === "calories" ? "bg-neutral-700 text-white" : "text-neutral-500 hover:text-neutral-300"
             }`}
           >
-            แคลอรี่
+            {t("calories")}
           </button>
         </div>
       </div>
 
       <p className="mb-3 min-h-[1em] text-xs text-neutral-600">
         {metric === "calories" && caloriesTrackedCount < activityCount
-          ? `คำนวณจาก ${caloriesTrackedCount} ใน ${activityCount} กิจกรรมที่กรอกแคลอรี่ไว้`
+          ? t("calculatedFrom", { tracked: caloriesTrackedCount, total: activityCount })
           : ""}
       </p>
 
@@ -90,7 +94,7 @@ export function TypeBreakdown({ items }: { items: TypeShare[] }) {
               key={i.type}
               className={color.solid}
               style={{ width: `${pct}%` }}
-              title={`${activityTypeLabel(i.type)}: ${formatValue(i, metric)}`}
+              title={`${activityTypeLabel(i.type)}: ${formatValue(i, metric, numberLocale)}`}
             />
           );
         })}
@@ -104,7 +108,7 @@ export function TypeBreakdown({ items }: { items: TypeShare[] }) {
               <span className={`h-2 w-2 rounded-full ${color.solid}`} />
               <span className="text-neutral-400">{activityTypeLabel(i.type)}</span>
               <span className="font-medium text-neutral-200">
-                {formatValue(i, metric)} ({pct}%)
+                {formatValue(i, metric, numberLocale)} ({pct}%)
               </span>
             </div>
           );

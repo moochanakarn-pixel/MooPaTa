@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations, getLocale } from "next-intl/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { macrosForGrams } from "@/lib/food";
@@ -29,14 +30,15 @@ function startOfWeek(date: Date): Date {
   return d;
 }
 
-function buildWeeklyBuckets(rows: { startedAt: Date; distanceMeters: number | null }[]): WeekBucket[] {
+function buildWeeklyBuckets(rows: { startedAt: Date; distanceMeters: number | null }[], locale: string): WeekBucket[] {
   const thisWeekStart = startOfWeek(new Date());
   const buckets: WeekBucket[] = [];
+  const dateLocale = locale === "en" ? "en-US" : "th-TH";
 
   for (let i = WEEKS_OF_HISTORY - 1; i >= 0; i--) {
     const weekStart = new Date(thisWeekStart.getTime() - i * MS_PER_WEEK);
     buckets.push({
-      label: weekStart.toLocaleDateString("th-TH", { day: "numeric", month: "short" }),
+      label: weekStart.toLocaleDateString(dateLocale, { day: "numeric", month: "short" }),
       km: 0,
     });
   }
@@ -59,6 +61,8 @@ export default async function DashboardPage({
 }) {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
+
+  const [t, locale] = await Promise.all([getTranslations("dashboard"), getLocale()]);
 
   const chartSince = new Date(Date.now() - WEEKS_OF_HISTORY * MS_PER_WEEK);
   const heatmapSince = new Date(Date.now() - 53 * 7 * 24 * 60 * 60 * 1000);
@@ -187,10 +191,10 @@ export default async function DashboardPage({
     healthTargets !== null || todayFoodLogs.length > 0 || (todayWaterAgg._sum.ml ?? 0) > 0 || recentWeightLogs.length > 0 || activeSupplements.length > 0;
 
   const onboardingSteps: OnboardingStep[] = [
-    { key: "profile", label: "กรอกโปรไฟล์โภชนาการ", done: isProfileComplete(nutritionProfile), href: "/dashboard/settings" },
-    { key: "activity", label: "บันทึกกิจกรรมแรก", done: stats._count._all > 0, href: "/dashboard/log-activity" },
-    { key: "food", label: "บันทึกอาหารมื้อแรก", done: totalFoodLogCount > 0, href: "/dashboard/food" },
-    { key: "water", label: "บันทึกน้ำครั้งแรก", done: totalWaterLogCount > 0, href: "/dashboard/food" },
+    { key: "profile", label: t("onboarding.profile"), done: isProfileComplete(nutritionProfile), href: "/dashboard/settings" },
+    { key: "activity", label: t("onboarding.activity"), done: stats._count._all > 0, href: "/dashboard/log-activity" },
+    { key: "food", label: t("onboarding.food"), done: totalFoodLogCount > 0, href: "/dashboard/food" },
+    { key: "water", label: t("onboarding.water"), done: totalWaterLogCount > 0, href: "/dashboard/food" },
   ];
   // Only for genuinely new accounts still working through the checklist —
   // hides itself once finished, or after two weeks regardless, so it never
@@ -214,7 +218,7 @@ export default async function DashboardPage({
   const heatmapDays = buildHeatmapDays(heatmapRows);
   const streaks = computeStreaks(heatmapDays);
 
-  const weeklyBuckets = buildWeeklyBuckets(chartRows);
+  const weeklyBuckets = buildWeeklyBuckets(chartRows, locale);
 
   const activityRows: ActivityRow[] = activities.map((a) => ({
     id: a.id,
@@ -247,23 +251,23 @@ export default async function DashboardPage({
             </div>
           )}
           <div>
-            <h1 className="text-lg font-bold leading-tight">สวัสดี, {user?.name ?? "นักวิ่ง"}</h1>
+            <h1 className="text-lg font-bold leading-tight">{t("greeting", { name: user?.name ?? t("defaultName") })}</h1>
             {streaks.current > 0 && (
               <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-neutral-500">
                 <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-xs font-medium text-orange-300">
-                  🔥 ติดต่อกัน {streaks.current} วัน
+                  🔥 {t("streakDays", { count: streaks.current })}
                 </span>
               </p>
             )}
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/dashboard/summary" className="text-sm text-neutral-500 transition hover:text-neutral-300" title="สรุปผลประจำวัน">
-            สรุปผล
+          <Link href="/dashboard/summary" className="text-sm text-neutral-500 transition hover:text-neutral-300" title={t("dailySummaryTitle")}>
+            {t("summaryLink")}
           </Link>
           <form action="/api/auth/logout" method="POST">
             <button className="text-sm text-neutral-500 transition hover:text-neutral-300">
-              ออกจากระบบ
+              {t("logout")}
             </button>
           </form>
         </div>
@@ -276,7 +280,7 @@ export default async function DashboardPage({
         {[
           {
             href: "/dashboard/records",
-            label: "สถิติสูงสุด",
+            label: t("shortcuts.records"),
             color: "text-amber-400",
             icon: (
               <>
@@ -287,13 +291,13 @@ export default async function DashboardPage({
           },
           {
             href: "/dashboard/compare",
-            label: "เทียบกิจกรรม",
+            label: t("shortcuts.compare"),
             color: "text-sky-400",
             icon: <path d="M6 4v12M6 4 3 7m3-3 3 3M14 16V4m0 12 3-3m-3 3-3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
           },
           {
             href: "/dashboard/achievements",
-            label: "ความสำเร็จ",
+            label: t("shortcuts.achievements"),
             color: "text-orange-400",
             icon: (
               <path
@@ -320,6 +324,7 @@ export default async function DashboardPage({
 
       <HealthSummary
         hasAnyData={hasAnyHealthData}
+        locale={locale}
         targets={healthTargets}
         todayCalories={todayFoodTotals.calories}
         todayProteinG={todayFoodTotals.proteinG}
@@ -333,7 +338,7 @@ export default async function DashboardPage({
         supplementsTotal={activeSupplements.length}
       />
 
-      <CollapsibleSection title="สถิติและแนวโน้มเพิ่มเติม" defaultOpen>
+      <CollapsibleSection title={t("moreStatsTitle")} defaultOpen>
         {thisMonthActivities.length > 0 && (
           <div className="mb-6">
             <MonthHighlights activities={thisMonthActivities} unit={unit} />
@@ -369,6 +374,7 @@ export default async function DashboardPage({
               durationSec: lastMonthAgg._sum.durationSec ?? 0,
             }}
             unit={unit}
+            locale={locale}
           />
         </div>
 
@@ -379,8 +385,8 @@ export default async function DashboardPage({
         <ActivityHeatmap streaks={streaks} />
       </CollapsibleSection>
 
-      <h2 className="mb-4 text-sm font-medium text-neutral-400">กิจกรรมล่าสุด</h2>
-      <ActivityFilters types={activityTypes.map((t) => t.type)} />
+      <h2 className="mb-4 text-sm font-medium text-neutral-400">{t("recentActivities")}</h2>
+      <ActivityFilters types={activityTypes.map((at) => at.type)} />
 
       {activities.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-neutral-800 py-16 text-center">
@@ -389,13 +395,13 @@ export default async function DashboardPage({
           <p className="text-neutral-500">
             {stats._count._all === 0 ? (
               <>
-                ยังไม่มีข้อมูลกิจกรรม ลองกด{" "}
+                {t("emptyState.noActivitiesYet")}{" "}
                 <Link href="/dashboard/log-activity" className="text-[#fc4c02] hover:underline">
-                  บันทึกกิจกรรมแรก
+                  {t("emptyState.logFirstActivity")}
                 </Link>
               </>
             ) : (
-              "ไม่พบกิจกรรมที่ตรงกับตัวกรองนี้"
+              t("emptyState.noMatch")
             )}
           </p>
         </div>

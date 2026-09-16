@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 type Mode = "login" | "signup" | "forgot";
 
@@ -11,6 +12,7 @@ const INPUT_CLASS =
 // The fallback login path alongside "เข้าสู่ระบบด้วย Google" above it on
 // the landing page, for anyone who'd rather not use a Google account.
 export function EmailAuthForm() {
+  const t = useTranslations("landing.emailAuth");
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
@@ -41,9 +43,9 @@ export function EmailAuthForm() {
           router.push("/dashboard");
           return;
         }
-        if (data.error === "email_not_verified") setError("ยังไม่ได้ยืนยันอีเมล เช็คกล่องจดหมายก่อนเข้าสู่ระบบ");
-        else if (data.error === "account_locked") setError("ลองรหัสผ่านผิดหลายครั้งเกินไป กรุณาลองใหม่ภายหลัง");
-        else setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+        if (data.error === "email_not_verified") setError(t("emailNotVerified"));
+        else if (data.error === "account_locked") setError(t("accountLocked"));
+        else setError(t("invalidCredentials"));
       } else if (mode === "signup") {
         const res = await fetch("/api/auth/signup", {
           method: "POST",
@@ -54,11 +56,11 @@ export function EmailAuthForm() {
         if (res.ok) {
           setMessage(data.message);
         } else if (data.error === "email_taken") {
-          setError("อีเมลนี้มีบัญชีอยู่แล้ว ลองเข้าสู่ระบบแทน");
+          setError(t("emailTaken"));
         } else if (data.error === "invalid_password") {
-          setError("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร");
+          setError(t("invalidPassword"));
         } else {
-          setError("อีเมลไม่ถูกต้อง");
+          setError(t("invalidEmail"));
         }
       } else {
         const res = await fetch("/api/auth/forgot-password", {
@@ -70,7 +72,7 @@ export function EmailAuthForm() {
         setMessage(data.message);
       }
     } catch {
-      setError("มีปัญหาบางอย่าง ลองใหม่อีกครั้ง");
+      setError(t("genericError"));
     } finally {
       setSubmitting(false);
     }
@@ -83,13 +85,13 @@ export function EmailAuthForm() {
           onClick={() => switchMode("login")}
           className={`rounded-lg px-3 py-1.5 font-medium transition ${mode === "login" ? "bg-neutral-800 text-neutral-100" : "text-neutral-500 hover:text-neutral-300"}`}
         >
-          เข้าสู่ระบบ
+          {t("login")}
         </button>
         <button
           onClick={() => switchMode("signup")}
           className={`rounded-lg px-3 py-1.5 font-medium transition ${mode === "signup" ? "bg-neutral-800 text-neutral-100" : "text-neutral-500 hover:text-neutral-300"}`}
         >
-          สมัครสมาชิก
+          {t("signup")}
         </button>
       </div>
 
@@ -98,7 +100,7 @@ export function EmailAuthForm() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="อีเมล"
+          placeholder={t("emailPlaceholder")}
           className={INPUT_CLASS}
         />
         {mode !== "forgot" && (
@@ -106,7 +108,7 @@ export function EmailAuthForm() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="รหัสผ่าน"
+            placeholder={t("passwordPlaceholder")}
             className={INPUT_CLASS}
           />
         )}
@@ -119,17 +121,17 @@ export function EmailAuthForm() {
           disabled={submitting || !email || (mode !== "forgot" && !password)}
           className="w-full rounded-xl bg-neutral-100 px-4 py-3 font-semibold text-neutral-900 transition hover:bg-white disabled:opacity-50"
         >
-          {submitting ? "กำลังดำเนินการ..." : mode === "login" ? "เข้าสู่ระบบ" : mode === "signup" ? "สมัครสมาชิก" : "ส่งลิงก์ตั้งรหัสผ่านใหม่"}
+          {submitting ? t("submitting") : mode === "login" ? t("login") : mode === "signup" ? t("signup") : t("sendResetLink")}
         </button>
 
         {mode === "login" && (
           <button onClick={() => switchMode("forgot")} className="w-full text-center text-xs text-neutral-500 hover:text-neutral-300">
-            ลืมรหัสผ่าน
+            {t("forgotPassword")}
           </button>
         )}
         {mode === "forgot" && (
           <button onClick={() => switchMode("login")} className="w-full text-center text-xs text-neutral-500 hover:text-neutral-300">
-            กลับไปเข้าสู่ระบบ
+            {t("backToLogin")}
           </button>
         )}
       </div>

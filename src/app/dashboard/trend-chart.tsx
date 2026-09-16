@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 
 export interface WeekBucket {
   label: string; // short date, e.g. "18 ส.ค."
@@ -11,6 +12,7 @@ const CHART_HEIGHT = 120;
 const BAR_GAP = 6;
 
 export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
+  const t = useTranslations("dashboard.trendChart");
   const [hover, setHover] = useState<number | null>(null);
   const gradientId = useId();
   const max = Math.max(...weeks.map((w) => w.km), 1);
@@ -20,17 +22,17 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
   return (
     <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
       <div className="mb-4 flex items-baseline justify-between">
-        <h2 className="font-medium">ระยะทางรายสัปดาห์</h2>
+        <h2 className="font-medium">{t("title")}</h2>
         <div className="flex items-center gap-3">
           <p className="text-xs text-neutral-500">
-            12 สัปดาห์ล่าสุด · เฉลี่ย <span className="text-neutral-400">{avg.toFixed(1)} กม.</span>
+            {t("last12Weeks")} <span className="text-neutral-400">{t("avgKm", { km: avg.toFixed(1) })}</span>
           </p>
           <a
             href="/api/share/period?range=week"
             download
             className="text-xs text-neutral-500 transition hover:text-neutral-300"
           >
-            แชร์สรุปสัปดาห์นี้
+            {t("shareThisWeek")}
           </a>
         </div>
       </div>
@@ -88,7 +90,8 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
 
       {hover !== null && (
         <p className="mt-2 text-center text-xs text-neutral-400">
-          สัปดาห์ {weeks[hover].label}: <span className="font-medium text-neutral-200">{weeks[hover].km.toFixed(1)} กม.</span>
+          {t("weekLabel", { label: weeks[hover].label })}:{" "}
+          <span className="font-medium text-neutral-200">{t("avgKm", { km: weeks[hover].km.toFixed(1) })}</span>
         </p>
       )}
     </div>

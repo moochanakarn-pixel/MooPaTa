@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export interface OnboardingStep {
   key: string;
@@ -13,6 +14,7 @@ export interface OnboardingStep {
 // up. The caller hides this entirely once every step is done or the
 // account is old enough that it'd read as nagging rather than guidance.
 export function OnboardingCard({ steps }: { steps: OnboardingStep[] }) {
+  const t = useTranslations("dashboard.onboardingCard");
   const doneCount = steps.filter((s) => s.done).length;
   const pct = (doneCount / steps.length) * 100;
 
@@ -20,7 +22,7 @@ export function OnboardingCard({ steps }: { steps: OnboardingStep[] }) {
     <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="flex items-center gap-2 font-medium">
-          <span>🎁</span> เริ่มต้นใช้งาน
+          <span>🎁</span> {t("title")}
         </h2>
         <span className="text-xs text-neutral-500">
           {doneCount}/{steps.length}

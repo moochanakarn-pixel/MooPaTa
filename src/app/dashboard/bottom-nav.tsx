@@ -3,18 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
-interface Tab {
+interface TabDef {
+  id: "home" | "diary" | "insights" | "account";
   href: string;
-  label: string;
   icon: React.ReactNode;
   match: (path: string) => boolean;
 }
 
-const TABS: Tab[] = [
+const TAB_DEFS: TabDef[] = [
   {
+    id: "home",
     href: "/dashboard",
-    label: "หน้าแรก",
     match: (p) => p === "/dashboard",
     icon: (
       <path
@@ -27,8 +28,8 @@ const TABS: Tab[] = [
     ),
   },
   {
+    id: "diary",
     href: "/dashboard/food",
-    label: "ไดอารี่",
     match: (p) => p.startsWith("/dashboard/food") || p.startsWith("/dashboard/portion-guide"),
     icon: (
       <path
@@ -41,8 +42,8 @@ const TABS: Tab[] = [
     ),
   },
   {
+    id: "insights",
     href: "/dashboard/nutrition",
-    label: "เชิงลึก",
     match: (p) => p.startsWith("/dashboard/nutrition") || p.startsWith("/dashboard/knowledge"),
     icon: (
       <path
@@ -55,8 +56,8 @@ const TABS: Tab[] = [
     ),
   },
   {
+    id: "account",
     href: "/dashboard/settings",
-    label: "บัญชี",
     match: (p) => p.startsWith("/dashboard/settings"),
     icon: (
       <>
@@ -67,10 +68,17 @@ const TABS: Tab[] = [
   },
 ];
 
-const QUICK_ACTIONS = [
+interface QuickActionDef {
+  id: "addFood" | "logActivity" | "supplements" | "logWeight" | "progressPhoto" | "inbody";
+  href: string;
+  color: string;
+  icon: React.ReactNode;
+}
+
+const QUICK_ACTION_DEFS: QuickActionDef[] = [
   {
+    id: "addFood",
     href: "/dashboard/food",
-    label: "เพิ่มอาหาร",
     color: "text-rose-400",
     icon: (
       <path
@@ -82,8 +90,8 @@ const QUICK_ACTIONS = [
     ),
   },
   {
+    id: "logActivity",
     href: "/dashboard/log-activity",
-    label: "บันทึกกิจกรรม",
     color: "text-emerald-400",
     icon: (
       <path
@@ -96,8 +104,8 @@ const QUICK_ACTIONS = [
     ),
   },
   {
+    id: "supplements",
     href: "/dashboard/supplements",
-    label: "อาหารเสริม",
     color: "text-violet-400",
     icon: (
       <path
@@ -110,8 +118,8 @@ const QUICK_ACTIONS = [
     ),
   },
   {
+    id: "logWeight",
     href: "/dashboard/nutrition",
-    label: "บันทึกน้ำหนัก",
     color: "text-sky-400",
     icon: (
       <>
@@ -121,8 +129,8 @@ const QUICK_ACTIONS = [
     ),
   },
   {
+    id: "progressPhoto",
     href: "/dashboard/nutrition?quick=photo",
-    label: "ถ่ายรูปติดตามรูปร่าง",
     color: "text-cyan-400",
     icon: (
       <path
@@ -135,8 +143,8 @@ const QUICK_ACTIONS = [
     ),
   },
   {
+    id: "inbody",
     href: "/dashboard/nutrition?quick=inbody",
-    label: "บันทึกผลตรวจ InBody",
     color: "text-fuchsia-400",
     icon: (
       <>
@@ -155,8 +163,12 @@ const QUICK_ACTIONS = [
 // still reachable via links from Home — this only replaces top-level
 // navigation, not the pages themselves.
 export function BottomNav() {
+  const t = useTranslations("bottomNav");
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  const TABS = TAB_DEFS.map((tab) => ({ ...tab, label: t(`tabs.${tab.id}`) }));
+  const QUICK_ACTIONS = QUICK_ACTION_DEFS.map((action) => ({ ...action, label: t(`quickActions.${action.id}`) }));
 
   return (
     <>
@@ -194,7 +206,7 @@ export function BottomNav() {
 
           <button
             onClick={() => setSheetOpen((v) => !v)}
-            aria-label="เพิ่มข้อมูล"
+            aria-label={t("addData")}
             className="relative -top-3 flex h-14 w-14 flex-none items-center justify-center rounded-full bg-[#fc4c02] text-white shadow-lg shadow-[#fc4c02]/30 transition hover:bg-[#e04402]"
           >
             <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6">
@@ -211,7 +223,7 @@ export function BottomNav() {
   );
 }
 
-function NavTab({ tab, active }: { tab: Tab; active: boolean }) {
+function NavTab({ tab, active }: { tab: TabDef & { label: string }; active: boolean }) {
   return (
     <Link
       href={tab.href}

@@ -1,17 +1,13 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { activityTypeLabel } from "@/lib/format";
 
-const RANGE_OPTIONS = [
-  { value: "all", label: "ทุกช่วงเวลา" },
-  { value: "7", label: "7 วันล่าสุด" },
-  { value: "30", label: "30 วันล่าสุด" },
-  { value: "90", label: "90 วันล่าสุด" },
-  { value: "365", label: "1 ปีล่าสุด" },
-];
+const RANGE_VALUES = ["all", "7", "30", "90", "365"] as const;
 
 export function ActivityFilters({ types }: { types: string[] }) {
+  const t = useTranslations("dashboard.activityFilters");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -33,10 +29,10 @@ export function ActivityFilters({ types }: { types: string[] }) {
         onChange={(e) => updateParam("type", e.target.value, "ALL")}
         className={selectClass}
       >
-        <option value="ALL">ทุกประเภท</option>
-        {types.map((t) => (
-          <option key={t} value={t}>
-            {activityTypeLabel(t)}
+        <option value="ALL">{t("allTypes")}</option>
+        {types.map((at) => (
+          <option key={at} value={at}>
+            {activityTypeLabel(at)}
           </option>
         ))}
       </select>
@@ -45,9 +41,9 @@ export function ActivityFilters({ types }: { types: string[] }) {
         onChange={(e) => updateParam("range", e.target.value, "all")}
         className={selectClass}
       >
-        {RANGE_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
+        {RANGE_VALUES.map((value) => (
+          <option key={value} value={value}>
+            {t(`range.${value}`)}
           </option>
         ))}
       </select>

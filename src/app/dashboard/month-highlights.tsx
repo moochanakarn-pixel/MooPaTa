@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { activityColor } from "@/lib/activity-colors";
 import {
   activitySpeedValue,
@@ -21,6 +22,7 @@ interface HighlightActivity {
 // click away. Most sessions never go past the dashboard, so the payoff of
 // "look what you did" belongs on the page people actually open every day.
 export function MonthHighlights({ activities, unit }: { activities: HighlightActivity[]; unit: UnitSystem }) {
+  const t = useTranslations("dashboard.monthHighlights");
   if (activities.length === 0) return null;
 
   const longest = activities.reduce((best, a) =>
@@ -35,7 +37,7 @@ export function MonthHighlights({ activities, unit }: { activities: HighlightAct
     longest.distanceMeters
       ? {
           activity: longest,
-          label: "ไกลที่สุดเดือนนี้",
+          label: t("longest"),
           value: formatDistanceKm(longest.distanceMeters, unit),
           icon: "M4 19h3l2-9 4 14 2-9h5",
         }
@@ -43,7 +45,7 @@ export function MonthHighlights({ activities, unit }: { activities: HighlightAct
     fastest.avgSpeedMs
       ? {
           activity: fastest,
-          label: "เร็วที่สุดเดือนนี้",
+          label: t("fastest"),
           value: activitySpeedValue(fastest.type, fastest.avgSpeedMs, unit),
           icon: "M13 2 3 14h7l-1 8 10-12h-7l1-8Z",
         }
@@ -51,7 +53,7 @@ export function MonthHighlights({ activities, unit }: { activities: HighlightAct
     highestClimb.elevationGainM
       ? {
           activity: highestClimb,
-          label: "ไต่ระดับเยอะสุดเดือนนี้",
+          label: t("highestClimb"),
           value: formatElevationM(highestClimb.elevationGainM, unit),
           icon: "M3 18 8 8l4 6 3-4 6 8H3Z",
         }

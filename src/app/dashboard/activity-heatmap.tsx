@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { localDateKey } from "@/lib/streak";
 
 export interface HeatmapDay {
@@ -68,15 +69,16 @@ export function computeStreaks(days: HeatmapDay[]): { current: number; longest: 
 // numbers carry the useful part of "how consistent have I been" without the
 // scroll-to-see-it grid.
 export function ActivityHeatmap({ streaks }: { streaks: { current: number; longest: number } }) {
+  const t = useTranslations("dashboard.activityHeatmap");
   return (
     <div className="flex items-center justify-between rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-      <h2 className="font-medium">ความสม่ำเสมอ</h2>
+      <h2 className="font-medium">{t("title")}</h2>
       <div className="flex gap-4 text-xs text-neutral-500">
         <span>
-          ติดต่อกัน <span className="font-medium text-neutral-200">{streaks.current}</span> วัน
+          {t("current")} <span className="font-medium text-neutral-200">{streaks.current}</span> {t("days")}
         </span>
         <span>
-          สูงสุด <span className="font-medium text-neutral-200">{streaks.longest}</span> วัน
+          {t("longest")} <span className="font-medium text-neutral-200">{streaks.longest}</span> {t("days")}
         </span>
       </div>
     </div>

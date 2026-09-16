@@ -2,6 +2,168 @@
   "common": {
     "backToOverview": "Back to overview"
   },
+  "bottomNav": {
+    "addData": "Add data",
+    "tabs": {
+      "home": "Home",
+      "diary": "Diary",
+      "insights": "Insights",
+      "account": "Account"
+    },
+    "quickActions": {
+      "addFood": "Add food",
+      "logActivity": "Log activity",
+      "supplements": "Supplements",
+      "logWeight": "Log weight",
+      "progressPhoto": "Take a progress photo",
+      "inbody": "Log an InBody scan"
+    }
+  },
+  "dashboard": {
+    "healthSummary": {
+      "noData": "No nutrition data yet — start logging food, water, or weight on the Insights page",
+      "getStarted": "Get started",
+      "title": "Today's health",
+      "viewAll": "View all",
+      "calories": "Calories",
+      "protein": "Protein",
+      "carb": "Carb",
+      "fat": "Fat",
+      "gramsUnit": "g",
+      "noCalorieTarget": "No calorie target set yet — fill in your nutrition profile",
+      "water": "Water",
+      "litersUnit": "L",
+      "latestWeight": "Latest weight",
+      "kgUnit": "kg",
+      "noWeightLog": "No log yet",
+      "supplements": "Supplements",
+      "timesUnit": "taken",
+      "noSupplements": "No items yet"
+    },
+    "goalProgress": {
+      "title": "This month's goal",
+      "reached": "Goal reached 🎉",
+      "progressPct": "{pct}% · adjust your goal at",
+      "settingsLink": "Settings"
+    },
+    "monthHighlights": {
+      "longest": "Longest this month",
+      "fastest": "Fastest this month",
+      "highestClimb": "Biggest climb this month"
+    },
+    "onboardingCard": {
+      "title": "Getting started"
+    },
+    "typeBreakdown": {
+      "title": "This month's activity split",
+      "duration": "Time",
+      "calories": "Calories",
+      "noCalorieData": "No activity this month has calories logged yet",
+      "calculatedFrom": "Calculated from {tracked} of {total} activities with calories logged"
+    },
+    "activityHeatmap": {
+      "title": "Consistency",
+      "current": "Current streak",
+      "longest": "Longest",
+      "days": "days"
+    },
+    "activityFilters": {
+      "allTypes": "All types",
+      "range": {
+        "all": "All time",
+        "7": "Last 7 days",
+        "30": "Last 30 days",
+        "90": "Last 90 days",
+        "365": "Last year"
+      }
+    },
+    "activityList": {
+      "cards": "Cards",
+      "table": "Compare table",
+      "activity": "Activity",
+      "sort": {
+        "date": "Date",
+        "distance": "Distance",
+        "duration": "Time",
+        "pace": "Pace/speed",
+        "elevation": "Elevation",
+        "hr": "Avg heart rate"
+      }
+    },
+    "trendChart": {
+      "title": "Weekly distance",
+      "last12Weeks": "Last 12 weeks ·",
+      "avgKm": "avg {km} km",
+      "shareThisWeek": "Share this week's summary",
+      "weekLabel": "Week {label}"
+    },
+    "periodComparison": {
+      "title": "This month vs. last month",
+      "shareThisMonth": "Share this month's summary",
+      "activities": "Activities",
+      "distance": "Distance",
+      "duration": "Time",
+      "vsLastMonth": "vs. last month"
+    },
+    "greeting": "Hi, {name}",
+    "defaultName": "Runner",
+    "streakDays": "{count}-day streak",
+    "dailySummaryTitle": "Daily summary",
+    "summaryLink": "Summary",
+    "logout": "Log out",
+    "shortcuts": {
+      "records": "Records",
+      "compare": "Compare",
+      "achievements": "Achievements"
+    },
+    "moreStatsTitle": "More stats and trends",
+    "recentActivities": "Recent activities",
+    "emptyState": {
+      "noActivitiesYet": "No activities yet — try",
+      "logFirstActivity": "logging your first activity",
+      "noMatch": "No activities match this filter"
+    },
+    "onboarding": {
+      "profile": "Fill in your nutrition profile",
+      "activity": "Log your first activity",
+      "food": "Log your first meal",
+      "water": "Log your first water intake"
+    }
+  },
+  "landing": {
+    "tagline": "Track your activity, food, water, and weight in one place — all in one app",
+    "features": {
+      "logActivity": { "title": "Log activity yourself", "desc": "Type in distance, time, heart rate, lifts yourself — no external app needed" },
+      "records": { "title": "Stats and records", "desc": "PRs across every sport, plus a daily streak" },
+      "chartsHeatmap": { "title": "Charts and heatmap", "desc": "See your consistency going back years" },
+      "diary": { "title": "Log food, water, weight", "desc": "Automatically calculates the calories and macros you should get" },
+      "reminders": { "title": "Water + supplement reminders", "desc": "On-time reminders, even on a busy day" },
+      "shareCard": { "title": "Share a nice-looking card", "desc": "A summary of your activity or nutrition, ready to post" }
+    },
+    "connectError": "Connection failed ({error}) — try again",
+    "signInGoogle": "Sign in with Google",
+    "or": "or",
+    "encryptedNotice": "Your data is encrypted and stored securely",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service",
+    "emailAuth": {
+      "emailNotVerified": "Email not verified yet — check your inbox before signing in",
+      "accountLocked": "Too many incorrect password attempts — try again later",
+      "invalidCredentials": "Incorrect email or password",
+      "emailTaken": "This email already has an account — try signing in instead",
+      "invalidPassword": "Password must be at least 8 characters",
+      "invalidEmail": "Invalid email",
+      "genericError": "Something went wrong — try again",
+      "login": "Sign in",
+      "signup": "Sign up",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password",
+      "submitting": "Working on it...",
+      "sendResetLink": "Send password reset link",
+      "forgotPassword": "Forgot password",
+      "backToLogin": "Back to sign in"
+    }
+  },
   "settings": {
     "title": "Settings",
     "buildInfo": "Running version: {commit} · {date}",

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { activityColor } from "@/lib/activity-colors";
 import {
   activitySpeedValue,
@@ -28,15 +29,6 @@ export interface ActivityRow {
 
 type SortKey = "date" | "distance" | "duration" | "pace" | "elevation" | "hr";
 
-const SORT_LABEL: Record<SortKey, string> = {
-  date: "วันที่",
-  distance: "ระยะทาง",
-  duration: "เวลา",
-  pace: "เพซ/ความเร็ว",
-  elevation: "ไต่ระดับ",
-  hr: "หัวใจเฉลี่ย",
-};
-
 function sortValue(a: ActivityRow, key: SortKey): number {
   switch (key) {
     case "date":
@@ -58,6 +50,7 @@ function sortValue(a: ActivityRow, key: SortKey): number {
 // mobile) and a sortable comparison table (best for eyeballing a trend
 // across many days/activities at once) — same underlying rows either way.
 export function ActivityListView({ activities, unit }: { activities: ActivityRow[]; unit: UnitSystem }) {
+  const t = useTranslations("dashboard.activityList");
   const [view, setView] = useState<"cards" | "table">("cards");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -84,13 +77,13 @@ export function ActivityListView({ activities, unit }: { activities: ActivityRow
             onClick={() => setView("cards")}
             className={`rounded-md px-2.5 py-1 transition ${view === "cards" ? "bg-neutral-800 text-neutral-100" : "text-neutral-500 hover:text-neutral-300"}`}
           >
-            การ์ด
+            {t("cards")}
           </button>
           <button
             onClick={() => setView("table")}
             className={`rounded-md px-2.5 py-1 transition ${view === "table" ? "bg-neutral-800 text-neutral-100" : "text-neutral-500 hover:text-neutral-300"}`}
           >
-            ตารางเปรียบเทียบ
+            {t("table")}
           </button>
         </div>
       </div>
@@ -128,14 +121,14 @@ export function ActivityListView({ activities, unit }: { activities: ActivityRow
           <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b border-neutral-800/80 text-xs text-neutral-500">
-                <th className="px-4 py-3 text-left font-medium">กิจกรรม</th>
+                <th className="px-4 py-3 text-left font-medium">{t("activity")}</th>
                 {(["date", "distance", "duration", "pace", "elevation", "hr"] as SortKey[]).map((key) => (
                   <th key={key} className="px-4 py-3 text-right font-medium">
                     <button
                       onClick={() => toggleSort(key)}
                       className="inline-flex items-center gap-1 transition hover:text-neutral-300"
                     >
-                      {SORT_LABEL[key]}
+                      {t(`sort.${key}`)}
                       {sortKey === key && <span>{sortDir === "asc" ? "↑" : "↓"}</span>}
                     </button>
                   </th>

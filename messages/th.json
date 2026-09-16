@@ -2,6 +2,168 @@
   "common": {
     "backToOverview": "กลับไปหน้ารวม"
   },
+  "bottomNav": {
+    "addData": "เพิ่มข้อมูล",
+    "tabs": {
+      "home": "หน้าแรก",
+      "diary": "ไดอารี่",
+      "insights": "เชิงลึก",
+      "account": "บัญชี"
+    },
+    "quickActions": {
+      "addFood": "เพิ่มอาหาร",
+      "logActivity": "บันทึกกิจกรรม",
+      "supplements": "อาหารเสริม",
+      "logWeight": "บันทึกน้ำหนัก",
+      "progressPhoto": "ถ่ายรูปติดตามรูปร่าง",
+      "inbody": "บันทึกผลตรวจ InBody"
+    }
+  },
+  "dashboard": {
+    "healthSummary": {
+      "noData": "ยังไม่มีข้อมูลโภชนาการ — เริ่มบันทึกอาหาร น้ำ หรือน้ำหนักได้ที่หน้าโภชนาการ",
+      "getStarted": "เริ่มเลย",
+      "title": "สุขภาพวันนี้",
+      "viewAll": "ดูทั้งหมด",
+      "calories": "แคลอรี่",
+      "protein": "โปรตีน",
+      "carb": "คาร์บ",
+      "fat": "ไขมัน",
+      "gramsUnit": "ก.",
+      "noCalorieTarget": "ยังไม่ได้ตั้งเป้าหมายแคลอรี่ — กรอกโปรไฟล์โภชนาการ",
+      "water": "น้ำดื่ม",
+      "litersUnit": "ล.",
+      "latestWeight": "น้ำหนักล่าสุด",
+      "kgUnit": "กก.",
+      "noWeightLog": "ยังไม่มีบันทึก",
+      "supplements": "อาหารเสริม",
+      "timesUnit": "ครั้ง",
+      "noSupplements": "ยังไม่มีรายการ"
+    },
+    "goalProgress": {
+      "title": "เป้าหมายเดือนนี้",
+      "reached": "ถึงเป้าหมายแล้ว 🎉",
+      "progressPct": "{pct}% · ปรับเป้าหมายได้ที่",
+      "settingsLink": "ตั้งค่า"
+    },
+    "monthHighlights": {
+      "longest": "ไกลที่สุดเดือนนี้",
+      "fastest": "เร็วที่สุดเดือนนี้",
+      "highestClimb": "ไต่ระดับเยอะสุดเดือนนี้"
+    },
+    "onboardingCard": {
+      "title": "เริ่มต้นใช้งาน"
+    },
+    "typeBreakdown": {
+      "title": "สัดส่วนกิจกรรมเดือนนี้",
+      "duration": "เวลา",
+      "calories": "แคลอรี่",
+      "noCalorieData": "ยังไม่มีกิจกรรมเดือนนี้ที่กรอกแคลอรี่ไว้",
+      "calculatedFrom": "คำนวณจาก {tracked} ใน {total} กิจกรรมที่กรอกแคลอรี่ไว้"
+    },
+    "activityHeatmap": {
+      "title": "ความสม่ำเสมอ",
+      "current": "ติดต่อกัน",
+      "longest": "สูงสุด",
+      "days": "วัน"
+    },
+    "activityFilters": {
+      "allTypes": "ทุกประเภท",
+      "range": {
+        "all": "ทุกช่วงเวลา",
+        "7": "7 วันล่าสุด",
+        "30": "30 วันล่าสุด",
+        "90": "90 วันล่าสุด",
+        "365": "1 ปีล่าสุด"
+      }
+    },
+    "activityList": {
+      "cards": "การ์ด",
+      "table": "ตารางเปรียบเทียบ",
+      "activity": "กิจกรรม",
+      "sort": {
+        "date": "วันที่",
+        "distance": "ระยะทาง",
+        "duration": "เวลา",
+        "pace": "เพซ/ความเร็ว",
+        "elevation": "ไต่ระดับ",
+        "hr": "หัวใจเฉลี่ย"
+      }
+    },
+    "trendChart": {
+      "title": "ระยะทางรายสัปดาห์",
+      "last12Weeks": "12 สัปดาห์ล่าสุด ·",
+      "avgKm": "เฉลี่ย {km} กม.",
+      "shareThisWeek": "แชร์สรุปสัปดาห์นี้",
+      "weekLabel": "สัปดาห์ {label}"
+    },
+    "periodComparison": {
+      "title": "เดือนนี้ เทียบกับเดือนที่แล้ว",
+      "shareThisMonth": "แชร์สรุปเดือนนี้",
+      "activities": "กิจกรรม",
+      "distance": "ระยะทาง",
+      "duration": "เวลา",
+      "vsLastMonth": "จากเดือนก่อน"
+    },
+    "greeting": "สวัสดี, {name}",
+    "defaultName": "นักวิ่ง",
+    "streakDays": "ติดต่อกัน {count} วัน",
+    "dailySummaryTitle": "สรุปผลประจำวัน",
+    "summaryLink": "สรุปผล",
+    "logout": "ออกจากระบบ",
+    "shortcuts": {
+      "records": "สถิติสูงสุด",
+      "compare": "เทียบกิจกรรม",
+      "achievements": "ความสำเร็จ"
+    },
+    "moreStatsTitle": "สถิติและแนวโน้มเพิ่มเติม",
+    "recentActivities": "กิจกรรมล่าสุด",
+    "emptyState": {
+      "noActivitiesYet": "ยังไม่มีข้อมูลกิจกรรม ลองกด",
+      "logFirstActivity": "บันทึกกิจกรรมแรก",
+      "noMatch": "ไม่พบกิจกรรมที่ตรงกับตัวกรองนี้"
+    },
+    "onboarding": {
+      "profile": "กรอกโปรไฟล์โภชนาการ",
+      "activity": "บันทึกกิจกรรมแรก",
+      "food": "บันทึกอาหารมื้อแรก",
+      "water": "บันทึกน้ำครั้งแรก"
+    }
+  },
+  "landing": {
+    "tagline": "บันทึกกิจกรรม อาหาร น้ำ น้ำหนัก ไว้ที่เดียว ครบจบในแอพเดียว",
+    "features": {
+      "logActivity": { "title": "บันทึกกิจกรรมเอง", "desc": "พิมพ์ระยะทาง เวลา หัวใจ ท่าเวทเอง ไม่ต้องพึ่งแอพนอก" },
+      "records": { "title": "สถิติและสถิติสูงสุด", "desc": "PR ทุกประเภทกีฬา พร้อม streak รายวัน" },
+      "chartsHeatmap": { "title": "กราฟและ Heatmap", "desc": "ดูความสม่ำเสมอย้อนหลังได้เป็นปี" },
+      "diary": { "title": "บันทึกอาหาร น้ำ น้ำหนัก", "desc": "คำนวณแคลอรี่และแมโครที่ควรได้ให้อัตโนมัติ" },
+      "reminders": { "title": "แจ้งเตือนน้ำ+อาหารเสริม", "desc": "เตือนตรงเวลา ไม่พลาดแม้วันยุ่ง" },
+      "shareCard": { "title": "แชร์การ์ดสวยๆ", "desc": "สรุปกิจกรรมหรือโภชนาการ พร้อมโพสต์โซเชียล" }
+    },
+    "connectError": "เชื่อมต่อไม่สำเร็จ ({error}) ลองใหม่อีกครั้ง",
+    "signInGoogle": "เข้าสู่ระบบด้วย Google",
+    "or": "หรือ",
+    "encryptedNotice": "ข้อมูลของคุณถูกเข้ารหัสและเก็บไว้อย่างปลอดภัย",
+    "privacyPolicy": "นโยบายความเป็นส่วนตัว",
+    "termsOfService": "ข้อกำหนดการใช้งาน",
+    "emailAuth": {
+      "emailNotVerified": "ยังไม่ได้ยืนยันอีเมล เช็คกล่องจดหมายก่อนเข้าสู่ระบบ",
+      "accountLocked": "ลองรหัสผ่านผิดหลายครั้งเกินไป กรุณาลองใหม่ภายหลัง",
+      "invalidCredentials": "อีเมลหรือรหัสผ่านไม่ถูกต้อง",
+      "emailTaken": "อีเมลนี้มีบัญชีอยู่แล้ว ลองเข้าสู่ระบบแทน",
+      "invalidPassword": "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร",
+      "invalidEmail": "อีเมลไม่ถูกต้อง",
+      "genericError": "มีปัญหาบางอย่าง ลองใหม่อีกครั้ง",
+      "login": "เข้าสู่ระบบ",
+      "signup": "สมัครสมาชิก",
+      "emailPlaceholder": "อีเมล",
+      "passwordPlaceholder": "รหัสผ่าน",
+      "submitting": "กำลังดำเนินการ...",
+      "sendResetLink": "ส่งลิงก์ตั้งรหัสผ่านใหม่",
+      "forgotPassword": "ลืมรหัสผ่าน",
+      "backToLogin": "กลับไปเข้าสู่ระบบ"
+    }
+  },
   "settings": {
     "title": "ตั้งค่า",
     "buildInfo": "เวอร์ชันที่รันอยู่: {commit} · {date}",
