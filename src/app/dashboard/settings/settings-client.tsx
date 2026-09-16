@@ -56,15 +56,25 @@ export function LocaleToggle({ initial }: { initial: AppLocale }) {
 
   async function change(next: AppLocale) {
     if (next === locale) return;
+    const previous = locale;
     setLocale(next);
     setSaving(true);
-    await fetch("/api/settings/locale", {
+    const res = await fetch("/api/settings/locale", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ locale: next === "en" ? "EN" : "TH" }),
     });
     setSaving(false);
-    router.refresh();
+    if (res.ok) {
+      router.refresh();
+    } else {
+      // Revert the optimistic flip — otherwise the toggle shows the new
+      // language as selected while every server-rendered string on the
+      // page (having never actually saved) stays in the old one, a
+      // whole-UI mismatch that's worse than the same failure mode on a
+      // single unit label.
+      setLocale(previous);
+    }
   }
 
   return (
