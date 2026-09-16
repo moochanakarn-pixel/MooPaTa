@@ -130,6 +130,123 @@
       "water": "Log your first water intake"
     }
   },
+  "food": {
+    "page": {
+      "backToOverview": "Back to overview",
+      "title": "Food diary",
+      "history": "Eating history",
+      "portionGuide": "Hand portion guide",
+      "library": "Personal food library",
+      "compareAgainst": "Compared against the target on the",
+      "nutritionLink": "Insights",
+      "noTargetYet": "No target set yet —",
+      "fillProfileLink": "fill in your nutrition profile",
+      "toCompare": "to compare against a target"
+    },
+    "dateStrip": {
+      "weekdayLabels": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+      "prevWeek": "Previous week",
+      "nextWeek": "Next week",
+      "pickDate": "Pick a date",
+      "backToToday": "Back to today"
+    },
+    "diary": {
+      "eatenToday": "Eaten today",
+      "selectedDaySummary": "Selected day summary",
+      "unitDefault": "piece",
+      "nutrients": {
+        "calories": "Calories",
+        "protein": "Protein",
+        "carb": "Carb",
+        "fat": "Fat",
+        "bonusNote": "Includes +{amount} g bonus target from activity"
+      },
+      "micronutrients": {
+        "title": "Other nutrients",
+        "sugar": "Sugar",
+        "sodium": "Sodium",
+        "fiber": "Fiber",
+        "cholesterolToday": "Cholesterol today {value} / {limit} mg",
+        "overLimit": "— over the limit"
+      },
+      "addFood": "Add food",
+      "importFromAI": "Import from AI",
+      "importTitle": "Paste a calorie table from AI to import a whole meal",
+      "addCustomMenu": "Add your own menu",
+      "quantityType": "Quantity type",
+      "grams": "Grams",
+      "unitOrServing": "Unit/serving",
+      "unitPlaceholderExample": "e.g. piece, serving, cup",
+      "amountGrams": "Amount (grams)",
+      "quantityUnit": "Quantity ({unit})",
+      "lockedNote": "(locked — calories/macros entered below are calculated from this amount)",
+      "meal": "Meal",
+      "foodNamePlaceholder": "Food name",
+      "caloriesPlaceholder": "Calories (kcal)",
+      "proteinPlaceholder": "Protein (g)",
+      "carbPlaceholder": "Carb (g)",
+      "fatPlaceholder": "Fat (g)",
+      "enterMacrosFor": "Enter calories/macros for {grams} {unit} above",
+      "macroSummary": "{kcal} kcal · protein {protein} g · carb {carb} g · fat {fat} g",
+      "saving": "Saving...",
+      "save": "Save",
+      "back": "Back",
+      "close": "Close",
+      "searchPlaceholder": "Search for a dish, e.g. stir-fried basil",
+      "scanLabel": "Scan label",
+      "favorites": "Favorites",
+      "frequentMenu": "Frequently eaten",
+      "suggestedFromCatalog": "Suggested from the Thai food catalog",
+      "remainingToday": "{kcal} kcal left today",
+      "kcalProtein": "{kcal} kcal · protein {protein} g",
+      "kcalPer100g": "{kcal} kcal/100g",
+      "addCustomQuery": "Add \"{query}\" myself",
+      "notLoggedYet": "Nothing logged yet",
+      "copying": "Copying...",
+      "copyFromPreviousDay": "Copy everything from the previous day",
+      "editNote": {
+        "before": "Only amount/meal can be edited here — the calories/protein/carb/fat for this food can be edited at the",
+        "link": "personal food library",
+        "after": "(editing there affects every past log of this food too)"
+      },
+      "cancel": "Cancel",
+      "highPurineTitle": "High purine — watch out if your uric acid is high",
+      "highPurineBadge": "High purine",
+      "repeat": "Repeat",
+      "edit": "Edit",
+      "delete": "Delete",
+      "errors": {
+        "invalidGrams": "Enter a valid amount (grams) before saving",
+        "saveFailed": "Save failed — check the data and try again",
+        "deleteFailed": "Delete failed — try again",
+        "invalidGramsEdit": "Enter a valid amount (grams)",
+        "editSaveFailed": "Save failed — try again",
+        "repeatFailed": "Repeat failed — try again",
+        "nothingToCopy": "The previous day has nothing to copy",
+        "copyFailed": "Copy failed — try again"
+      }
+    },
+    "nutrientOverview": {
+      "fromTarget": "of {target} {unit} target",
+      "over": "{amount} over",
+      "remaining": "{amount} left"
+    },
+    "waterLogCard": {
+      "title": "Today's water",
+      "liters": "{value} L",
+      "litersUnit": "L",
+      "fillGlass": "Add {ml} ml",
+      "quickAdd": "+{ml} ml",
+      "customPlaceholder": "Custom (ml)",
+      "add": "Add",
+      "undoLastTitle": "Undo last entry ({ml} ml)",
+      "undoLast": "Undo last entry",
+      "undoing": "Undoing...",
+      "invalidAmount": "Enter a valid water amount first",
+      "saveFailed": "Save failed — try again",
+      "undoFailed": "Undo failed — try again"
+    }
+  },
   "landing": {
     "tagline": "Track your activity, food, water, and weight in one place — all in one app",
     "features": {

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import {
   GENERIC_UNIT,
   GRAM_UNIT,
@@ -106,6 +107,10 @@ export function FoodLogView({
   isToday: boolean;
   healthFlags: HealthFlags;
 }) {
+  const t = useTranslations("food.diary");
+  const locale = useLocale();
+  const gUnit = locale === "en" ? "g" : "ก.";
+  const mgUnit = locale === "en" ? "mg" : "มก.";
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -122,7 +127,7 @@ export function FoodLogView({
   // library entries was typing "1" meaning "1 piece" into a grams-only
   // field, which per100gFromTotal then read as "1 gram".
   const [customUnitMode, setCustomUnitMode] = useState<"grams" | "unit">("grams");
-  const [customUnitLabel, setCustomUnitLabel] = useState("ชิ้น");
+  const [customUnitLabel, setCustomUnitLabel] = useState(t("unitDefault"));
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -165,28 +170,28 @@ export function FoodLogView({
 
   const nutrientPages: NutrientPage[] = useMemo(
     () => [
-      { key: "calories", label: "แคลอรี่", eaten: totals.calories, target: targets?.targetCalories ?? null, unit: "kcal", color: "#fc4c02" },
+      { key: "calories", label: t("nutrients.calories"), eaten: totals.calories, target: targets?.targetCalories ?? null, unit: "kcal", color: "#fc4c02" },
       {
         key: "protein",
-        label: "โปรตีน",
+        label: t("nutrients.protein"),
         eaten: totals.proteinG,
         target: targets?.proteinG ?? null,
-        unit: "ก.",
+        unit: gUnit,
         color: "#38bdf8",
-        bonusNote: targets && targets.proteinBonusG > 0 ? `รวมเป้าเพิ่มจากกิจกรรม +${targets.proteinBonusG} ก.` : undefined,
+        bonusNote: targets && targets.proteinBonusG > 0 ? t("nutrients.bonusNote", { amount: targets.proteinBonusG }) : undefined,
       },
       {
         key: "carb",
-        label: "คาร์บ",
+        label: t("nutrients.carb"),
         eaten: totals.carbG,
         target: targets?.carbG ?? null,
-        unit: "ก.",
+        unit: gUnit,
         color: "#f59e0b",
-        bonusNote: targets && targets.carbBonusG > 0 ? `รวมเป้าเพิ่มจากกิจกรรม +${targets.carbBonusG} ก.` : undefined,
+        bonusNote: targets && targets.carbBonusG > 0 ? t("nutrients.bonusNote", { amount: targets.carbBonusG }) : undefined,
       },
-      { key: "fat", label: "ไขมัน", eaten: totals.fatG, target: targets?.fatG ?? null, unit: "ก.", color: "#f43f5e" },
+      { key: "fat", label: t("nutrients.fat"), eaten: totals.fatG, target: targets?.fatG ?? null, unit: gUnit, color: "#f43f5e" },
     ],
-    [totals, targets]
+    [totals, targets, t, gUnit]
   );
 
   // Micronutrients render as a static block below the calorie/macro rings
@@ -195,7 +200,7 @@ export function FoodLogView({
   const micronutrientPage: CustomPage | undefined = totals.hasMicronutrients
     ? {
         key: "micronutrients",
-        label: "สารอาหารอื่นๆ",
+        label: t("micronutrients.title"),
         content: (
           <>
             <div className="grid grid-cols-3 gap-2">
@@ -211,8 +216,8 @@ export function FoodLogView({
                     />
                   </svg>
                 </span>
-                <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.sugarG)} ก.</p>
-                <p className="text-[11px] text-neutral-500">น้ำตาล</p>
+                <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.sugarG)} {gUnit}</p>
+                <p className="text-[11px] text-neutral-500">{t("micronutrients.sugar")}</p>
               </div>
               <div className="flex flex-col items-center gap-1 rounded-xl bg-neutral-900/60 py-2.5">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-500/10 text-sky-400">
@@ -226,8 +231,8 @@ export function FoodLogView({
                     />
                   </svg>
                 </span>
-                <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.sodiumMg)} มก.</p>
-                <p className="text-[11px] text-neutral-500">โซเดียม</p>
+                <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.sodiumMg)} {mgUnit}</p>
+                <p className="text-[11px] text-neutral-500">{t("micronutrients.sodium")}</p>
               </div>
               <div className="flex flex-col items-center gap-1 rounded-xl bg-neutral-900/60 py-2.5">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400">
@@ -241,8 +246,8 @@ export function FoodLogView({
                     />
                   </svg>
                 </span>
-                <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.fiberG)} ก.</p>
-                <p className="text-[11px] text-neutral-500">ไฟเบอร์</p>
+                <p className="text-sm font-bold tabular-nums text-neutral-100">{Math.round(totals.fiberG)} {gUnit}</p>
+                <p className="text-[11px] text-neutral-500">{t("micronutrients.fiber")}</p>
               </div>
             </div>
             {healthFlags.highCholesterol && totals.cholesterolMg > 0 && (
@@ -251,8 +256,8 @@ export function FoodLogView({
                   totals.cholesterolMg > DAILY_CHOLESTEROL_LIMIT_MG ? "text-red-400" : "text-neutral-500"
                 }`}
               >
-                คอเลสเตอรอลวันนี้ {Math.round(totals.cholesterolMg)} / {DAILY_CHOLESTEROL_LIMIT_MG} มก.
-                {totals.cholesterolMg > DAILY_CHOLESTEROL_LIMIT_MG && " — เกินเพดานแล้ว"}
+                {t("micronutrients.cholesterolToday", { value: Math.round(totals.cholesterolMg), limit: DAILY_CHOLESTEROL_LIMIT_MG })}
+                {totals.cholesterolMg > DAILY_CHOLESTEROL_LIMIT_MG && ` ${t("micronutrients.overLimit")}`}
               </p>
             )}
           </>
@@ -333,7 +338,7 @@ export function FoodLogView({
     setCustomCarb("");
     setCustomFat("");
     setCustomUnitMode("grams");
-    setCustomUnitLabel("ชิ้น");
+    setCustomUnitLabel(t("unitDefault"));
     setPending({ kind: "custom", grams: 100 });
   }
 
@@ -368,7 +373,7 @@ export function FoodLogView({
   async function submitPending() {
     if (!pending) return;
     if (!Number.isFinite(pending.grams) || pending.grams <= 0) {
-      setSubmitError("กรอกปริมาณ (กรัม) ให้ถูกต้องก่อนบันทึก");
+      setSubmitError(t("errors.invalidGrams"));
       return;
     }
     setSubmitError(null);
@@ -422,7 +427,7 @@ export function FoodLogView({
       setQuery("");
       router.refresh();
     } else {
-      setSubmitError("บันทึกไม่สำเร็จ ตรวจสอบข้อมูลแล้วลองใหม่อีกครั้ง");
+      setSubmitError(t("errors.saveFailed"));
     }
   }
 
@@ -432,7 +437,7 @@ export function FoodLogView({
     if (res.ok) {
       router.refresh();
     } else {
-      setDeleteError("ลบไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setDeleteError(t("errors.deleteFailed"));
     }
   }
 
@@ -446,7 +451,7 @@ export function FoodLogView({
   async function saveEdit(id: string) {
     const grams = Number(editGrams);
     if (!Number.isFinite(grams) || grams <= 0) {
-      setEditError("กรอกปริมาณ (กรัม) ให้ถูกต้อง");
+      setEditError(t("errors.invalidGramsEdit"));
       return;
     }
     setEditError(null);
@@ -461,7 +466,7 @@ export function FoodLogView({
       setEditingId(null);
       router.refresh();
     } else {
-      setEditError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setEditError(t("errors.editSaveFailed"));
     }
   }
 
@@ -479,7 +484,7 @@ export function FoodLogView({
     if (res.ok) {
       router.refresh();
     } else {
-      setDeleteError("ทำซ้ำไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setDeleteError(t("errors.repeatFailed"));
     }
   }
 
@@ -503,14 +508,14 @@ export function FoodLogView({
       router.refresh();
     } else {
       const data = await res.json().catch(() => ({}));
-      setCopyError(data.error === "nothing_to_copy" ? "วันก่อนหน้าไม่มีข้อมูลให้คัดลอก" : "คัดลอกไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setCopyError(data.error === "nothing_to_copy" ? t("errors.nothingToCopy") : t("errors.copyFailed"));
     }
   }
 
   return (
     <div>
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-        <p className="mb-1 text-center text-xs text-neutral-500">{isToday ? "กินไปวันนี้" : "สรุปวันที่เลือก"}</p>
+        <p className="mb-1 text-center text-xs text-neutral-500">{isToday ? t("eatenToday") : t("selectedDaySummary")}</p>
         <NutrientOverview pages={nutrientPages} extraPage={micronutrientPage} />
       </div>
 
@@ -525,11 +530,11 @@ export function FoodLogView({
             <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
               <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
-            เพิ่มอาหาร
+            {t("addFood")}
           </button>
           <button
             onClick={() => setShowImport(true)}
-            title="วางตารางแคลอรี่ที่ได้จาก AI แล้วนำเข้าทั้งมื้อ"
+            title={t("importTitle")}
             className="flex flex-none items-center justify-center gap-1.5 rounded-xl border border-neutral-700 px-4 py-3 text-sm font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800/50"
           >
             <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
@@ -541,7 +546,7 @@ export function FoodLogView({
                 strokeLinejoin="round"
               />
             </svg>
-            นำเข้าจาก AI
+            {t("importFromAI")}
           </button>
         </div>
       ) : showAdd ? (
@@ -552,12 +557,12 @@ export function FoodLogView({
                 {pending.kind === "personal" && pending.food.name}
                 {pending.kind === "catalog" && pending.food.name}
                 {pending.kind === "label" && pending.name}
-                {pending.kind === "custom" && "เพิ่มเมนูเอง"}
+                {pending.kind === "custom" && t("addCustomMenu")}
               </h3>
 
               {pending.kind === "custom" && (
                 <div className="mb-3 flex items-center gap-2">
-                  <label className="text-xs text-neutral-500">ประเภทปริมาณ</label>
+                  <label className="text-xs text-neutral-500">{t("quantityType")}</label>
                   <div className="flex overflow-hidden rounded-lg border border-neutral-700 text-xs">
                     <button
                       type="button"
@@ -567,7 +572,7 @@ export function FoodLogView({
                         customUnitMode === "grams" ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:bg-neutral-800"
                       }`}
                     >
-                      กรัม
+                      {t("grams")}
                     </button>
                     <button
                       type="button"
@@ -577,7 +582,7 @@ export function FoodLogView({
                         customUnitMode === "unit" ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:bg-neutral-800"
                       }`}
                     >
-                      หน่วย/ที่
+                      {t("unitOrServing")}
                     </button>
                   </div>
                   {customUnitMode === "unit" && (
@@ -585,7 +590,7 @@ export function FoodLogView({
                       value={customUnitLabel}
                       onChange={(e) => setCustomUnitLabel(e.target.value)}
                       disabled={customMacrosStarted}
-                      placeholder="เช่น ชิ้น, ที่, ถ้วย"
+                      placeholder={t("unitPlaceholderExample")}
                       className={`${INPUT_CLASS} w-28 disabled:opacity-50`}
                     />
                   )}
@@ -596,7 +601,7 @@ export function FoodLogView({
                 <label className="text-xs text-neutral-500">
                   {(() => {
                     const unitLabel = pendingUnitLabel();
-                    return isGramUnit(unitLabel) ? "ปริมาณ (กรัม)" : `จำนวน (${unitLabel})`;
+                    return isGramUnit(unitLabel) ? t("amountGrams") : t("quantityUnit", { unit: unitLabel });
                   })()}
                 </label>
                 <input
@@ -609,13 +614,13 @@ export function FoodLogView({
                 />
                 {customMacrosStarted && (
                   <span className="text-xs text-neutral-600">
-                    (ล็อกไว้ — แคลอรี่/แมโครที่กรอกด้านล่างคำนวณจากปริมาณนี้)
+                    {t("lockedNote")}
                   </span>
                 )}
               </div>
 
               <div className="mb-3 flex items-center gap-2">
-                <label className="text-xs text-neutral-500">มื้อ</label>
+                <label className="text-xs text-neutral-500">{t("meal")}</label>
                 <select value={mealType} onChange={(e) => setMealType(e.target.value)} className={`${INPUT_CLASS} w-36`}>
                   {MEAL_TYPE_OPTIONS.map((m) => (
                     <option key={m.value} value={m.value}>
@@ -630,7 +635,7 @@ export function FoodLogView({
                   <input
                     value={customName}
                     onChange={(e) => setCustomName(e.target.value)}
-                    placeholder="ชื่ออาหาร"
+                    placeholder={t("foodNamePlaceholder")}
                     className={INPUT_CLASS}
                   />
                   <div className="grid grid-cols-2 gap-2">
@@ -639,7 +644,7 @@ export function FoodLogView({
                       min="0"
                       value={customCalories}
                       onChange={(e) => setCustomCalories(e.target.value)}
-                      placeholder="แคลอรี่ (kcal)"
+                      placeholder={t("caloriesPlaceholder")}
                       className={INPUT_CLASS}
                     />
                     <input
@@ -647,7 +652,7 @@ export function FoodLogView({
                       min="0"
                       value={customProtein}
                       onChange={(e) => setCustomProtein(e.target.value)}
-                      placeholder="โปรตีน (ก.)"
+                      placeholder={t("proteinPlaceholder")}
                       className={INPUT_CLASS}
                     />
                     <input
@@ -655,7 +660,7 @@ export function FoodLogView({
                       min="0"
                       value={customCarb}
                       onChange={(e) => setCustomCarb(e.target.value)}
-                      placeholder="คาร์บ (ก.)"
+                      placeholder={t("carbPlaceholder")}
                       className={INPUT_CLASS}
                     />
                     <input
@@ -663,12 +668,12 @@ export function FoodLogView({
                       min="0"
                       value={customFat}
                       onChange={(e) => setCustomFat(e.target.value)}
-                      placeholder="ไขมัน (ก.)"
+                      placeholder={t("fatPlaceholder")}
                       className={INPUT_CLASS}
                     />
                   </div>
                   <p className="text-xs text-neutral-500">
-                    กรอกแคลอรี่/แมโครสำหรับ {pending.grams || 0} {pendingUnitLabel()} ด้านบน
+                    {t("enterMacrosFor", { grams: pending.grams || 0, unit: pendingUnitLabel() })}
                   </p>
                 </div>
               )}
@@ -679,7 +684,12 @@ export function FoodLogView({
                     const per100g =
                       pending.kind === "personal" ? pending.food : pending.kind === "catalog" ? pending.food : pending.per100g;
                     const m = macrosForGrams(per100g, pending.grams);
-                    return `${Math.round(m.calories)} kcal · โปรตีน ${Math.round(m.proteinG)} ก. · คาร์บ ${Math.round(m.carbG)} ก. · ไขมัน ${Math.round(m.fatG)} ก.`;
+                    return t("macroSummary", {
+                      kcal: Math.round(m.calories),
+                      protein: Math.round(m.proteinG),
+                      carb: Math.round(m.carbG),
+                      fat: Math.round(m.fatG),
+                    });
                   })()}
                 </p>
               )}
@@ -692,7 +702,7 @@ export function FoodLogView({
                   disabled={saving || (pending.kind === "custom" && !customName.trim())}
                   className="rounded-lg bg-[#fc4c02] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:opacity-50"
                 >
-                  {saving ? "กำลังบันทึก..." : "บันทึก"}
+                  {saving ? t("saving") : t("save")}
                 </button>
                 <button
                   onClick={() => {
@@ -701,7 +711,7 @@ export function FoodLogView({
                   }}
                   className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:border-neutral-600"
                 >
-                  ย้อนกลับ
+                  {t("back")}
                 </button>
               </div>
             </div>
@@ -710,16 +720,16 @@ export function FoodLogView({
           ) : (
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-medium text-neutral-300">เพิ่มอาหาร</h3>
+                <h3 className="text-sm font-medium text-neutral-300">{t("addFood")}</h3>
                 <button onClick={() => setShowAdd(false)} className="text-xs text-neutral-500 hover:text-neutral-300">
-                  ปิด
+                  {t("close")}
                 </button>
               </div>
               <div className="mb-2 flex gap-2">
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="ค้นหาเมนู เช่น ผัดกะเพรา"
+                  placeholder={t("searchPlaceholder")}
                   className={INPUT_CLASS}
                   autoFocus
                 />
@@ -736,13 +746,13 @@ export function FoodLogView({
                     />
                     <circle cx="10" cy="11" r="2.6" stroke="currentColor" strokeWidth="1.4" />
                   </svg>
-                  สแกนฉลาก
+                  {t("scanLabel")}
                 </button>
               </div>
 
               {!query.trim() && favoritePersonalFoods.length > 0 && (
                 <div className="mb-3">
-                  <p className="mb-1 px-1 text-[11px] text-neutral-600">เมนูโปรด</p>
+                  <p className="mb-1 px-1 text-[11px] text-neutral-600">{t("favorites")}</p>
                   <div className="space-y-1">
                     {favoritePersonalFoods.map((f) => (
                       <button
@@ -766,8 +776,8 @@ export function FoodLogView({
               {!query.trim() && suggestions.length > 0 && (
                 <div className="mb-1">
                   <div className="mb-1 flex items-center justify-between px-1">
-                    <p className="text-[11px] text-neutral-600">{usingFrequent ? "เมนูที่กินบ่อย" : "แนะนำจากรายการอาหารไทย"}</p>
-                    <span className="text-[11px] text-neutral-600">เหลือ {Math.round(remainingCalories ?? 0)} kcal วันนี้</span>
+                    <p className="text-[11px] text-neutral-600">{usingFrequent ? t("frequentMenu") : t("suggestedFromCatalog")}</p>
+                    <span className="text-[11px] text-neutral-600">{t("remainingToday", { kcal: Math.round(remainingCalories ?? 0) })}</span>
                   </div>
                   <div className="space-y-1">
                     {suggestions.map((s) => (
@@ -778,7 +788,7 @@ export function FoodLogView({
                       >
                         <span className="text-neutral-200">{s.food.name}</span>
                         <span className="text-xs text-neutral-500">
-                          {Math.round(s.calories)} kcal · โปรตีน {Math.round(s.proteinG)} ก.
+                          {t("kcalProtein", { kcal: Math.round(s.calories), protein: Math.round(s.proteinG) })}
                         </span>
                       </button>
                     ))}
@@ -790,7 +800,7 @@ export function FoodLogView({
                 <div className="max-h-64 space-y-1 overflow-y-auto">
                   {personalMatches.length > 0 && (
                     <>
-                      <p className="px-1 pt-1 text-[11px] text-neutral-600">เมนูที่กินบ่อย</p>
+                      <p className="px-1 pt-1 text-[11px] text-neutral-600">{t("frequentMenu")}</p>
                       {personalMatches.map((f) => (
                         <button
                           key={f.id}
@@ -807,7 +817,7 @@ export function FoodLogView({
                   )}
                   {catalogMatches.length > 0 && (
                     <>
-                      <p className="px-1 pt-1 text-[11px] text-neutral-600">แนะนำจากรายการอาหารไทย</p>
+                      <p className="px-1 pt-1 text-[11px] text-neutral-600">{t("suggestedFromCatalog")}</p>
                       {catalogMatches.map((f) => (
                         <button
                           key={f.name}
@@ -815,7 +825,7 @@ export function FoodLogView({
                           className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-sm hover:bg-neutral-800/50"
                         >
                           <span className="text-neutral-200">{f.name}</span>
-                          <span className="text-xs text-neutral-500">{Math.round(f.caloriesPer100g)} kcal/100ก.</span>
+                          <span className="text-xs text-neutral-500">{t("kcalPer100g", { kcal: Math.round(f.caloriesPer100g) })}</span>
                         </button>
                       ))}
                     </>
@@ -827,7 +837,7 @@ export function FoodLogView({
                     <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5">
                       <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                     </svg>
-                    เพิ่ม &quot;{query.trim()}&quot; เอง
+                    {t("addCustomQuery", { query: query.trim() })}
                   </button>
                 </div>
               )}
@@ -840,13 +850,13 @@ export function FoodLogView({
 
       {todayLogs.length === 0 ? (
         <div className="rounded-xl border border-dashed border-neutral-800 px-5 py-4 text-center">
-          <p className="text-xs text-neutral-600">ยังไม่ได้บันทึก</p>
+          <p className="text-xs text-neutral-600">{t("notLoggedYet")}</p>
           <button
             onClick={copyPreviousDay}
             disabled={copyingDay}
             className="mt-2 text-xs text-lime-400 hover:underline disabled:opacity-50"
           >
-            {copyingDay ? "กำลังคัดลอก..." : "คัดลอกจากวันก่อนหน้าทั้งหมด"}
+            {copyingDay ? t("copying") : t("copyFromPreviousDay")}
           </button>
           {copyError && <p className="mt-1 text-xs text-red-400">{copyError}</p>}
         </div>
@@ -858,7 +868,7 @@ export function FoodLogView({
                 <p className="mb-3 truncate text-sm font-medium text-neutral-200">{l.foodName}</p>
                 <div className="mb-2 flex items-center gap-2">
                   <label className="text-xs text-neutral-500">
-                    {isGramUnit(l.unitLabel) ? "ปริมาณ (กรัม)" : `จำนวน (${l.unitLabel})`}
+                    {isGramUnit(l.unitLabel) ? t("amountGrams") : t("quantityUnit", { unit: l.unitLabel })}
                   </label>
                   <input
                     type="number"
@@ -869,7 +879,7 @@ export function FoodLogView({
                   />
                 </div>
                 <div className="mb-2 flex items-center gap-2">
-                  <label className="text-xs text-neutral-500">มื้อ</label>
+                  <label className="text-xs text-neutral-500">{t("meal")}</label>
                   <select
                     value={editMealType}
                     onChange={(e) => setEditMealType(e.target.value)}
@@ -883,11 +893,11 @@ export function FoodLogView({
                   </select>
                 </div>
                 <p className="mb-2 text-xs text-neutral-600">
-                  แก้ได้แค่ปริมาณ/มื้อตรงนี้ — ค่าแคลอรี่/โปรตีน/คาร์บ/ไขมันของเมนูนี้ ไปแก้ได้ที่{" "}
+                  {t("editNote.before")}{" "}
                   <Link href={`/dashboard/food/library?edit=${l.foodId}`} className="text-lime-400 hover:underline">
-                    คลังอาหารส่วนตัว
+                    {t("editNote.link")}
                   </Link>{" "}
-                  (แก้ที่นั่นจะมีผลกับทุกครั้งที่เคยบันทึกเมนูนี้ด้วย)
+                  {t("editNote.after")}
                 </p>
                 {editError && <p className="mb-2 text-xs text-red-400">{editError}</p>}
                 <div className="flex gap-2">
@@ -896,13 +906,13 @@ export function FoodLogView({
                     disabled={editSaving}
                     className="rounded-lg bg-[#fc4c02] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#e04402] disabled:opacity-50"
                   >
-                    {editSaving ? "กำลังบันทึก..." : "บันทึก"}
+                    {editSaving ? t("saving") : t("save")}
                   </button>
                   <button
                     onClick={() => setEditingId(null)}
                     className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:border-neutral-600"
                   >
-                    ยกเลิก
+                    {t("cancel")}
                   </button>
                 </div>
               </li>
@@ -916,10 +926,10 @@ export function FoodLogView({
                     <span className="truncate">{l.foodName}</span>
                     {healthFlags.highUricAcid && matchesPurineKeyword(l.foodName) && (
                       <span
-                        title="มีพิวรีนสูง — ระวังถ้ากรดยูริกสูง"
+                        title={t("highPurineTitle")}
                         className="flex-none rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-400"
                       >
-                        พิวรีนสูง
+                        {t("highPurineBadge")}
                       </span>
                     )}
                   </p>
@@ -933,20 +943,20 @@ export function FoodLogView({
                     onClick={() => repeatLog(l.id)}
                     disabled={repeatingId === l.id}
                     className="text-neutral-600 transition hover:text-lime-400 disabled:opacity-50"
-                    title="ทำซ้ำ"
+                    title={t("repeat")}
                   >
                     <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
                       <rect x="7" y="7" width="9" height="9" rx="1.6" stroke="currentColor" strokeWidth="1.5" />
                       <path d="M4 13V5.5A1.5 1.5 0 0 1 5.5 4H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                     </svg>
                   </button>
-                  <button onClick={() => startEdit(l)} className="text-neutral-600 transition hover:text-neutral-300" title="แก้ไข">
+                  <button onClick={() => startEdit(l)} className="text-neutral-600 transition hover:text-neutral-300" title={t("edit")}>
                     <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
                       <path d="M4 16l.5-2.8L13 4.7l2.3 2.3L6.8 15.5 4 16Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
                       <path d="M11.3 6.4l2.3 2.3" stroke="currentColor" strokeWidth="1.5" />
                     </svg>
                   </button>
-                  <button onClick={() => deleteLog(l.id)} className="text-neutral-600 transition hover:text-red-400" title="ลบ">
+                  <button onClick={() => deleteLog(l.id)} className="text-neutral-600 transition hover:text-red-400" title={t("delete")}>
                     <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
                       <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                     </svg>

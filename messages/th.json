@@ -130,6 +130,123 @@
       "water": "บันทึกน้ำครั้งแรก"
     }
   },
+  "food": {
+    "page": {
+      "backToOverview": "กลับไปหน้ารวม",
+      "title": "บันทึกอาหาร",
+      "history": "ประวัติการกิน",
+      "portionGuide": "กะปริมาณด้วยมือ",
+      "library": "คลังอาหารส่วนตัว",
+      "compareAgainst": "เทียบกับเป้าหมายที่หน้า",
+      "nutritionLink": "โภชนาการ",
+      "noTargetYet": "ยังไม่ได้ตั้งเป้าหมาย —",
+      "fillProfileLink": "กรอกโปรไฟล์โภชนาการ",
+      "toCompare": "เพื่อเทียบกับเป้าหมายได้"
+    },
+    "dateStrip": {
+      "weekdayLabels": ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"],
+      "prevWeek": "สัปดาห์ก่อนหน้า",
+      "nextWeek": "สัปดาห์ถัดไป",
+      "pickDate": "เลือกวันที่",
+      "backToToday": "กลับไปวันนี้"
+    },
+    "diary": {
+      "eatenToday": "กินไปวันนี้",
+      "selectedDaySummary": "สรุปวันที่เลือก",
+      "unitDefault": "ชิ้น",
+      "nutrients": {
+        "calories": "แคลอรี่",
+        "protein": "โปรตีน",
+        "carb": "คาร์บ",
+        "fat": "ไขมัน",
+        "bonusNote": "รวมเป้าเพิ่มจากกิจกรรม +{amount} ก."
+      },
+      "micronutrients": {
+        "title": "สารอาหารอื่นๆ",
+        "sugar": "น้ำตาล",
+        "sodium": "โซเดียม",
+        "fiber": "ไฟเบอร์",
+        "cholesterolToday": "คอเลสเตอรอลวันนี้ {value} / {limit} มก.",
+        "overLimit": "— เกินเพดานแล้ว"
+      },
+      "addFood": "เพิ่มอาหาร",
+      "importFromAI": "นำเข้าจาก AI",
+      "importTitle": "วางตารางแคลอรี่ที่ได้จาก AI แล้วนำเข้าทั้งมื้อ",
+      "addCustomMenu": "เพิ่มเมนูเอง",
+      "quantityType": "ประเภทปริมาณ",
+      "grams": "กรัม",
+      "unitOrServing": "หน่วย/ที่",
+      "unitPlaceholderExample": "เช่น ชิ้น, ที่, ถ้วย",
+      "amountGrams": "ปริมาณ (กรัม)",
+      "quantityUnit": "จำนวน ({unit})",
+      "lockedNote": "(ล็อกไว้ — แคลอรี่/แมโครที่กรอกด้านล่างคำนวณจากปริมาณนี้)",
+      "meal": "มื้อ",
+      "foodNamePlaceholder": "ชื่ออาหาร",
+      "caloriesPlaceholder": "แคลอรี่ (kcal)",
+      "proteinPlaceholder": "โปรตีน (ก.)",
+      "carbPlaceholder": "คาร์บ (ก.)",
+      "fatPlaceholder": "ไขมัน (ก.)",
+      "enterMacrosFor": "กรอกแคลอรี่/แมโครสำหรับ {grams} {unit} ด้านบน",
+      "macroSummary": "{kcal} kcal · โปรตีน {protein} ก. · คาร์บ {carb} ก. · ไขมัน {fat} ก.",
+      "saving": "กำลังบันทึก...",
+      "save": "บันทึก",
+      "back": "ย้อนกลับ",
+      "close": "ปิด",
+      "searchPlaceholder": "ค้นหาเมนู เช่น ผัดกะเพรา",
+      "scanLabel": "สแกนฉลาก",
+      "favorites": "เมนูโปรด",
+      "frequentMenu": "เมนูที่กินบ่อย",
+      "suggestedFromCatalog": "แนะนำจากรายการอาหารไทย",
+      "remainingToday": "เหลือ {kcal} kcal วันนี้",
+      "kcalProtein": "{kcal} kcal · โปรตีน {protein} ก.",
+      "kcalPer100g": "{kcal} kcal/100ก.",
+      "addCustomQuery": "เพิ่ม \"{query}\" เอง",
+      "notLoggedYet": "ยังไม่ได้บันทึก",
+      "copying": "กำลังคัดลอก...",
+      "copyFromPreviousDay": "คัดลอกจากวันก่อนหน้าทั้งหมด",
+      "editNote": {
+        "before": "แก้ได้แค่ปริมาณ/มื้อตรงนี้ — ค่าแคลอรี่/โปรตีน/คาร์บ/ไขมันของเมนูนี้ ไปแก้ได้ที่",
+        "link": "คลังอาหารส่วนตัว",
+        "after": "(แก้ที่นั่นจะมีผลกับทุกครั้งที่เคยบันทึกเมนูนี้ด้วย)"
+      },
+      "cancel": "ยกเลิก",
+      "highPurineTitle": "มีพิวรีนสูง — ระวังถ้ากรดยูริกสูง",
+      "highPurineBadge": "พิวรีนสูง",
+      "repeat": "ทำซ้ำ",
+      "edit": "แก้ไข",
+      "delete": "ลบ",
+      "errors": {
+        "invalidGrams": "กรอกปริมาณ (กรัม) ให้ถูกต้องก่อนบันทึก",
+        "saveFailed": "บันทึกไม่สำเร็จ ตรวจสอบข้อมูลแล้วลองใหม่อีกครั้ง",
+        "deleteFailed": "ลบไม่สำเร็จ ลองใหม่อีกครั้ง",
+        "invalidGramsEdit": "กรอกปริมาณ (กรัม) ให้ถูกต้อง",
+        "editSaveFailed": "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง",
+        "repeatFailed": "ทำซ้ำไม่สำเร็จ ลองใหม่อีกครั้ง",
+        "nothingToCopy": "วันก่อนหน้าไม่มีข้อมูลให้คัดลอก",
+        "copyFailed": "คัดลอกไม่สำเร็จ ลองใหม่อีกครั้ง"
+      }
+    },
+    "nutrientOverview": {
+      "fromTarget": "จากเป้า {target} {unit}",
+      "over": "เกิน {amount}",
+      "remaining": "เหลือ {amount}"
+    },
+    "waterLogCard": {
+      "title": "น้ำดื่มวันนี้",
+      "liters": "{value} ลิตร",
+      "litersUnit": "ลิตร",
+      "fillGlass": "เติม {ml} มล.",
+      "quickAdd": "+{ml} มล.",
+      "customPlaceholder": "กำหนดเอง (มล.)",
+      "add": "เพิ่ม",
+      "undoLastTitle": "ลบรายการล่าสุด ({ml} มล.)",
+      "undoLast": "ลบรายการล่าสุด",
+      "undoing": "กำลังลบ...",
+      "invalidAmount": "กรอกปริมาณน้ำให้ถูกต้องก่อน",
+      "saveFailed": "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง",
+      "undoFailed": "ลบไม่สำเร็จ ลองใหม่อีกครั้ง"
+    }
+  },
   "landing": {
     "tagline": "บันทึกกิจกรรม อาหาร น้ำ น้ำหนัก ไว้ที่เดียว ครบจบในแอพเดียว",
     "features": {

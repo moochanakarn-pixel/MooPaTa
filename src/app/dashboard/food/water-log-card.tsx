@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { WaterReminderToggle, type WaterReminderSchedule } from "./water-reminder-toggle";
 
 export interface WaterLogEntry {
@@ -15,12 +16,22 @@ const GLASS_ML = 250;
 const MIN_GLASSES = 4;
 const MAX_GLASSES = 14;
 
-function WaterGlass({ fillPct, tappable, onTap }: { fillPct: number; tappable: boolean; onTap?: () => void }) {
+function WaterGlass({
+  fillPct,
+  tappable,
+  onTap,
+  fillLabel,
+}: {
+  fillPct: number;
+  tappable: boolean;
+  onTap?: () => void;
+  fillLabel: string;
+}) {
   const Tag = tappable ? "button" : "div";
   return (
     <Tag
       onClick={tappable ? onTap : undefined}
-      title={tappable ? `เติม ${GLASS_ML} มล.` : undefined}
+      title={tappable ? fillLabel : undefined}
       className={`relative h-11 w-7 flex-none overflow-hidden rounded-b-xl rounded-t-md border-2 transition ${
         fillPct > 0 ? "border-cyan-600/50" : "border-neutral-700"
       } ${tappable ? "cursor-pointer hover:border-cyan-500" : ""}`}
@@ -37,7 +48,19 @@ function WaterGlass({ fillPct, tappable, onTap }: { fillPct: number; tappable: b
 // serving, filled bottom-up by today's total — tapping the next empty
 // glass is a one-tap way to log exactly that serving, same amount the
 // +250 quick-add button below does.
-function WaterGlasses({ totalMl, targetMl, onAddGlass, disabled }: { totalMl: number; targetMl: number | null; onAddGlass: () => void; disabled: boolean }) {
+function WaterGlasses({
+  totalMl,
+  targetMl,
+  onAddGlass,
+  disabled,
+  fillLabel,
+}: {
+  totalMl: number;
+  targetMl: number | null;
+  onAddGlass: () => void;
+  disabled: boolean;
+  fillLabel: string;
+}) {
   const glassCount = Math.min(Math.max(Math.ceil((targetMl ?? 2000) / GLASS_ML), MIN_GLASSES), MAX_GLASSES);
   const filledGlasses = Math.floor(totalMl / GLASS_ML);
   const remainderMl = totalMl % GLASS_ML;
@@ -59,6 +82,7 @@ function WaterGlasses({ totalMl, targetMl, onAddGlass, disabled }: { totalMl: nu
             fillPct={fillPct}
             tappable={!disabled && isNextEmptySlot}
             onTap={onAddGlass}
+            fillLabel={fillLabel}
           />
         );
       })}
@@ -83,6 +107,7 @@ export function WaterLogCard({
   isToday: boolean;
   reminderSchedule: WaterReminderSchedule;
 }) {
+  const t = useTranslations("food.waterLogCard");
   const router = useRouter();
   const [adding, setAdding] = useState<number | null>(null);
   const [undoing, setUndoing] = useState(false);
@@ -104,7 +129,7 @@ export function WaterLogCard({
 
   async function addWater(ml: number) {
     if (!Number.isFinite(ml) || ml <= 0) {
-      setError("กรอกปริมาณน้ำให้ถูกต้องก่อน");
+      setError(t("invalidAmount"));
       return;
     }
     setError(null);
@@ -119,7 +144,7 @@ export function WaterLogCard({
       setCustomMl("");
       router.refresh();
     } else {
-      setError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setError(t("saveFailed"));
     }
   }
 
@@ -129,7 +154,7 @@ export function WaterLogCard({
     const res = await fetch(`/api/water/log/${lastEntry.id}`, { method: "DELETE" });
     setUndoing(false);
     if (res.ok) router.refresh();
-    else setError("ลบไม่สำเร็จ ลองใหม่อีกครั้ง");
+    else setError(t("undoFailed"));
   }
 
   return (
@@ -146,16 +171,24 @@ export function WaterLogCard({
             />
           </svg>
         </div>
-        <h2 className="font-medium">น้ำดื่มวันนี้</h2>
+        <h2 className="font-medium">{t("title")}</h2>
       </div>
 
       <p className="mb-3 text-3xl font-bold tabular-nums">
         {(totalMl / 1000).toFixed(2)}
-        {targetMl && <span className="text-lg font-medium text-neutral-500"> / {(targetMl / 1000).toFixed(1)} ลิตร</span>}
-        {!targetMl && <span className="text-lg font-medium text-neutral-500"> ลิตร</span>}
+        {targetMl && (
+          <span className="text-lg font-medium text-neutral-500"> / {t("liters", { value: (targetMl / 1000).toFixed(1) })}</span>
+        )}
+        {!targetMl && <span className="text-lg font-medium text-neutral-500"> {t("litersUnit")}</span>}
       </p>
       <div className="mb-4">
-        <WaterGlasses totalMl={totalMl} targetMl={targetMl} onAddGlass={() => addWater(GLASS_ML)} disabled={adding !== null} />
+        <WaterGlasses
+          totalMl={totalMl}
+          targetMl={targetMl}
+          onAddGlass={() => addWater(GLASS_ML)}
+          disabled={adding !== null}
+          fillLabel={t("fillGlass", { ml: GLASS_ML })}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -166,7 +199,7 @@ export function WaterLogCard({
             disabled={adding !== null}
             className="rounded-lg border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 transition hover:border-cyan-700 hover:text-cyan-300 disabled:opacity-50"
           >
-            +{ml} มล.
+            {t("quickAdd", { ml })}
           </button>
         ))}
         <input
@@ -174,7 +207,7 @@ export function WaterLogCard({
           min="1"
           value={customMl}
           onChange={(e) => setCustomMl(e.target.value)}
-          placeholder="กำหนดเอง (มล.)"
+          placeholder={t("customPlaceholder")}
           className="w-32 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600"
         />
         <button
@@ -182,19 +215,19 @@ export function WaterLogCard({
           disabled={adding !== null || !customMl}
           className="rounded-lg bg-cyan-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-cyan-500 disabled:opacity-50"
         >
-          เพิ่ม
+          {t("add")}
         </button>
         {lastEntry && (
           <button
             onClick={undoLast}
             disabled={undoing}
-            title={`ลบรายการล่าสุด (${lastEntry.ml} มล.)`}
+            title={t("undoLastTitle", { ml: lastEntry.ml })}
             className="ml-auto flex items-center gap-1 text-xs text-neutral-500 transition hover:text-red-300 disabled:opacity-50"
           >
             <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5">
               <path d="M8 5 4 9l4 4M4 9h8a4 4 0 0 1 0 8h-1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            {undoing ? "กำลังลบ..." : "ลบรายการล่าสุด"}
+            {undoing ? t("undoing") : t("undoLast")}
           </button>
         )}
       </div>

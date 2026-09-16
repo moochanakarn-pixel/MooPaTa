@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-const WEEKDAY_LABEL = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
+import { useTranslations } from "next-intl";
 
 function addDaysKey(dateKey: string, delta: number): string {
   const [y, m, d] = dateKey.split("-").map(Number);
@@ -30,6 +29,8 @@ function weekDays(selectedDate: string) {
 }
 
 export function DateStrip({ selectedDate, todayDate }: { selectedDate: string; todayDate: string }) {
+  const t = useTranslations("food.dateStrip");
+  const weekdayLabels = t.raw("weekdayLabels") as string[];
   const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
   const days = weekDays(selectedDate);
@@ -49,7 +50,7 @@ export function DateStrip({ selectedDate, todayDate }: { selectedDate: string; t
         <button
           onClick={() => go(addDaysKey(selectedDate, -7))}
           className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-neutral-400 transition hover:bg-neutral-800/60 hover:text-neutral-200"
-          aria-label="สัปดาห์ก่อนหน้า"
+          aria-label={t("prevWeek")}
         >
           <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
             <path d="M12.5 4 7 10l5.5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -63,7 +64,7 @@ export function DateStrip({ selectedDate, todayDate }: { selectedDate: string; t
             <rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.4" />
             <path d="M3 8h14M7 2v4M13 2v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
           </svg>
-          เลือกวันที่
+          {t("pickDate")}
         </button>
         <button
           onClick={() => !isCurrentWeek && go(addDaysKey(selectedDate, 7))}
@@ -71,7 +72,7 @@ export function DateStrip({ selectedDate, todayDate }: { selectedDate: string; t
           className={`flex h-7 w-7 flex-none items-center justify-center rounded-full transition ${
             isCurrentWeek ? "text-neutral-700" : "text-neutral-400 hover:bg-neutral-800/60 hover:text-neutral-200"
           }`}
-          aria-label="สัปดาห์ถัดไป"
+          aria-label={t("nextWeek")}
         >
           <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
             <path d="M7.5 4 13 10l-5.5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -112,7 +113,7 @@ export function DateStrip({ selectedDate, todayDate }: { selectedDate: string; t
                     : "text-neutral-300 hover:bg-neutral-800/60"
               }`}
             >
-              <span className="text-[10px]">{WEEKDAY_LABEL[i]}</span>
+              <span className="text-[10px]">{weekdayLabels[i]}</span>
               <span className={`text-sm font-semibold ${isTodayCell && !isSelected ? "text-lime-400" : ""}`}>{d.dayOfMonth}</span>
             </button>
           );
@@ -120,7 +121,7 @@ export function DateStrip({ selectedDate, todayDate }: { selectedDate: string; t
       </div>
       {!isToday && (
         <button onClick={() => go(todayDate)} className="mt-2 w-full text-center text-xs text-lime-400 hover:underline">
-          กลับไปวันนี้
+          {t("backToToday")}
         </button>
       )}
     </div>

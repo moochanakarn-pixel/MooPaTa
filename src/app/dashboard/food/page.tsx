@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { macrosForGrams } from "@/lib/food";
@@ -13,6 +14,7 @@ import { WaterLogCard, type WaterLogEntry } from "./water-log-card";
 export default async function FoodPage({ searchParams }: { searchParams: { date?: string } }) {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
+  const t = await getTranslations("food.page");
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -132,38 +134,38 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
         <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
           <path d="M13 4 7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        กลับไปหน้ารวม
+        {t("backToOverview")}
       </Link>
 
       <div className="mb-1 flex items-center justify-between">
-        <h1 className="text-xl font-bold">บันทึกอาหาร</h1>
+        <h1 className="text-xl font-bold">{t("title")}</h1>
         <div className="flex items-center gap-3">
           <Link href="/dashboard/food/history" className="text-xs text-neutral-500 transition hover:text-neutral-300">
-            ประวัติการกิน
+            {t("history")}
           </Link>
           <Link href="/dashboard/portion-guide" className="text-xs text-neutral-500 transition hover:text-neutral-300">
-            กะปริมาณด้วยมือ
+            {t("portionGuide")}
           </Link>
           <Link href="/dashboard/food/library" className="text-xs text-neutral-500 transition hover:text-neutral-300">
-            คลังอาหารส่วนตัว
+            {t("library")}
           </Link>
         </div>
       </div>
       <p className="mb-4 text-sm text-neutral-500">
         {targets ? (
           <>
-            เทียบกับเป้าหมายที่หน้า{" "}
+            {t("compareAgainst")}{" "}
             <Link href="/dashboard/nutrition" className="text-lime-400 hover:underline">
-              โภชนาการ
+              {t("nutritionLink")}
             </Link>
           </>
         ) : (
           <>
-            ยังไม่ได้ตั้งเป้าหมาย —{" "}
+            {t("noTargetYet")}{" "}
             <Link href="/dashboard/settings" className="text-lime-400 hover:underline">
-              กรอกโปรไฟล์โภชนาการ
+              {t("fillProfileLink")}
             </Link>{" "}
-            เพื่อเทียบกับเป้าหมายได้
+            {t("toCompare")}
           </>
         )}
       </p>

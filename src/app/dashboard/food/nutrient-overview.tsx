@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
+import { useLocale, useTranslations } from "next-intl";
 
 export interface NutrientPage {
   key: string;
@@ -87,6 +88,9 @@ function RingGauge({
 }
 
 function MainRing({ page }: { page: NutrientPage }) {
+  const t = useTranslations("food.nutrientOverview");
+  const locale = useLocale();
+  const numberLocale = locale === "en" ? "en-US" : "th-TH";
   const { target, pct, over, remaining } = ringMetrics(page);
   const offset = MAIN_CIRCUMFERENCE * (1 - pct);
   return (
@@ -102,15 +106,17 @@ function MainRing({ page }: { page: NutrientPage }) {
         offset={offset}
         showProgress={target > 0}
       >
-        <span className="text-xl font-extrabold tabular-nums tracking-tight">{Math.round(page.eaten).toLocaleString("th-TH")}</span>
+        <span className="text-xl font-extrabold tabular-nums tracking-tight">{Math.round(page.eaten).toLocaleString(numberLocale)}</span>
         <span className="text-[10px] text-neutral-500">
-          {page.target !== null ? `จากเป้า ${Math.round(page.target).toLocaleString("th-TH")} ${page.unit}` : page.unit}
+          {page.target !== null
+            ? t("fromTarget", { target: Math.round(page.target).toLocaleString(numberLocale), unit: page.unit })
+            : page.unit}
         </span>
         {page.target !== null && (
           <span className={`mt-0.5 text-[10px] font-medium ${over ? "text-red-400" : "text-neutral-400"}`}>
             {over
-              ? `เกิน ${Math.round(page.eaten - target).toLocaleString("th-TH")}`
-              : `เหลือ ${Math.round(remaining).toLocaleString("th-TH")}`}
+              ? t("over", { amount: Math.round(page.eaten - target).toLocaleString(numberLocale) })
+              : t("remaining", { amount: Math.round(remaining).toLocaleString(numberLocale) })}
           </span>
         )}
       </RingGauge>
