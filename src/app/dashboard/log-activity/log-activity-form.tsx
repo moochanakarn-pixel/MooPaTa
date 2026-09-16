@@ -354,6 +354,13 @@ export function LogActivityForm({
       setError("กรอกระยะเวลาให้ถูกต้องก่อน");
       return;
     }
+    if (rpe.trim()) {
+      const n = Number(rpe);
+      if (!Number.isInteger(n) || n < 1 || n > 10) {
+        setError("ระดับความเหนื่อย (RPE) ต้องเป็นจำนวนเต็ม 1-10 เท่านั้น (ห้ามมีจุดทศนิยม)");
+        return;
+      }
+    }
     const namedExercises = exercises.filter((r) => r.name.trim());
     for (const r of namedExercises) {
       for (const s of r.sets) {
@@ -361,6 +368,13 @@ export function LogActivityForm({
         if (!Number.isInteger(reps) || reps <= 0) {
           setError(`ท่า "${r.name.trim()}" ต้องกรอกจำนวนครั้งเป็นจำนวนเต็มมากกว่า 0 ทุกเซ็ท`);
           return;
+        }
+        if (s.rpe.trim()) {
+          const setRpe = Number(s.rpe);
+          if (!Number.isInteger(setRpe) || setRpe < 1 || setRpe > 10) {
+            setError(`ท่า "${r.name.trim()}" มี RPE ที่ไม่ใช่จำนวนเต็ม 1-10 (ห้ามมีจุดทศนิยม)`);
+            return;
+          }
         }
       }
     }
@@ -572,6 +586,7 @@ export function LogActivityForm({
                 type="number"
                 min="1"
                 max="10"
+                step="1"
                 value={rpe}
                 onChange={(e) => setRpe(e.target.value)}
                 placeholder="เช่น 7"
@@ -693,6 +708,7 @@ export function LogActivityForm({
                           type="number"
                           min="1"
                           max="10"
+                          step="1"
                           value={s.rpe}
                           onChange={(e) => updateSetRow(r.id, s.id, { rpe: e.target.value })}
                           placeholder="-"
