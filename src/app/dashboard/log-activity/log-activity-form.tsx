@@ -100,6 +100,17 @@ const AI_PROMPT_TEMPLATE = `อ่านค่าจากรูปสรุป�
 ดันไหล่ดัมเบล | 2 | 14 | 5 | 8
 ดันไหล่ดัมเบล | 3 | 10 | 4 | 9`;
 
+// Which distance a "best pace" is expressed per, by activity type — Run
+// reads per km, Swim per 100m (swimmers don't talk in km/h or km pace), and
+// everything else has no pace convention at all, just plain speed. Mirrors
+// activitySpeedValue's per-type dispatch in src/lib/format.ts, which is what
+// ends up displaying whatever this form writes to Activity.maxSpeedMs.
+function paceUnitMeters(type: string): number | null {
+  if (type === "Run") return 1000;
+  if (type === "Swim") return 100;
+  return null;
+}
+
 function toDatetimeLocal(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -170,6 +181,7 @@ export interface LogActivityInitial {
   maxHeartRate: string;
   calories: string;
   avgCadence: string;
+  maxSpeedMs: string;
   rpe: string;
   notes: string;
   exercises: { name: string; sets: { reps: string; weightKg: string; rpe: string }[] }[];
@@ -207,6 +219,28 @@ export function LogActivityForm({
   const [maxHeartRate, setMaxHeartRate] = useState(initial?.maxHeartRate ?? "");
   const [calories, setCalories] = useState(initial?.calories ?? "");
   const [avgCadence, setAvgCadence] = useState(initial?.avgCadence ?? "");
+  // Split into per-type fields (mm:ss pace vs. plain km/h speed) rather than
+  // one raw m/s field, since that's how someone reads it off their own
+  // watch — converted to/from Activity.maxSpeedMs (m/s) only at save/load
+  // time. Seeded from `initial.maxSpeedMs` using the activity's *loaded*
+  // type (not the live `type` state below) since that's the type it was
+  // actually recorded/converted under; switching the type dropdown after
+  // that just changes which of these three fields is shown, not any
+  // stored value, so nothing here needs to react to that switch.
+  const initialMaxSpeedMs = initial?.maxSpeedMs ? Number(initial.maxSpeedMs) : null;
+  const initialPaceUnit = initial ? paceUnitMeters(initial.type) : null;
+  const [bestPaceMin, setBestPaceMin] = useState(() => {
+    if (!initialMaxSpeedMs || !initialPaceUnit) return "";
+    return String(Math.floor(initialPaceUnit / initialMaxSpeedMs / 60));
+  });
+  const [bestPaceSec, setBestPaceSec] = useState(() => {
+    if (!initialMaxSpeedMs || !initialPaceUnit) return "";
+    return String(Math.round((initialPaceUnit / initialMaxSpeedMs) % 60));
+  });
+  const [bestSpeedKmh, setBestSpeedKmh] = useState(() => {
+    if (!initialMaxSpeedMs || initialPaceUnit) return "";
+    return String(Math.round(initialMaxSpeedMs * 3.6 * 10) / 10);
+  });
   const [rpe, setRpe] = useState(initial?.rpe ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
   const [exercises, setExercises] = useState<ExerciseRow[]>(
@@ -219,6 +253,34 @@ export function LogActivityForm({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Live off the current `type` dropdown (not initial's), so switching
+  // between e.g. Run and WeightTraining mid-edit swaps which of the three
+  // best-pace/speed fields above is shown immediately.
+  const paceUnit = paceUnitMeters(type);
+  const usesPace = paceUnit !== null;
+
+  // Converts whichever of the three fields is currently visible into
+  // Activity.maxSpeedMs (m/s) for the request body — `null` means nothing
+  // was entered (leave the activity's own maxSpeedMs untouched/unset), and
+  // `NaN` signals "entered but not a valid number" so save() can reject it
+  // with a specific message instead of silently dropping it (same
+  // "invalid input fails loudly" rule as RPE above).
+  function computeBestSpeedMs(): number | null {
+    if (usesPace) {
+      if (!bestPaceMin.trim() && !bestPaceSec.trim()) return null;
+      const min = bestPaceMin.trim() ? Number(bestPaceMin) : 0;
+      const sec = bestPaceSec.trim() ? Number(bestPaceSec) : 0;
+      if (!Number.isFinite(min) || !Number.isFinite(sec) || min < 0 || sec < 0 || sec >= 60) return NaN;
+      const totalSec = min * 60 + sec;
+      if (totalSec <= 0) return NaN;
+      return (paceUnit as number) / totalSec;
+    }
+    if (!bestSpeedKmh.trim()) return null;
+    const kmh = Number(bestSpeedKmh);
+    if (!Number.isFinite(kmh) || kmh <= 0) return NaN;
+    return kmh / 3.6;
+  }
 
   const [mode, setMode] = useState<"manual" | "import">("manual");
   const [pasteText, setPasteText] = useState("");
@@ -361,6 +423,15 @@ export function LogActivityForm({
         return;
       }
     }
+    const bestSpeedMs = computeBestSpeedMs();
+    if (Number.isNaN(bestSpeedMs)) {
+      setError(
+        usesPace
+          ? "กรอกเพซที่ดีที่สุดให้ถูกต้อง (นาที/วินาทีเป็นตัวเลขไม่ติดลบ วินาทีต้องน้อยกว่า 60)"
+          : "กรอกความเร็วสูงสุดให้ถูกต้อง (ตัวเลขมากกว่า 0)"
+      );
+      return;
+    }
     const namedExercises = exercises.filter((r) => r.name.trim());
     for (const r of namedExercises) {
       for (const s of r.sets) {
@@ -394,6 +465,7 @@ export function LogActivityForm({
         maxHeartRate: maxHeartRate.trim() || undefined,
         calories: calories.trim() || undefined,
         avgCadence: avgCadence.trim() || undefined,
+        maxSpeedMs: bestSpeedMs !== null ? bestSpeedMs : undefined,
         rpe: rpe.trim() || undefined,
         notes: notes.trim() || undefined,
         exercises: namedExercises.map((r) => ({
@@ -579,6 +651,40 @@ export function LogActivityForm({
                 placeholder="spm ถ้าวิ่ง/เดิน, rpm ถ้าปั่นจักรยาน"
                 className={INPUT_CLASS}
               />
+            </div>
+            <div>
+              <label className={LABEL_CLASS}>{usesPace ? `เพซสูงสุด (ต่อ ${paceUnit === 1000 ? "กม." : "100 ม."})` : "ความเร็วสูงสุด (กม./ชม.)"}</label>
+              {usesPace ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="number"
+                    min="0"
+                    value={bestPaceMin}
+                    onChange={(e) => setBestPaceMin(e.target.value)}
+                    placeholder="นาที"
+                    className={INPUT_CLASS}
+                  />
+                  <span className="text-neutral-600">:</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="59"
+                    value={bestPaceSec}
+                    onChange={(e) => setBestPaceSec(e.target.value)}
+                    placeholder="วินาที"
+                    className={INPUT_CLASS}
+                  />
+                </div>
+              ) : (
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={bestSpeedKmh}
+                  onChange={(e) => setBestSpeedKmh(e.target.value)}
+                  className={INPUT_CLASS}
+                />
+              )}
             </div>
             <div>
               <label className={LABEL_CLASS}>ระดับความเหนื่อย (RPE 1-10)</label>

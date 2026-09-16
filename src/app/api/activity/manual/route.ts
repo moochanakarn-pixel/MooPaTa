@@ -35,6 +35,10 @@ export async function POST(req: NextRequest) {
   const maxHeartRate = optionalNonNegative(body.maxHeartRate);
   const calories = optionalNonNegative(body.calories);
   const avgCadence = optionalNonNegative(body.avgCadence);
+  // Already converted to m/s client-side (from a pace or km/h input, per
+  // activity type — see log-activity-form.tsx) — this route just passes it
+  // through, the same as the rest of the optional numeric fields.
+  const maxSpeedMs = optionalNonNegative(body.maxSpeedMs);
   const rpe = optionalRpe(body.rpe);
   const notes = optionalNotes(body.notes);
   const exercises = parseExercises(body.exercises);
@@ -48,7 +52,7 @@ export async function POST(req: NextRequest) {
   if (Number.isNaN(startedAt.getTime())) {
     return NextResponse.json({ error: "invalid_date" }, { status: 400 });
   }
-  if ([distanceKm, avgHeartRate, maxHeartRate, calories, avgCadence, rpe].some((n) => n !== null && Number.isNaN(n))) {
+  if ([distanceKm, avgHeartRate, maxHeartRate, calories, avgCadence, maxSpeedMs, rpe].some((n) => n !== null && Number.isNaN(n))) {
     return NextResponse.json({ error: "invalid_optional_field" }, { status: 400 });
   }
   if (exercises === null) {
@@ -66,6 +70,7 @@ export async function POST(req: NextRequest) {
       durationSec: Math.round(durationMin * 60),
       distanceMeters: distanceKm !== null ? distanceKm * 1000 : null,
       avgSpeedMs: computeAvgSpeedMs(distanceKm, durationMin),
+      maxSpeedMs,
       avgHeartRate,
       maxHeartRate,
       calories,

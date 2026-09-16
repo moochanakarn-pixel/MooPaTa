@@ -91,9 +91,12 @@ export function optionalRpe(value: unknown): number | null {
 // (optional) but nothing ever wrote avgSpeedMs from those two — so
 // activitySpeedValue() (src/lib/format.ts) had nothing to show and
 // "เพซเฉลี่ย"/"ความเร็วเฉลี่ย" silently rendered "-" even when both inputs
-// needed to derive it were right there. maxSpeedMs stays uncomputed
-// (returned as-is by callers) since there's no per-second data to derive a
-// max from, only a single average over the whole duration.
+// needed to derive it were right there. maxSpeedMs has no equivalent
+// distance/duration formula (there's no per-second data to derive a max
+// from, only a single average over the whole duration) — instead the form
+// lets someone type it in directly (their watch's own "best pace"/"max
+// speed" stat, already converted to m/s client-side) and the POST/PATCH
+// routes pass it straight through via optionalNonNegative below.
 export function computeAvgSpeedMs(distanceKm: number | null, durationMin: number): number | null {
   if (distanceKm === null || distanceKm <= 0 || durationMin <= 0) return null;
   return (distanceKm * 1000) / (durationMin * 60);
