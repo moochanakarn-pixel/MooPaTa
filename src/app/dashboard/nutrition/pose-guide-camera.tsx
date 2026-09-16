@@ -1,13 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { PHOTO_ANGLE_LABEL, type PhotoAngle } from "@/lib/progress-photo-types";
-
-const ANGLE_INSTRUCTION: Record<PhotoAngle, string> = {
-  FRONT: "ยืนหันหน้าเข้ากล้อง ให้ลำตัวอยู่ในกรอบเงา",
-  SIDE: "ยืนหันข้างเข้ากล้อง ให้ลำตัวอยู่ในกรอบเงา",
-  BACK: "ยืนหันหลังให้กล้อง ให้ลำตัวอยู่ในกรอบเงา",
-};
 
 // Same standing-forward outline works for both FRONT and BACK — the guide
 // is only about vertical/horizontal alignment (distance from camera,
@@ -77,6 +72,12 @@ export function PoseGuideCamera({
   onCapture: (file: File) => void;
   onClose: () => void;
 }) {
+  const t = useTranslations("nutrition.poseGuideCamera");
+  const angleInstruction: Record<PhotoAngle, string> = {
+    FRONT: t("instruction.FRONT"),
+    SIDE: t("instruction.SIDE"),
+    BACK: t("instruction.BACK"),
+  };
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
@@ -98,7 +99,7 @@ export function PoseGuideCamera({
         streamRef.current = stream;
         if (videoRef.current) videoRef.current.srcObject = stream;
       } catch {
-        if (!cancelled) setError("เปิดกล้องไม่ได้ — ลองอัปโหลดจากคลังภาพแทน");
+        if (!cancelled) setError(t("cameraFailed"));
       }
     }
     start();
@@ -143,7 +144,7 @@ export function PoseGuideCamera({
               </div>
             </div>
             <p className="pointer-events-none absolute inset-x-0 top-4 text-center text-sm font-medium text-white drop-shadow">
-              {ANGLE_INSTRUCTION[angle]}
+              {angleInstruction[angle]}
             </p>
           </>
         )}
@@ -151,13 +152,13 @@ export function PoseGuideCamera({
 
       <div className="flex items-center justify-between gap-4 bg-black/90 p-5">
         <button onClick={onClose} className="text-sm text-neutral-400 hover:text-white">
-          ยกเลิก
+          {t("cancel")}
         </button>
         {!error && (
           <button
             onClick={capture}
             disabled={capturing}
-            aria-label={`ถ่ายรูป${PHOTO_ANGLE_LABEL[angle]}`}
+            aria-label={t("takePhotoOf", { angle: PHOTO_ANGLE_LABEL[angle] })}
             className="h-16 w-16 flex-none rounded-full border-4 border-white bg-white/20 transition disabled:opacity-50"
           />
         )}
@@ -166,7 +167,7 @@ export function PoseGuideCamera({
             onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
             className="text-sm text-neutral-400 hover:text-white"
           >
-            สลับกล้อง
+            {t("switchCamera")}
           </button>
         ) : (
           <span className="w-12" />

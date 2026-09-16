@@ -281,6 +281,158 @@
       "backToLogin": "Back to sign in"
     }
   },
+  "nutrition": {
+    "calorieRing": {
+      "fromTarget": "of {target} kcal target",
+      "over": "{amount} kcal over",
+      "remaining": "{amount} kcal left"
+    },
+    "loggingStreakCard": {
+      "weekdayLabels": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+      "title": "Logging streak",
+      "days": "days",
+      "daysCount": "{count} days",
+      "longestFoodStreak": "Longest food logging streak",
+      "longestWeightStreak": "Longest weight logging streak"
+    },
+    "periodComparison": {
+      "title": "This week vs. last week",
+      "totalCalories": "Total calories",
+      "totalProtein": "Total protein",
+      "totalWater": "Total water",
+      "gramsValue": "{value} g",
+      "litersValue": "{value} L",
+      "vsLastWeek": "vs. last week"
+    },
+    "calorieTrendChart": {
+      "title": "Daily calories",
+      "latestDays": "Last {count} days ·",
+      "avgKcal": "avg {kcal} kcal",
+      "kcalValue": "{kcal} kcal",
+      "targetKcal": "target {kcal} kcal",
+      "dashedLineNote": "Dashed line = that day's target"
+    },
+    "weightLogCard": {
+      "title": "Weight trend",
+      "needMoreLogs": "Log your weight at least twice to see a trend chart",
+      "weightPlaceholder": "Today's weight (kg)",
+      "saving": "Saving...",
+      "save": "Save",
+      "tapToDelete": "Tap to delete",
+      "kgValue": "{value} kg",
+      "invalidWeight": "Enter a valid weight first",
+      "saveFailed": "Save failed — try again"
+    },
+    "bodyCompositionCard": {
+      "title": "Body composition (InBody)",
+      "close": "Close",
+      "addEntry": "+ Add scan",
+      "kgValue": "{value} kg",
+      "weight": "Weight",
+      "bodyFatPercent": "Body fat %",
+      "muscleMass": "Muscle mass",
+      "visceralFat": "Visceral fat",
+      "noData": "No data yet — if you've never had an InBody scan, skip this section entirely and the app will calculate BMR from the standard formula (weight/height/age) instead.",
+      "katchMcArdleNotice": "✓ Now calculating BMR with Katch-McArdle (based on your actual muscle mass) and protein from lean body mass instead of the standard formula — more accurate.",
+      "seeHowItsCalculated": "See how it's calculated",
+      "manualEntry": "Enter manually",
+      "importFromAI": "Import from AI",
+      "import": {
+        "step1": "1. Copy this prompt, paste it to an AI (Claude, ChatGPT), and attach your InBody scan photo",
+        "copied": "Copied ✓",
+        "copyPrompt": "Copy prompt to ask AI",
+        "step2": "2. Copy the AI's reply and paste it in the box below",
+        "convert": "Parse data",
+        "couldNotReadAny": "Couldn't read any values — try pasting the text again, or check that it matches the example",
+        "couldNotReadSome": "Couldn't read: {fields} — you can fill these in manually below"
+      },
+      "weightKgRequired": "Weight (kg) *",
+      "bodyFatPercentOptional": "Body fat % (optional)",
+      "skeletalMuscleMass": "Skeletal muscle mass (kg)",
+      "visceralFatLevel": "Visceral fat (level)",
+      "inbodyReportedBmr": "BMR reported by InBody (if any — for comparison only, not used in calculations)",
+      "saving": "Saving...",
+      "saveEntry": "Save scan",
+      "tapToDelete": "Tap to delete",
+      "invalidWeight": "Enter a valid weight first",
+      "saveFailed": "Save failed — try again",
+      "copyFailed": "Copy failed — try pressing and holding the text below to copy it yourself"
+    },
+    "progressPhotosCard": {
+      "title": "Progress photos",
+      "subtitle": "Take front/side/back photos to track changes over time — private, only you can see them",
+      "uploading": "Uploading...",
+      "dateAndCount": "{date} · {count} photos",
+      "noPhotoYet": "No photo yet",
+      "takePhotoWithGuide": "Take photo with guide",
+      "tip": "Take photos periodically (e.g. monthly) at the same angle and pose, so changes over time are easier to compare",
+      "beforeAfter": "Before-after comparison",
+      "daysApart": "{days} days apart",
+      "before": "Before",
+      "after": "After",
+      "hideAllHistory": "Hide all photo history",
+      "viewAllHistory": "View all photo history",
+      "deleting": "Deleting...",
+      "delete": "Delete",
+      "uploadFailed": "Upload failed — use a jpg/png/webp file up to 8MB",
+      "deleteFailed": "Delete failed — try again"
+    },
+    "poseGuideCamera": {
+      "instruction": {
+        "FRONT": "Stand facing the camera, keep your body inside the outline",
+        "SIDE": "Stand sideways to the camera, keep your body inside the outline",
+        "BACK": "Stand with your back to the camera, keep your body inside the outline"
+      },
+      "cameraFailed": "Couldn't open the camera — try uploading from your gallery instead",
+      "cancel": "Cancel",
+      "takePhotoOf": "Take {angle} photo",
+      "switchCamera": "Switch camera"
+    },
+    "page": {
+      "backToOverview": "Back to overview",
+      "title": "Insights",
+      "incompleteProfile": "Fill in your weight, height, age, and activity level on the settings page first, so the app can automatically calculate your calorie/macro/water targets",
+      "fillProfile": "Go fill in your profile",
+      "editProfile": "Edit profile",
+      "whereThisComesFrom": "Where this number comes from",
+      "shareThisMonth": "Share this month's summary",
+      "bmiTitle": "BMI (Body Mass Index)",
+      "bmiCategory": {
+        "UNDER": "Underweight",
+        "NORMAL": "Normal weight",
+        "OVER": "Overweight",
+        "OBESE1": "Obese class 1",
+        "OBESE2": "Obese class 2"
+      },
+      "bmiGuidance": {
+        "UNDER": "Your weight is below the healthy range — try adding a reasonable amount of calories and protein to reach the normal range",
+        "NORMAL": "Your weight is in the normal range — keep it up",
+        "OVER": "Your weight is slightly above the standard range but not hard to reduce — keep following your goal",
+        "OBESE1": "Your weight is noticeably above the standard range, but it's manageable — don't worry, keep following your goal",
+        "OBESE2": "Your weight is in the obese range — consider consulting a doctor or specialist for an appropriate plan"
+      },
+      "bmiAsianCriteriaNote": "Uses Asian BMI criteria (WHO Asia-Pacific region / Thai Ministry of Public Health), which is stricter than the general international standard — some body composition devices (e.g. InBody) use the broader international criteria (normal up to 25), so the same BMI number can get a different label. That's not a calculation error.",
+      "carb": "Carb",
+      "protein": "Protein",
+      "fat": "Fat",
+      "gramsValue": "{value} g",
+      "caloriesToday": "Today's calories",
+      "calculatedFromInbody": "Calculated from your latest InBody scan (Katch-McArdle)",
+      "baseTarget": "Base target",
+      "addedFromActivity": "Added from today's activity",
+      "eatenSoFar": "Eaten so far",
+      "remaining": "Remaining",
+      "dailyMacroTarget": "Daily macro target",
+      "macroBonusNote": "Adjusted up from today's activity ({duration}): carb +{carb} g · protein +{protein} g",
+      "intensityAdjustedNote": "(adjusted for intensity based on logged calories — {direction} ×{multiplier})",
+      "heavierThanUsual": "heavier than usual",
+      "lighterThanUsual": "lighter than usual",
+      "waterTargetToday": "Today's water target",
+      "liters": "{value} L",
+      "baseLiters": "Base {value} L",
+      "waterBonusNote": "+ {value} L bonus from today's activity ({duration})"
+    }
+  },
   "settings": {
     "title": "Settings",
     "buildInfo": "Running version: {commit} · {date}",

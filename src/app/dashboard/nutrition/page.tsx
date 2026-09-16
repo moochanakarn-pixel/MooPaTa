@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { formatDuration } from "@/lib/format";
@@ -13,8 +15,6 @@ import {
   ACTIVITY_LEVEL_LABEL,
   computeBmi,
   bmiCategory,
-  BMI_CATEGORY_LABEL,
-  BMI_CATEGORY_GUIDANCE,
   type BmiCategory,
 } from "@/lib/nutrition";
 import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
@@ -53,16 +53,17 @@ const BMI_GAUGE_MIN = 15;
 const BMI_GAUGE_MAX = 35;
 
 function BmiGauge({ weightKg, heightCm }: { weightKg: number; heightCm: number }) {
+  const t = useTranslations("nutrition.page");
   const bmi = computeBmi(weightKg, heightCm);
   const category = bmiCategory(bmi);
   const pct = Math.min(Math.max(((bmi - BMI_GAUGE_MIN) / (BMI_GAUGE_MAX - BMI_GAUGE_MIN)) * 100, 0), 100);
 
   return (
     <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-      <h2 className="mb-3 font-medium">BMI (ดัชนีมวลกาย)</h2>
+      <h2 className="mb-3 font-medium">{t("bmiTitle")}</h2>
       <div className="mb-4 flex items-baseline gap-2">
         <span className="text-3xl font-extrabold tabular-nums">{bmi.toFixed(1)}</span>
-        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${BMI_BADGE_STYLE[category]}`}>{BMI_CATEGORY_LABEL[category]}</span>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${BMI_BADGE_STYLE[category]}`}>{t(`bmiCategory.${category}`)}</span>
       </div>
       <div className="relative mb-4 h-2 w-full rounded-full" style={{ background: "linear-gradient(to right, #38bdf8, #22c55e, #eab308, #f97316, #ef4444)" }}>
         <div
@@ -70,28 +71,26 @@ function BmiGauge({ weightKg, heightCm }: { weightKg: number; heightCm: number }
           style={{ left: `${pct}%` }}
         />
       </div>
-      <p className="text-xs text-neutral-500">{BMI_CATEGORY_GUIDANCE[category]}</p>
+      <p className="text-xs text-neutral-500">{t(`bmiGuidance.${category}`)}</p>
       {/* Explains the gap users hit when cross-checking against a device like
           InBody, which defaults to the international cutoff (normal up to
           25) — same BMI number, different label, not a calculation error. */}
-      <p className="mt-2 text-[11px] text-neutral-600">
-        ใช้เกณฑ์ BMI แบบเอเชีย (WHO ภูมิภาคเอเชีย-แปซิฟิก/สธ.) ซึ่งเข้มกว่ามาตรฐานสากลทั่วไป — เครื่องตรวจองค์ประกอบร่างกายบางรุ่น
-        (เช่น InBody) ใช้เกณฑ์สากลที่กว้างกว่า (ปกติถึง 25) ค่า BMI ตัวเลขอาจเท่ากันแต่ป้ายกำกับต่างกันได้ ไม่ใช่คำนวณผิด
-      </p>
+      <p className="mt-2 text-[11px] text-neutral-600">{t("bmiAsianCriteriaNote")}</p>
     </div>
   );
 }
 
 function MacroBar({ proteinG, carbG, fatG }: { proteinG: number; carbG: number; fatG: number }) {
+  const t = useTranslations("nutrition.page");
   const proteinKcal = proteinG * 4;
   const carbKcal = carbG * 4;
   const fatKcal = fatG * 9;
   const total = proteinKcal + carbKcal + fatKcal || 1;
 
   const items = [
-    { label: "คาร์บ", grams: carbG, kcal: carbKcal, color: "#22c55e" },
-    { label: "โปรตีน", grams: proteinG, kcal: proteinKcal, color: "#38bdf8" },
-    { label: "ไขมัน", grams: fatG, kcal: fatKcal, color: "#eab308" },
+    { key: "carb", label: t("carb"), grams: carbG, kcal: carbKcal, color: "#22c55e" },
+    { key: "protein", label: t("protein"), grams: proteinG, kcal: proteinKcal, color: "#38bdf8" },
+    { key: "fat", label: t("fat"), grams: fatG, kcal: fatKcal, color: "#eab308" },
   ];
 
   return (
@@ -99,14 +98,14 @@ function MacroBar({ proteinG, carbG, fatG }: { proteinG: number; carbG: number; 
       {items.map((it) => {
         const pct = Math.round((it.kcal / total) * 100);
         return (
-          <div key={it.label}>
+          <div key={it.key}>
             <div className="mb-1.5 flex items-center justify-between text-xs">
               <span className="flex items-center gap-1.5 text-neutral-400">
                 <span className="h-2 w-2 rounded-full" style={{ background: it.color }} />
                 {it.label}
               </span>
               <span className="tabular-nums text-neutral-500">
-                <span className="font-semibold text-neutral-200">{Math.round(it.grams)} ก.</span> · {pct}%
+                <span className="font-semibold text-neutral-200">{t("gramsValue", { value: Math.round(it.grams) })}</span> · {pct}%
               </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-800">
@@ -122,6 +121,8 @@ function MacroBar({ proteinG, carbG, fatG }: { proteinG: number; carbG: number; 
 export default async function NutritionPage({ searchParams }: { searchParams: { quick?: string } }) {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
+  const [t, locale] = await Promise.all([getTranslations("nutrition.page"), getLocale()]);
+  const numberLocale = locale === "en" ? "en-US" : "th-TH";
 
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user) redirect("/");
@@ -141,7 +142,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
       <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
         <path d="M13 4 7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      กลับไปหน้ารวม
+      {t("backToOverview")}
     </Link>
   );
 
@@ -149,18 +150,16 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
     return (
       <main className="mx-auto max-w-2xl px-6 py-10">
         {backLink}
-        <h1 className="mb-8 text-xl font-bold">โภชนาการ</h1>
+        <h1 className="mb-8 text-xl font-bold">{t("title")}</h1>
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-neutral-800 py-16 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/mascot-face.png" alt="" className="h-16 w-16 object-contain" />
-          <p className="max-w-xs text-neutral-500">
-            กรอกน้ำหนัก ส่วนสูง อายุ และระดับกิจกรรม ในหน้าตั้งค่าก่อน เพื่อคำนวณเป้าหมายแคลอรี่/แมโคร/น้ำให้อัตโนมัติ
-          </p>
+          <p className="max-w-xs text-neutral-500">{t("incompleteProfile")}</p>
           <Link
             href="/dashboard/settings"
             className="mt-2 rounded-xl bg-[#fc4c02] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#e04402]"
           >
-            ไปกรอกโปรไฟล์
+            {t("fillProfile")}
           </Link>
         </div>
       </main>
@@ -321,7 +320,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
     const key = dayKey(d);
     const dayTarget = applyActivityBonus(baseTargets, activitiesByDay.get(key) ?? []);
     return {
-      label: d.toLocaleDateString("th-TH", { day: "numeric", month: "short" }),
+      label: d.toLocaleDateString(numberLocale, { day: "numeric", month: "short" }),
       calories: caloriesByDay.get(key) ?? 0,
       targetCalories: dayTarget.targetCalories,
     };
@@ -330,19 +329,19 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
       {backLink}
-      <h1 className="mb-1 text-xl font-bold">โภชนาการ</h1>
+      <h1 className="mb-1 text-xl font-bold">{t("title")}</h1>
       <p className="mb-8 text-sm text-neutral-500">
         {GOAL_LABEL[user.nutritionGoal]} · {ACTIVITY_LEVEL_LABEL[profile.activityLevel]} ·{" "}
         <Link href="/dashboard/settings" className="text-neutral-400 hover:text-neutral-200 hover:underline">
-          แก้โปรไฟล์
+          {t("editProfile")}
         </Link>{" "}
         ·{" "}
         <Link href="/dashboard/knowledge" className="text-neutral-400 hover:text-neutral-200 hover:underline">
-          ตัวเลขนี้มาจากไหน
+          {t("whereThisComesFrom")}
         </Link>{" "}
         ·{" "}
         <a href="/api/share/nutrition" download className="text-neutral-400 hover:text-neutral-200 hover:underline">
-          แชร์สรุปเดือนนี้
+          {t("shareThisMonth")}
         </a>
       </p>
 
@@ -362,19 +361,17 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
       <ProgressPhotosCard angles={progressPhotoAngles} autoOpenAngle={searchParams.quick === "photo" ? "FRONT" : null} />
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-        <p className="mb-4 text-center text-xs text-neutral-500">แคลอรี่วันนี้</p>
-        <CalorieRing eaten={todayCaloriesEaten} target={targets.targetCalories} />
+        <p className="mb-4 text-center text-xs text-neutral-500">{t("caloriesToday")}</p>
+        <CalorieRing eaten={todayCaloriesEaten} target={targets.targetCalories} locale={locale} />
         <div className="mt-5 flex justify-center gap-6 text-xs text-neutral-500">
           <span>
-            BMR <span className="font-medium text-neutral-300">{targets.bmr.toLocaleString("th-TH")}</span> kcal
+            BMR <span className="font-medium text-neutral-300">{targets.bmr.toLocaleString(numberLocale)}</span> kcal
           </span>
           <span>
-            TDEE <span className="font-medium text-neutral-300">{targets.tdee.toLocaleString("th-TH")}</span> kcal
+            TDEE <span className="font-medium text-neutral-300">{targets.tdee.toLocaleString(numberLocale)}</span> kcal
           </span>
         </div>
-        {targets.usedBodyComposition && (
-          <p className="mt-2 text-center text-[11px] text-violet-400">คำนวณจากผลตรวจ InBody ล่าสุด (Katch-McArdle)</p>
-        )}
+        {targets.usedBodyComposition && <p className="mt-2 text-center text-[11px] text-violet-400">{t("calculatedFromInbody")}</p>}
 
         {/* explainCalorieTarget() plugs this user's own TDEE/goal/rate into
             the same formula the knowledge page (/dashboard/knowledge)
@@ -387,42 +384,47 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
 
         <div className="mt-5 space-y-2 border-t border-neutral-800 pt-4 text-xs">
           <div className="flex items-center justify-between">
-            <span className="text-neutral-500">เป้าหมายพื้นฐาน</span>
-            <span className="font-medium text-neutral-200">{baseTargets.targetCalories.toLocaleString("th-TH")} kcal</span>
+            <span className="text-neutral-500">{t("baseTarget")}</span>
+            <span className="font-medium text-neutral-200">{baseTargets.targetCalories.toLocaleString(numberLocale)} kcal</span>
           </div>
           {targets.targetCalories > baseTargets.targetCalories && (
             <div className="flex items-center justify-between">
-              <span className="text-neutral-500">เพิ่มจากกิจกรรมวันนี้</span>
+              <span className="text-neutral-500">{t("addedFromActivity")}</span>
               <span className="font-medium text-emerald-400">
-                +{(targets.targetCalories - baseTargets.targetCalories).toLocaleString("th-TH")} kcal
+                +{(targets.targetCalories - baseTargets.targetCalories).toLocaleString(numberLocale)} kcal
               </span>
             </div>
           )}
           <div className="flex items-center justify-between">
-            <span className="text-neutral-500">กินไปแล้ว</span>
-            <span className="font-medium text-neutral-200">{Math.round(todayCaloriesEaten).toLocaleString("th-TH")} kcal</span>
+            <span className="text-neutral-500">{t("eatenSoFar")}</span>
+            <span className="font-medium text-neutral-200">{Math.round(todayCaloriesEaten).toLocaleString(numberLocale)} kcal</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-neutral-500">เหลืออีก</span>
+            <span className="text-neutral-500">{t("remaining")}</span>
             <span className={`font-semibold ${todayCaloriesEaten > targets.targetCalories ? "text-amber-400" : "text-lime-400"}`}>
-              {Math.round(targets.targetCalories - todayCaloriesEaten).toLocaleString("th-TH")} kcal
+              {Math.round(targets.targetCalories - todayCaloriesEaten).toLocaleString(numberLocale)} kcal
             </span>
           </div>
         </div>
       </div>
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-        <h2 className="mb-4 font-medium">แมโครที่ควรได้ต่อวัน</h2>
+        <h2 className="mb-4 font-medium">{t("dailyMacroTarget")}</h2>
         <MacroBar proteinG={targets.proteinG} carbG={targets.carbG} fatG={targets.fatG} />
         {(targets.carbBonusG > 0 || targets.proteinBonusG > 0) && (
           <p className="mt-4 text-xs text-neutral-500">
-            ปรับเพิ่มจากกิจกรรมวันนี้ ({formatDuration(activityDurationTodaySec)}): คาร์บ +{targets.carbBonusG} ก. ·
-            โปรตีน +{targets.proteinBonusG} ก.
+            {t("macroBonusNote", {
+              duration: formatDuration(activityDurationTodaySec),
+              carb: targets.carbBonusG,
+              protein: targets.proteinBonusG,
+            })}
             {Math.abs(targets.intensityMultiplier - 1) > 0.01 && (
               <span>
                 {" "}
-                (ปรับตามความหนักจากแคลอรี่ที่บันทึกไว้ — {targets.intensityMultiplier > 1 ? "หนักกว่าปกติ" : "เบากว่าปกติ"} ×
-                {targets.intensityMultiplier.toFixed(2)})
+                {t("intensityAdjustedNote", {
+                  direction: targets.intensityMultiplier > 1 ? t("heavierThanUsual") : t("lighterThanUsual"),
+                  multiplier: targets.intensityMultiplier.toFixed(2),
+                })}
               </span>
             )}
           </p>
@@ -436,6 +438,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
       <NutritionPeriodComparison
         thisWeek={{ calories: thisWeekCalories, proteinG: thisWeekProteinG, waterMl: thisWeekWaterMl }}
         lastWeek={{ calories: lastWeekCalories, proteinG: lastWeekProteinG, waterMl: lastWeekWaterMl }}
+        locale={locale}
       />
 
       <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
@@ -451,15 +454,18 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
               />
             </svg>
           </div>
-          <h2 className="font-medium">เป้าหมายน้ำวันนี้</h2>
+          <h2 className="font-medium">{t("waterTargetToday")}</h2>
         </div>
-        <p className="mb-3 text-3xl font-bold tabular-nums">{(targets.waterMl / 1000).toFixed(1)} ลิตร</p>
+        <p className="mb-3 text-3xl font-bold tabular-nums">{t("liters", { value: (targets.waterMl / 1000).toFixed(1) })}</p>
         <p className="text-xs text-neutral-500">
-          พื้นฐาน {(targets.baseWaterMl / 1000).toFixed(1)} ลิตร
+          {t("baseLiters", { value: (targets.baseWaterMl / 1000).toFixed(1) })}
           {targets.waterBonusMl > 0 && (
             <>
               {" "}
-              + เพิ่ม {(targets.waterBonusMl / 1000).toFixed(1)} ลิตร จากกิจกรรมวันนี้ ({formatDuration(activityDurationTodaySec)})
+              {t("waterBonusNote", {
+                value: (targets.waterBonusMl / 1000).toFixed(1),
+                duration: formatDuration(activityDurationTodaySec),
+              })}
             </>
           )}
         </p>

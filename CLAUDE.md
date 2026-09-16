@@ -363,11 +363,11 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     มีประโยชน์มากที่สุดตอนคู่กับ `?bg=transparent`: เลือก `top`/`bottom` เพื่อเว้นพื้นที่เฟรมส่วนที่เหลือ
     ให้รูปพื้นหลังโชว์ผ่านได้เต็ม ๆ แบบสติกเกอร์ IG/Line story — เลือกได้จาก sheet เดียวกับ style/bg
 
-### 5. ภาษา (i18n) — เริ่มมีแล้ว แต่แปลแค่บางหน้า
+### 5. ภาษา (i18n) — วางโครงสร้างเสร็จแล้ว แปลครบ "หน้าหลัก" ทั้งหมดตามขอบเขตที่ตกลงไว้
 เดิมทั้งแอพเป็น Thai-only ล้วน ไม่มี i18n infra เลย ผู้ใช้ขอให้เพิ่มภาษาอังกฤษ + ปุ่มสลับภาษา — ขอบเขต
-ที่ตกลงกันคือ **วางโครงสร้าง i18n ก่อน แล้วแปลแค่ "หน้าหลัก"** (4 แท็บ bottom-nav + หน้า landing)
-ไม่ใช่ทั้ง 108 ไฟล์ที่มีข้อความไทยฝังอยู่ — ดูแผนเต็มที่ `/root/.claude/plans/dreamy-frolicking-gadget.md`
-ถ้าต้องการรายละเอียดของแต่ละ phase ที่เหลือ
+ที่ตกลงกันคือ **วางโครงสร้าง i18n ก่อน แล้วแปลแค่ "หน้าหลัก"** (4 แท็บ bottom-nav: หน้าแรก/ไดอารี่/เชิงลึก/
+บัญชี + หน้า landing + component ลูกโดยตรงของแต่ละหน้า) ไม่ใช่ทั้ง 108 ไฟล์ที่มีข้อความไทยฝังอยู่ — ดูแผนเต็ม
+ที่ `/root/.claude/plans/dreamy-frolicking-gadget.md` ถ้าต้องการรายละเอียดการตัดสินใจแต่ละ phase
 - **ใช้ `next-intl` แบบ "without i18n routing"** — ไม่มี `middleware.ts`, ไม่มี `[locale]/` segment,
   โครงสร้าง `src/app/` ยังแบนเหมือนเดิมทั้งหมด ตั้งใจเลือกแบบนี้เพราะเป็นแอพส่วนตัวหลังบ้าน login ไม่มี
   ความจำเป็นด้าน SEO/URL localization การย้ายทั้ง 171 ไฟล์ไปอยู่ใต้ `[locale]/` จะเป็น diff ใหญ่มากโดย
@@ -403,24 +403,57 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
   — มีเทส `messages/messages.test.ts` เทียบ key set สองไฟล์ต้องตรงกันเป๊ะ (เพิ่ม `messages/**/*.test.ts`
   เข้า `vitest.config.mts`'s `include` เพราะปกติจะสแกนแค่ `src/**`) กัน key หายไปฝั่งใดฝั่งหนึ่งเงียบ ๆ
   แบบเดียวกับที่เทส comma-thousands กันบั๊กคล้ายกันในพาร์เซอร์ AI-import
-- **แปลแล้ว (phase นี้): หน้าตั้งค่าทั้งหน้า** (`settings/page.tsx` + `settings-client.tsx` +
-  `profile-form.tsx`/`nutrition-profile-form.tsx`/`macro-preferences-form.tsx`/
-  `health-flags-form.tsx`/`set-password-form.tsx`) — ทดสอบจริงผ่าน MariaDB แล้ว: login แล้วสลับ EN
-  ที่หน้าตั้งค่า → เนื้อหาเปลี่ยนภาษาทันที, ลบ cookie ทดสอบใหม่ (เหลือแค่ session cookie) → ยังคง
-  โชว์อังกฤษ (พิสูจน์ว่า `User.locale` เป็นตัวตัดสิน ไม่ใช่ cookie), grep หาอักษรไทยในหน้าที่ตั้งเป็น
-  EN แล้วไม่เจอเลยสักตัว — ยังไม่แปล (Thai-only เหมือนเดิม): `ACTIVITY_LEVEL_LABEL`/`GOAL_LABEL`
-  (`src/lib/nutrition.ts`, ใช้ร่วมกับหน้าเชิงลึก/ไดอารี่ที่ยังไม่แปล เปลี่ยนแค่ในหน้าตั้งค่าจะทำให้ไม่ตรงกัน
-  ข้ามหน้า), ข้อความ success/error ที่ส่งมาจาก `/api/settings/set-password` (server ส่ง Thai string
-  ตรง ๆ, API error strings อยู่นอกขอบเขตรอบนี้)
-- **ยังไม่แปล (รอ phase ถัดไป)**: หน้า landing (`src/app/page.tsx`), `bottom-nav.tsx`, หน้าแรก
-  (`dashboard/page.tsx` + component ย่อย), ไดอารี่ (`food/page.tsx` + component ย่อย), เชิงลึก
-  (`nutrition/page.tsx` + component ย่อย) — ยังเป็นภาษาไทยล้วนเหมือนเดิมทุกจุด — ทุกหน้านอกเหนือจากนี้
-  (activity detail/records/compare/achievements/log-activity/portion-guide/knowledge, ข้อความ error
-  จาก API, AI-import prompt, อีเมล, ข้อความในรูปการ์ดแชร์ Satori) **ไม่อยู่ในแผนที่จะแปลรอบนี้เลย**
-  เป็น Thai-only ถาวรจนกว่าจะมีคนขอเพิ่ม
+- **แปลครบแล้วทั้ง 5 หน้าหลัก + component ลูกที่จำเป็น** ทดสอบจริงผ่าน MariaDB ทุกหน้า: login แล้วสลับ EN
+  ที่หน้าตั้งค่า → เนื้อหาเปลี่ยนภาษาทันที, ลบ cookie ทดสอบใหม่ (เหลือแค่ session cookie) → ยังคงโชว์
+  อังกฤษ (พิสูจน์ว่า `User.locale` เป็นตัวตัดสิน ไม่ใช่ cookie), grep หาอักษรไทยในหน้าที่ตั้งเป็น EN แล้ว
+  ไม่เจอเลยสักตัว (ยกเว้นจุดที่ตั้งใจเว้นไว้ ดูด้านล่าง) — รายชื่อหน้า/ไฟล์ที่แปลแล้ว:
+  - **หน้าตั้งค่า** — `settings/page.tsx` + `settings-client.tsx` + `profile-form.tsx`/
+    `nutrition-profile-form.tsx`/`macro-preferences-form.tsx`/`health-flags-form.tsx`/
+    `set-password-form.tsx`
+  - **หน้า landing/login** — `src/app/page.tsx` + `email-auth-form.tsx`
+  - **Bottom nav** — `bottom-nav.tsx` (4 แท็บ + sheet ทางลัด 6 อัน)
+  - **หน้าแรก (`/dashboard`)** — `page.tsx` + `health-summary.tsx`/`goal-progress.tsx`/
+    `month-highlights.tsx`/`onboarding-card.tsx`/`type-breakdown.tsx`/`activity-heatmap.tsx`/
+    `activity-filters.tsx`/`activity-list-view.tsx`/`trend-chart.tsx`/`period-comparison.tsx`
+  - **ไดอารี่ (`/dashboard/food`)** — `page.tsx` + `date-strip.tsx`/`water-log-card.tsx`/
+    `food-log-view.tsx`/`nutrient-overview.tsx` (ตัวหลังเป็น grandchild แต่แปลด้วยเพราะเป็นภาพหลัก
+    ของหน้า ไม่ใช่แค่ direct child ตามขอบเขตเดิม)
+  - **เชิงลึก (`/dashboard/nutrition`)** — `page.tsx` + `weight-log-card.tsx`/`weight-trend-chart.tsx`
+    (grandchild, แปลด้วยเหตุผลเดียวกับ nutrient-overview)/`body-composition-card.tsx`/
+    `progress-photos-card.tsx`/`pose-guide-camera.tsx` (grandchild, แปลเพราะเป็น core flow ไม่ใช่
+    ฟีเจอร์เสริม)/`calorie-trend-chart.tsx`/`calorie-ring.tsx`/`nutrition-period-comparison.tsx`/
+    `logging-streak-card.tsx`
+  - **`src/app/layout.tsx`'s `<meta name="description">` และ `src/app/manifest.ts`** — เปลี่ยนจาก
+    `export const metadata`/`export default function manifest()` แบบ static เป็น
+    `generateMetadata()`/async `manifest()` ที่เรียก `getTranslations("landing")` แทน เพราะ metadata
+    เดิม hardcode ข้อความไทยไว้ตรง ๆ ไม่ขึ้นกับ locale เลย
+- **ยังไม่แปล (ตั้งใจ, นอกขอบเขตรอบนี้)**:
+  - `ACTIVITY_LEVEL_LABEL`/`GOAL_LABEL` (`src/lib/nutrition.ts`) — shared label map ที่ยังใช้ร่วมกับ
+    หน้านอกขอบเขต (activity detail ฯลฯ) เปลี่ยนแค่ในหน้าที่แปลแล้วจะทำให้ไม่ตรงกันข้ามหน้า —
+    `BMI_CATEGORY_LABEL`/`BMI_CATEGORY_GUIDANCE` ตรงข้ามกัน แปลแล้วเพราะใช้แค่ในหน้าเชิงลึกหน้าเดียว
+    (ดูโค้ดใน `nutrition/page.tsx`, ไม่ import จาก `src/lib/nutrition.ts` อีกต่อไป สร้าง key ในหน้า
+    เชิงลึกแทน)
+  - `explainCalorieTarget()` (`src/lib/nutrition.ts`) — ฟังก์ชันประกอบประโยคอธิบายเป้าหมายแคลอรี่
+    แบบไดนามิก (สอดตัวเลขจริงของ user เข้าไปในประโยคไทย) ซับซ้อนเกินขอบเขต "แปลข้อความ UI คงที่"
+    ของรอบนี้ ยังคง Thai-only เสมอไม่ว่า locale ไหน
+  - AI-import prompt ทั้งหมด (`AI_PROMPT_TEMPLATE` ใน `body-composition-card.tsx`, prompt template
+    ใน `import-meal-panel.tsx`/`activity-import-parse.ts` ฯลฯ) รวมถึง field label ที่ parser ต้องจับคู่
+    กับ prompt เป๊ะ ๆ (เช่น `missing` array ใน `applyParsedText`) — คงเป็นภาษาไทยเสมอเพราะ parser
+    (`body-composition-import-parse.ts` ฯลฯ) ผูกกับ label ไทยตรง ๆ เปลี่ยนตาม locale ไม่ได้โดยไม่แก้
+    parser ด้วย ซึ่งอยู่นอกขอบเขตรอบนี้
+  - Grandchild ที่ไม่ใช่ core flow ของหน้าไดอารี่: `food-label-scanner.tsx`, `import-meal-panel.tsx`,
+    `water-reminder-toggle.tsx` — เปิดจากปุ่มรองในแผงเพิ่มอาหาร ไม่ใช่ส่วนที่เห็นทันทีเมื่อเข้าหน้า
+  - ทุกหน้านอกเหนือจาก 5 หน้าหลักด้านบน (activity detail/records/compare/achievements/log-activity/
+    portion-guide/knowledge) ข้อความ error จาก API, อีเมล, ข้อความในรูปการ์ดแชร์ Satori — Thai-only
+    ถาวรจนกว่าจะมีคนขอเพิ่ม
 - **ข้อมูลที่ผู้ใช้พิมพ์เอง (ชื่อเมนู/ชื่อกิจกรรม/ชื่อท่า/หมายเหตุ/ชื่อโปรไฟล์ ฯลฯ) ไม่ผ่านระบบแปลภาษา
   เลยไม่ว่ากรณีใด** — เก็บ/แสดงตามที่พิมพ์ไว้เป๊ะเสมอ ระบบ i18n ครอบคลุมแค่ข้อความ UI ของแอพเอง
   (label/ปุ่ม/หัวข้อ) เท่านั้น
+- **หน่วย "กก."/"ก."/"มก."/วันที่แบบ `toLocaleString`/`toLocaleDateString`** — จุดที่แปลแล้วทุกจุดเปลี่ยน
+  จาก hardcode `"th-TH"` เป็นเลือกตาม locale (`locale === "en" ? "en-US" : "th-TH"` สำหรับตัวเลข/วันที่,
+  `locale === "en" ? "kg"/"g"/"mg" : "กก."/"ก."/"มก."` สำหรับหน่วย) — แต่ `Food.unitLabel`/`GRAM_UNIT`
+  (`src/lib/food.ts`) เป็นค่าที่เก็บจริงใน DB (ใช้เทียบ `isGramUnit()`) เลย**ไม่แปล** ไม่ว่า locale ไหน
+  เพราะเป็น data field ไม่ใช่ label แสดงผลเฉย ๆ
 
 ### 6. อื่น ๆ
 - Activity pages: `/dashboard` (list), `/dashboard/activity/[id]` (detail), `/dashboard/log-activity`
@@ -733,6 +766,6 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
   แก้ปัญหานี้ได้ทันที
 - Deploy จริงอยู่บน **Windows Server** ผ่าน `nssm` (`D:\Projectphp\MooPaTa`, service ชื่อ `MooPaTa`)
   — คนละ workflow กับ dev/test ที่นี่ (Linux) ดู `DEPLOY-WINDOWS.md` สำหรับขั้นตอน deploy ฉบับเต็ม
-- ข้อความ UI ส่วนใหญ่ยังเป็นภาษาไทยล้วน ยกเว้นหน้าที่แปลแล้ว (ดู "### 5. ภาษา (i18n)" — ตอนนี้มีแค่
-  หน้าตั้งค่า) ที่สลับ TH/EN ได้จริงผ่าน `next-intl` — comment ในโค้ดเป็นอังกฤษเป็นหลัก อธิบาย "ทำไม"
-  ไม่ใช่ "ทำอะไร"
+- ข้อความ UI ของ 5 หน้าหลัก (landing/หน้าแรก/ไดอารี่/เชิงลึก/บัญชี, ดู "### 5. ภาษา (i18n)") สลับ TH/EN
+  ได้จริงผ่าน `next-intl` แล้ว — หน้านอกเหนือจากนั้นยังเป็นภาษาไทยล้วน — comment ในโค้ดเป็นอังกฤษเป็นหลัก
+  อธิบาย "ทำไม" ไม่ใช่ "ทำอะไร"

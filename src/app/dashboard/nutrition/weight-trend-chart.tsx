@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+import { useLocale } from "next-intl";
 
 export interface WeightPoint {
   loggedAtMs: number;
@@ -11,14 +12,17 @@ const WIDTH = 600;
 const HEIGHT = 140;
 const PADDING = 8;
 
-function formatDate(ms: number): string {
-  return new Date(ms).toLocaleDateString("th-TH", { day: "numeric", month: "short" });
+function formatDate(ms: number, dateLocale: string): string {
+  return new Date(ms).toLocaleDateString(dateLocale, { day: "numeric", month: "short" });
 }
 
 // Bodyweight-over-time line chart — same visual language as the activity
 // detail page's ProfileChart (gradient fill, dashed average, hover
 // crosshair) but keyed by wall-clock date instead of distance-along-route.
 export function WeightTrendChart({ points }: { points: WeightPoint[] }) {
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? "en-US" : "th-TH";
+  const kgUnit = locale === "en" ? "kg" : "กก.";
   const gradientId = useId();
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
@@ -78,16 +82,19 @@ export function WeightTrendChart({ points }: { points: WeightPoint[] }) {
     <div>
       <div className="mb-2 flex items-baseline justify-between">
         <p className="text-xs text-neutral-500">
-          {formatDate(first.loggedAtMs)} – {formatDate(latest.loggedAtMs)}
+          {formatDate(first.loggedAtMs, dateLocale)} – {formatDate(latest.loggedAtMs, dateLocale)}
         </p>
         {hoverPoint ? (
           <span className="text-xs text-neutral-400">
-            {formatDate(hoverPoint.loggedAtMs)} · <span className="font-medium text-neutral-200">{hoverPoint.weightKg.toFixed(1)} กก.</span>
+            {formatDate(hoverPoint.loggedAtMs, dateLocale)} ·{" "}
+            <span className="font-medium text-neutral-200">
+              {hoverPoint.weightKg.toFixed(1)} {kgUnit}
+            </span>
           </span>
         ) : (
           <span className={`text-xs font-medium ${deltaKg > 0 ? "text-amber-400" : deltaKg < 0 ? "text-lime-400" : "text-neutral-500"}`}>
             {deltaKg > 0 ? "+" : ""}
-            {deltaKg.toFixed(1)} กก.
+            {deltaKg.toFixed(1)} {kgUnit}
           </span>
         )}
       </div>
@@ -108,10 +115,10 @@ export function WeightTrendChart({ points }: { points: WeightPoint[] }) {
         <path d={areaPath} fill={`url(#${gradientId})`} stroke="none" />
 
         <text x={PADDING + 2} y={PADDING + 9} fontSize="9" fill="rgba(42,36,32,0.45)">
-          {maxY.toFixed(1)} กก.
+          {maxY.toFixed(1)} {kgUnit}
         </text>
         <text x={PADDING + 2} y={HEIGHT - PADDING - 3} fontSize="9" fill="rgba(42,36,32,0.45)">
-          {minY.toFixed(1)} กก.
+          {minY.toFixed(1)} {kgUnit}
         </text>
 
         <path d={linePath} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />

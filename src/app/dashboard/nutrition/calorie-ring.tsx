@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 // Circular progress ring for today's calories — same "eaten vs. target"
 // data the food page already shows as a bar, in the ring shape competitor
 // apps use as their headline visual. Plain SVG, no interactivity needed,
@@ -7,7 +9,9 @@ const STROKE = 16;
 const RADIUS = (SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-export function CalorieRing({ eaten, target }: { eaten: number; target: number }) {
+export function CalorieRing({ eaten, target, locale }: { eaten: number; target: number; locale: string }) {
+  const t = useTranslations("nutrition.calorieRing");
+  const numberLocale = locale === "en" ? "en-US" : "th-TH";
   const pct = target > 0 ? Math.min(eaten / target, 1) : 0;
   const over = target > 0 && eaten > target;
   const offset = CIRCUMFERENCE * (1 - pct);
@@ -31,10 +35,12 @@ export function CalorieRing({ eaten, target }: { eaten: number; target: number }
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl font-extrabold tracking-tight tabular-nums">{Math.round(eaten).toLocaleString("th-TH")}</span>
-        <span className="text-xs text-neutral-500">จากเป้า {target.toLocaleString("th-TH")} kcal</span>
+        <span className="text-4xl font-extrabold tracking-tight tabular-nums">{Math.round(eaten).toLocaleString(numberLocale)}</span>
+        <span className="text-xs text-neutral-500">{t("fromTarget", { target: target.toLocaleString(numberLocale) })}</span>
         <span className={`mt-1 text-xs font-medium ${over ? "text-amber-400" : "text-neutral-400"}`}>
-          {over ? `เกินไป ${Math.round(eaten - target).toLocaleString("th-TH")} kcal` : `เหลืออีก ${Math.round(remaining).toLocaleString("th-TH")} kcal`}
+          {over
+            ? t("over", { amount: Math.round(eaten - target).toLocaleString(numberLocale) })
+            : t("remaining", { amount: Math.round(remaining).toLocaleString(numberLocale) })}
         </span>
       </div>
     </div>

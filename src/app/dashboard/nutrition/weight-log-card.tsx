@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { WeightTrendChart, type WeightPoint } from "./weight-trend-chart";
 
 export interface WeightLogEntry {
@@ -14,6 +15,7 @@ const INPUT_CLASS =
   "w-28 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
 
 export function WeightLogCard({ logs }: { logs: WeightLogEntry[] }) {
+  const t = useTranslations("nutrition.weightLogCard");
   const router = useRouter();
   const [value, setValue] = useState("");
   const [saving, setSaving] = useState(false);
@@ -25,7 +27,7 @@ export function WeightLogCard({ logs }: { logs: WeightLogEntry[] }) {
   async function save() {
     const weightKg = Number(value);
     if (!Number.isFinite(weightKg) || weightKg <= 0) {
-      setError("กรอกน้ำหนักให้ถูกต้องก่อน");
+      setError(t("invalidWeight"));
       return;
     }
     setError(null);
@@ -40,7 +42,7 @@ export function WeightLogCard({ logs }: { logs: WeightLogEntry[] }) {
       setValue("");
       router.refresh();
     } else {
-      setError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setError(t("saveFailed"));
     }
   }
 
@@ -63,7 +65,7 @@ export function WeightLogCard({ logs }: { logs: WeightLogEntry[] }) {
             />
           </svg>
         </div>
-        <h2 className="font-medium">แนวโน้มน้ำหนัก</h2>
+        <h2 className="font-medium">{t("title")}</h2>
       </div>
 
       {points.length >= 2 ? (
@@ -71,7 +73,7 @@ export function WeightLogCard({ logs }: { logs: WeightLogEntry[] }) {
           <WeightTrendChart points={points} />
         </div>
       ) : (
-        <p className="mb-4 text-xs text-neutral-600">บันทึกน้ำหนักอย่างน้อย 2 ครั้งเพื่อดูกราฟแนวโน้ม</p>
+        <p className="mb-4 text-xs text-neutral-600">{t("needMoreLogs")}</p>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
@@ -81,7 +83,7 @@ export function WeightLogCard({ logs }: { logs: WeightLogEntry[] }) {
           step="0.1"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="น้ำหนักวันนี้ (กก.)"
+          placeholder={t("weightPlaceholder")}
           className={INPUT_CLASS}
         />
         <button
@@ -89,7 +91,7 @@ export function WeightLogCard({ logs }: { logs: WeightLogEntry[] }) {
           disabled={saving || !value}
           className="rounded-lg bg-lime-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-lime-500 disabled:opacity-50"
         >
-          {saving ? "กำลังบันทึก..." : "บันทึก"}
+          {saving ? t("saving") : t("save")}
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
@@ -100,10 +102,10 @@ export function WeightLogCard({ logs }: { logs: WeightLogEntry[] }) {
             <button
               key={l.id}
               onClick={() => deleteLog(l.id)}
-              title="กดเพื่อลบ"
+              title={t("tapToDelete")}
               className="flex items-center gap-1 rounded-full border border-neutral-800 bg-neutral-900/60 px-2.5 py-1 text-xs text-neutral-400 transition hover:border-red-800 hover:text-red-300"
             >
-              {l.weightKg.toFixed(1)} กก.
+              {t("kgValue", { value: l.weightKg.toFixed(1) })}
               <svg viewBox="0 0 20 20" fill="none" className="h-2.5 w-2.5">
                 <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>

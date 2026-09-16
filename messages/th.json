@@ -281,6 +281,158 @@
       "backToLogin": "กลับไปเข้าสู่ระบบ"
     }
   },
+  "nutrition": {
+    "calorieRing": {
+      "fromTarget": "จากเป้า {target} kcal",
+      "over": "เกินไป {amount} kcal",
+      "remaining": "เหลืออีก {amount} kcal"
+    },
+    "loggingStreakCard": {
+      "weekdayLabels": ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"],
+      "title": "สถิติบันทึกต่อเนื่อง",
+      "days": "วัน",
+      "daysCount": "{count} วัน",
+      "longestFoodStreak": "บันทึกอาหารต่อเนื่องสูงสุด",
+      "longestWeightStreak": "บันทึกน้ำหนักต่อเนื่องสูงสุด"
+    },
+    "periodComparison": {
+      "title": "สัปดาห์นี้ เทียบกับสัปดาห์ที่แล้ว",
+      "totalCalories": "แคลอรี่รวม",
+      "totalProtein": "โปรตีนรวม",
+      "totalWater": "น้ำรวม",
+      "gramsValue": "{value} ก.",
+      "litersValue": "{value} ล.",
+      "vsLastWeek": "จากสัปดาห์ก่อน"
+    },
+    "calorieTrendChart": {
+      "title": "แคลอรี่รายวัน",
+      "latestDays": "{count} วันล่าสุด ·",
+      "avgKcal": "เฉลี่ย {kcal} kcal",
+      "kcalValue": "{kcal} kcal",
+      "targetKcal": "เป้าหมาย {kcal} kcal",
+      "dashedLineNote": "เส้นประ = เป้าหมายของวันนั้น"
+    },
+    "weightLogCard": {
+      "title": "แนวโน้มน้ำหนัก",
+      "needMoreLogs": "บันทึกน้ำหนักอย่างน้อย 2 ครั้งเพื่อดูกราฟแนวโน้ม",
+      "weightPlaceholder": "น้ำหนักวันนี้ (กก.)",
+      "saving": "กำลังบันทึก...",
+      "save": "บันทึก",
+      "tapToDelete": "กดเพื่อลบ",
+      "kgValue": "{value} กก.",
+      "invalidWeight": "กรอกน้ำหนักให้ถูกต้องก่อน",
+      "saveFailed": "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง"
+    },
+    "bodyCompositionCard": {
+      "title": "องค์ประกอบร่างกาย (InBody)",
+      "close": "ปิด",
+      "addEntry": "+ เพิ่มผลตรวจ",
+      "kgValue": "{value} กก.",
+      "weight": "น้ำหนัก",
+      "bodyFatPercent": "% ไขมัน",
+      "muscleMass": "มวลกล้ามเนื้อ",
+      "visceralFat": "ไขมันช่องท้อง",
+      "noData": "ยังไม่มีข้อมูล — ถ้าไม่เคยตรวจ InBody ข้ามส่วนนี้ไปได้เลย แอพจะคำนวณ BMR จากสูตรมาตรฐาน (น้ำหนัก/ส่วนสูง/อายุ) แทน",
+      "katchMcArdleNotice": "✓ ใช้ผลตรวจล่าสุดคำนวณ BMR แบบ Katch-McArdle (อิงมวลกล้ามเนื้อจริง) และโปรตีนจากมวลไร้ไขมันแทนสูตรมาตรฐานแล้ว — แม่นยำกว่าเดิม",
+      "seeHowItsCalculated": "ดูวิธีคำนวณ",
+      "manualEntry": "กรอกเอง",
+      "importFromAI": "นำเข้าจาก AI",
+      "import": {
+        "step1": "1. คัดลอกคำสั่งนี้ไปวางถาม AI (Claude, ChatGPT) แล้วแนบรูปผลตรวจ InBody เข้าไปด้วย",
+        "copied": "คัดลอกแล้ว ✓",
+        "copyPrompt": "คัดลอกคำสั่งสำหรับถาม AI",
+        "step2": "2. คัดลอกคำตอบที่ได้มาวางในช่องด้านล่างนี้",
+        "convert": "แปลงข้อมูล",
+        "couldNotReadAny": "อ่านค่าไม่ได้เลย ลองวางข้อความใหม่ หรือดูว่าตรงกับตัวอย่างมั้ย",
+        "couldNotReadSome": "อ่านไม่ได้: {fields} — กรอกเองเพิ่มด้านล่างได้"
+      },
+      "weightKgRequired": "น้ำหนัก (กก.) *",
+      "bodyFatPercentOptional": "% ไขมัน (ไม่บังคับ)",
+      "skeletalMuscleMass": "มวลกล้ามเนื้อโครงร่าง (กก.)",
+      "visceralFatLevel": "ไขมันในช่องท้อง (ระดับ)",
+      "inbodyReportedBmr": "BMR ที่ InBody คำนวณให้ (ถ้ามี — ไว้เทียบเฉยๆ ไม่ได้ใช้คำนวณจริง)",
+      "saving": "กำลังบันทึก...",
+      "saveEntry": "บันทึกผลตรวจ",
+      "tapToDelete": "กดเพื่อลบ",
+      "invalidWeight": "กรอกน้ำหนักให้ถูกต้องก่อน",
+      "saveFailed": "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง",
+      "copyFailed": "คัดลอกไม่สำเร็จ ลองกดค้างที่ข้อความด้านล่างเพื่อคัดลอกเองแทน"
+    },
+    "progressPhotosCard": {
+      "title": "รูปติดตามรูปร่าง",
+      "subtitle": "ถ่ายรูปด้านหน้า/ข้าง/หลัง เพื่อดูความเปลี่ยนแปลงย้อนหลังได้ — เก็บส่วนตัว ไม่มีใครเห็นนอกจากคุณ",
+      "uploading": "กำลังอัปโหลด...",
+      "dateAndCount": "{date} · {count} รูป",
+      "noPhotoYet": "ยังไม่มีรูป",
+      "takePhotoWithGuide": "ถ่ายรูปพร้อมไกด์",
+      "tip": "ถ่ายรูปเป็นระยะ (เช่น ทุกเดือน) มุมเดิมท่าเดิม เพื่อเทียบความเปลี่ยนแปลงกับตัวเองย้อนหลังได้ชัดเจนขึ้น",
+      "beforeAfter": "เปรียบเทียบก่อน-หลัง",
+      "daysApart": "ห่างกัน {days} วัน",
+      "before": "ก่อน",
+      "after": "หลัง",
+      "hideAllHistory": "ซ่อนประวัติรูปทั้งหมด",
+      "viewAllHistory": "ดูประวัติรูปทั้งหมด",
+      "deleting": "กำลังลบ...",
+      "delete": "ลบ",
+      "uploadFailed": "อัปโหลดไม่สำเร็จ — ใช้ไฟล์ jpg/png/webp ขนาดไม่เกิน 8MB",
+      "deleteFailed": "ลบไม่สำเร็จ ลองใหม่อีกครั้ง"
+    },
+    "poseGuideCamera": {
+      "instruction": {
+        "FRONT": "ยืนหันหน้าเข้ากล้อง ให้ลำตัวอยู่ในกรอบเงา",
+        "SIDE": "ยืนหันข้างเข้ากล้อง ให้ลำตัวอยู่ในกรอบเงา",
+        "BACK": "ยืนหันหลังให้กล้อง ให้ลำตัวอยู่ในกรอบเงา"
+      },
+      "cameraFailed": "เปิดกล้องไม่ได้ — ลองอัปโหลดจากคลังภาพแทน",
+      "cancel": "ยกเลิก",
+      "takePhotoOf": "ถ่ายรูป{angle}",
+      "switchCamera": "สลับกล้อง"
+    },
+    "page": {
+      "backToOverview": "กลับไปหน้ารวม",
+      "title": "โภชนาการ",
+      "incompleteProfile": "กรอกน้ำหนัก ส่วนสูง อายุ และระดับกิจกรรม ในหน้าตั้งค่าก่อน เพื่อคำนวณเป้าหมายแคลอรี่/แมโคร/น้ำให้อัตโนมัติ",
+      "fillProfile": "ไปกรอกโปรไฟล์",
+      "editProfile": "แก้โปรไฟล์",
+      "whereThisComesFrom": "ตัวเลขนี้มาจากไหน",
+      "shareThisMonth": "แชร์สรุปเดือนนี้",
+      "bmiTitle": "BMI (ดัชนีมวลกาย)",
+      "bmiCategory": {
+        "UNDER": "น้ำหนักน้อยกว่าเกณฑ์",
+        "NORMAL": "น้ำหนักปกติ",
+        "OVER": "น้ำหนักเกิน",
+        "OBESE1": "อ้วนระดับ 1",
+        "OBESE2": "อ้วนระดับ 2"
+      },
+      "bmiGuidance": {
+        "UNDER": "น้ำหนักของคุณต่ำกว่าเกณฑ์ — ลองเพิ่มแคลอรี่และโปรตีนให้พอเหมาะเพื่อเข้าเกณฑ์ปกติ",
+        "NORMAL": "น้ำหนักของคุณอยู่ในเกณฑ์ปกติแล้ว รักษาระดับนี้ไว้ได้เลย",
+        "OVER": "น้ำหนักของคุณเกินมาตรฐานเล็กน้อยแต่ลดได้ไม่ยาก ทำตามเป้าหมายที่ตั้งไว้ต่อไป",
+        "OBESE1": "น้ำหนักของคุณเกินมาตรฐานพอสมควรแต่ลดได้ ไม่ต้องกังวล ทำตามเป้าหมายที่ตั้งไว้ต่อไป",
+        "OBESE2": "น้ำหนักของคุณอยู่ในเกณฑ์อ้วน ควรปรึกษาแพทย์หรือผู้เชี่ยวชาญเพื่อวางแผนที่เหมาะสม"
+      },
+      "bmiAsianCriteriaNote": "ใช้เกณฑ์ BMI แบบเอเชีย (WHO ภูมิภาคเอเชีย-แปซิฟิก/สธ.) ซึ่งเข้มกว่ามาตรฐานสากลทั่วไป — เครื่องตรวจองค์ประกอบร่างกายบางรุ่น (เช่น InBody) ใช้เกณฑ์สากลที่กว้างกว่า (ปกติถึง 25) ค่า BMI ตัวเลขอาจเท่ากันแต่ป้ายกำกับต่างกันได้ ไม่ใช่คำนวณผิด",
+      "carb": "คาร์บ",
+      "protein": "โปรตีน",
+      "fat": "ไขมัน",
+      "gramsValue": "{value} ก.",
+      "caloriesToday": "แคลอรี่วันนี้",
+      "calculatedFromInbody": "คำนวณจากผลตรวจ InBody ล่าสุด (Katch-McArdle)",
+      "baseTarget": "เป้าหมายพื้นฐาน",
+      "addedFromActivity": "เพิ่มจากกิจกรรมวันนี้",
+      "eatenSoFar": "กินไปแล้ว",
+      "remaining": "เหลืออีก",
+      "dailyMacroTarget": "แมโครที่ควรได้ต่อวัน",
+      "macroBonusNote": "ปรับเพิ่มจากกิจกรรมวันนี้ ({duration}): คาร์บ +{carb} ก. · โปรตีน +{protein} ก.",
+      "intensityAdjustedNote": "(ปรับตามความหนักจากแคลอรี่ที่บันทึกไว้ — {direction} ×{multiplier})",
+      "heavierThanUsual": "หนักกว่าปกติ",
+      "lighterThanUsual": "เบากว่าปกติ",
+      "waterTargetToday": "เป้าหมายน้ำวันนี้",
+      "liters": "{value} ลิตร",
+      "baseLiters": "พื้นฐาน {value} ลิตร",
+      "waterBonusNote": "+ เพิ่ม {value} ลิตร จากกิจกรรมวันนี้ ({duration})"
+    }
+  },
   "settings": {
     "title": "ตั้งค่า",
     "buildInfo": "เวอร์ชันที่รันอยู่: {commit} · {date}",

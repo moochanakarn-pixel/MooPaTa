@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { PHOTO_ANGLE_LABEL, type PhotoAngle } from "@/lib/progress-photo-types";
 import { PoseGuideCamera } from "./pose-guide-camera";
 
@@ -15,8 +16,8 @@ export interface ProgressPhotoAngleState {
   entries: ProgressPhotoEntry[]; // oldest first
 }
 
-function formatDate(ms: number): string {
-  return new Date(ms).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
+function formatDate(ms: number, dateLocale: string): string {
+  return new Date(ms).toLocaleDateString(dateLocale, { day: "numeric", month: "short", year: "2-digit" });
 }
 
 // Front/side/back progress photos — each angle keeps a full dated history
@@ -36,6 +37,9 @@ export function ProgressPhotosCard({
   // tap a thumbnail themselves.
   autoOpenAngle?: PhotoAngle | null;
 }) {
+  const t = useTranslations("nutrition.progressPhotosCard");
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? "en-US" : "th-TH";
   const router = useRouter();
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [uploading, setUploading] = useState<PhotoAngle | null>(null);
@@ -62,7 +66,7 @@ export function ProgressPhotosCard({
     if (res.ok) {
       router.refresh();
     } else {
-      setError("อัปโหลดไม่สำเร็จ — ใช้ไฟล์ jpg/png/webp ขนาดไม่เกิน 8MB");
+      setError(t("uploadFailed"));
     }
   }
 
@@ -79,7 +83,7 @@ export function ProgressPhotosCard({
     if (res.ok) {
       router.refresh();
     } else {
-      setError("ลบไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setError(t("deleteFailed"));
     }
   }
 
@@ -88,10 +92,8 @@ export function ProgressPhotosCard({
 
   return (
     <div ref={cardRef} className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-      <h2 className="mb-1 font-medium">รูปติดตามรูปร่าง</h2>
-      <p className="mb-4 text-xs text-neutral-500">
-        ถ่ายรูปด้านหน้า/ข้าง/หลัง เพื่อดูความเปลี่ยนแปลงย้อนหลังได้ — เก็บส่วนตัว ไม่มีใครเห็นนอกจากคุณ
-      </p>
+      <h2 className="mb-1 font-medium">{t("title")}</h2>
+      <p className="mb-4 text-xs text-neutral-500">{t("subtitle")}</p>
 
       <div className="grid grid-cols-3 gap-3">
         {angles.map((a) => {
@@ -117,7 +119,7 @@ export function ProgressPhotosCard({
                   </svg>
                 )}
                 {uploading === a.angle && (
-                  <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-[11px] text-white">กำลังอัปโหลด...</span>
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-[11px] text-white">{t("uploading")}</span>
                 )}
               </button>
               <input
@@ -135,26 +137,24 @@ export function ProgressPhotosCard({
               />
               <p className="mt-1.5 text-xs text-neutral-400">{PHOTO_ANGLE_LABEL[a.angle]}</p>
               <p className="text-[11px] text-neutral-600">
-                {latest ? `${formatDate(latest.takenAtMs)} · ${a.entries.length} รูป` : "ยังไม่มีรูป"}
+                {latest ? t("dateAndCount", { date: formatDate(latest.takenAtMs, dateLocale), count: a.entries.length }) : t("noPhotoYet")}
               </p>
               <button
                 onClick={() => setCameraAngle(a.angle)}
                 disabled={uploading === a.angle}
                 className="mt-0.5 text-[10px] text-cyan-500 hover:text-cyan-400 disabled:opacity-50"
               >
-                ถ่ายรูปพร้อมไกด์
+                {t("takePhotoWithGuide")}
               </button>
             </div>
           );
         })}
       </div>
-      <p className="mt-3 text-[11px] text-neutral-600">
-        💡 ถ่ายรูปเป็นระยะ (เช่น ทุกเดือน) มุมเดิมท่าเดิม เพื่อเทียบความเปลี่ยนแปลงกับตัวเองย้อนหลังได้ชัดเจนขึ้น
-      </p>
+      <p className="mt-3 text-[11px] text-neutral-600">💡 {t("tip")}</p>
 
       {anglesWithComparison.length > 0 && (
         <div className="mt-5 border-t border-neutral-800/80 pt-4">
-          <h3 className="mb-3 text-sm font-medium text-neutral-300">เปรียบเทียบก่อน-หลัง</h3>
+          <h3 className="mb-3 text-sm font-medium text-neutral-300">{t("beforeAfter")}</h3>
           <div className="space-y-4">
             {anglesWithComparison.map((a) => {
               const oldest = a.entries[0];
@@ -163,7 +163,7 @@ export function ProgressPhotosCard({
               return (
                 <div key={a.angle}>
                   <p className="mb-1.5 text-xs text-neutral-500">
-                    {PHOTO_ANGLE_LABEL[a.angle]} — ห่างกัน {daysApart} วัน
+                    {PHOTO_ANGLE_LABEL[a.angle]} — {t("daysApart", { days: daysApart })}
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     {[oldest, latest].map((entry, i) => (
@@ -172,12 +172,12 @@ export function ProgressPhotosCard({
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={`/api/progress-photo/${entry.id}`}
-                            alt={i === 0 ? "ก่อน" : "หลัง"}
+                            alt={i === 0 ? t("before") : t("after")}
                             className="h-full w-full object-cover"
                           />
                         </div>
                         <p className="mt-1 text-center text-[11px] text-neutral-500">
-                          {i === 0 ? "ก่อน" : "หลัง"} · {formatDate(entry.takenAtMs)}
+                          {i === 0 ? t("before") : t("after")} · {formatDate(entry.takenAtMs, dateLocale)}
                         </p>
                       </div>
                     ))}
@@ -195,7 +195,7 @@ export function ProgressPhotosCard({
             onClick={() => setShowHistory((v) => !v)}
             className="text-xs font-medium text-neutral-400 hover:text-neutral-200"
           >
-            {showHistory ? "ซ่อนประวัติรูปทั้งหมด" : "ดูประวัติรูปทั้งหมด"}
+            {showHistory ? t("hideAllHistory") : t("viewAllHistory")}
           </button>
           {showHistory && (
             <div className="mt-3 space-y-3">
@@ -212,13 +212,13 @@ export function ProgressPhotosCard({
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={`/api/progress-photo/${entry.id}`} alt="" className="h-full w-full object-cover" />
                           </div>
-                          <p className="mt-1 text-[10px] text-neutral-500">{formatDate(entry.takenAtMs)}</p>
+                          <p className="mt-1 text-[10px] text-neutral-500">{formatDate(entry.takenAtMs, dateLocale)}</p>
                           <button
                             onClick={() => handleDelete(entry.id)}
                             disabled={deleting === entry.id}
                             className="text-[10px] text-neutral-600 hover:text-red-400 disabled:opacity-50"
                           >
-                            {deleting === entry.id ? "กำลังลบ..." : "ลบ"}
+                            {deleting === entry.id ? t("deleting") : t("delete")}
                           </button>
                         </div>
                       ))}

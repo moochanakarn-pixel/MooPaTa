@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { parseBodyCompositionText } from "@/lib/body-composition-import-parse";
 
 export interface BodyCompositionEntry {
@@ -61,6 +62,10 @@ export function BodyCompositionCard({
   // and find/expand this card themselves.
   autoOpen?: boolean;
 }) {
+  const t = useTranslations("nutrition.bodyCompositionCard");
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? "en-US" : "th-TH";
+  const kgUnit = locale === "en" ? "kg" : "กก.";
   const router = useRouter();
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [showForm, setShowForm] = useState(entries.length === 0 || autoOpen);
@@ -90,7 +95,7 @@ export function BodyCompositionCard({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setImportNotice("คัดลอกไม่สำเร็จ ลองกดค้างที่ข้อความด้านล่างเพื่อคัดลอกเองแทน");
+      setImportNotice(t("copyFailed"));
     }
   }
 
@@ -111,10 +116,10 @@ export function BodyCompositionCard({
     ].filter(Boolean) as string[];
 
     if (parsed.weightKg === null) {
-      setImportNotice('อ่านค่าไม่ได้เลย ลองวางข้อความใหม่ หรือดูว่าตรงกับตัวอย่างมั้ย');
+      setImportNotice(t("import.couldNotReadAny"));
       return;
     }
-    setImportNotice(missing.length > 0 ? `อ่านไม่ได้: ${missing.join(", ")} — กรอกเองเพิ่มด้านล่างได้` : null);
+    setImportNotice(missing.length > 0 ? t("import.couldNotReadSome", { fields: missing.join(", ") }) : null);
     setMode("manual");
   }
 
@@ -124,7 +129,7 @@ export function BodyCompositionCard({
   async function save() {
     const w = Number(weightKg);
     if (!Number.isFinite(w) || w <= 0) {
-      setError("กรอกน้ำหนักให้ถูกต้องก่อน");
+      setError(t("invalidWeight"));
       return;
     }
     setError(null);
@@ -153,7 +158,7 @@ export function BodyCompositionCard({
       setShowForm(false);
       router.refresh();
     } else {
-      setError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setError(t("saveFailed"));
     }
   }
 
@@ -178,11 +183,11 @@ export function BodyCompositionCard({
               <path d="M9 12h6M12 9v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
             </svg>
           </div>
-          <h2 className="font-medium">องค์ประกอบร่างกาย (InBody)</h2>
+          <h2 className="font-medium">{t("title")}</h2>
         </div>
         {entries.length > 0 && (
           <button onClick={() => setShowForm((v) => !v)} className="text-xs text-neutral-500 hover:text-neutral-300">
-            {showForm ? "ปิด" : "+ เพิ่มผลตรวจ"}
+            {showForm ? t("close") : t("addEntry")}
           </button>
         )}
       </div>
@@ -190,35 +195,33 @@ export function BodyCompositionCard({
       {latest ? (
         <div className="mb-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
           <div>
-            <p className="font-semibold text-neutral-200">{latest.weightKg.toFixed(1)} กก.</p>
-            <p className="text-xs text-neutral-500">น้ำหนัก</p>
+            <p className="font-semibold text-neutral-200">{t("kgValue", { value: latest.weightKg.toFixed(1) })}</p>
+            <p className="text-xs text-neutral-500">{t("weight")}</p>
           </div>
           <div>
             <p className="font-semibold text-neutral-200">{latest.bodyFatPercent !== null ? `${latest.bodyFatPercent.toFixed(1)}%` : "-"}</p>
-            <p className="text-xs text-neutral-500">% ไขมัน</p>
+            <p className="text-xs text-neutral-500">{t("bodyFatPercent")}</p>
           </div>
           <div>
             <p className="font-semibold text-neutral-200">
-              {latest.skeletalMuscleMassKg !== null ? `${latest.skeletalMuscleMassKg.toFixed(1)} กก.` : "-"}
+              {latest.skeletalMuscleMassKg !== null ? t("kgValue", { value: latest.skeletalMuscleMassKg.toFixed(1) }) : "-"}
             </p>
-            <p className="text-xs text-neutral-500">มวลกล้ามเนื้อ</p>
+            <p className="text-xs text-neutral-500">{t("muscleMass")}</p>
           </div>
           <div>
             <p className="font-semibold text-neutral-200">{latest.visceralFatLevel !== null ? latest.visceralFatLevel : "-"}</p>
-            <p className="text-xs text-neutral-500">ไขมันช่องท้อง</p>
+            <p className="text-xs text-neutral-500">{t("visceralFat")}</p>
           </div>
         </div>
       ) : (
-        <p className="mb-4 text-xs text-neutral-600">
-          ยังไม่มีข้อมูล — ถ้าไม่เคยตรวจ InBody ข้ามส่วนนี้ไปได้เลย แอพจะคำนวณ BMR จากสูตรมาตรฐาน (น้ำหนัก/ส่วนสูง/อายุ) แทน
-        </p>
+        <p className="mb-4 text-xs text-neutral-600">{t("noData")}</p>
       )}
 
       {latest?.bodyFatPercent !== null && latest !== undefined && (
         <p className="mb-4 rounded-lg bg-violet-500/10 px-3 py-2 text-xs text-violet-400">
-          ✓ ใช้ผลตรวจล่าสุดคำนวณ BMR แบบ Katch-McArdle (อิงมวลกล้ามเนื้อจริง) และโปรตีนจากมวลไร้ไขมันแทนสูตรมาตรฐานแล้ว — แม่นยำกว่าเดิม{" "}
+          {t("katchMcArdleNotice")}{" "}
           <Link href="/dashboard/knowledge" className="underline hover:text-violet-300">
-            ดูวิธีคำนวณ
+            {t("seeHowItsCalculated")}
           </Link>
         </p>
       )}
@@ -232,7 +235,7 @@ export function BodyCompositionCard({
                 mode === "manual" ? "bg-violet-600 text-white" : "text-neutral-400 hover:text-neutral-200"
               }`}
             >
-              กรอกเอง
+              {t("manualEntry")}
             </button>
             <button
               onClick={() => setMode("import")}
@@ -240,24 +243,22 @@ export function BodyCompositionCard({
                 mode === "import" ? "bg-violet-600 text-white" : "text-neutral-400 hover:text-neutral-200"
               }`}
             >
-              นำเข้าจาก AI
+              {t("importFromAI")}
             </button>
           </div>
 
           {mode === "import" ? (
             <div className="space-y-2">
               <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
-                <p className="text-xs text-neutral-400">
-                  1. คัดลอกคำสั่งนี้ไปวางถาม AI (Claude, ChatGPT) แล้วแนบรูปผลตรวจ InBody เข้าไปด้วย
-                </p>
+                <p className="text-xs text-neutral-400">{t("import.step1")}</p>
                 <button
                   type="button"
                   onClick={copyPrompt}
                   className="mt-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800"
                 >
-                  {copied ? "คัดลอกแล้ว ✓" : "คัดลอกคำสั่งสำหรับถาม AI"}
+                  {copied ? t("import.copied") : t("import.copyPrompt")}
                 </button>
-                <p className="mt-2 text-xs text-neutral-400">2. คัดลอกคำตอบที่ได้มาวางในช่องด้านล่างนี้</p>
+                <p className="mt-2 text-xs text-neutral-400">{t("import.step2")}</p>
               </div>
               <textarea
                 value={pasteText}
@@ -272,14 +273,14 @@ export function BodyCompositionCard({
                 disabled={!pasteText.trim()}
                 className="rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-violet-500 disabled:opacity-50"
               >
-                แปลงข้อมูล
+                {t("import.convert")}
               </button>
             </div>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="mb-1 block text-[10px] text-neutral-500">น้ำหนัก (กก.) *</label>
+                  <label className="mb-1 block text-[10px] text-neutral-500">{t("weightKgRequired")}</label>
                   <input
                     type="number"
                     min="1"
@@ -290,7 +291,7 @@ export function BodyCompositionCard({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] text-neutral-500">% ไขมัน (ไม่บังคับ)</label>
+                  <label className="mb-1 block text-[10px] text-neutral-500">{t("bodyFatPercentOptional")}</label>
                   <input
                     type="number"
                     min="0"
@@ -301,7 +302,7 @@ export function BodyCompositionCard({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] text-neutral-500">มวลกล้ามเนื้อโครงร่าง (กก.)</label>
+                  <label className="mb-1 block text-[10px] text-neutral-500">{t("skeletalMuscleMass")}</label>
                   <input
                     type="number"
                     min="0"
@@ -312,7 +313,7 @@ export function BodyCompositionCard({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] text-neutral-500">ไขมันในช่องท้อง (ระดับ)</label>
+                  <label className="mb-1 block text-[10px] text-neutral-500">{t("visceralFatLevel")}</label>
                   <input
                     type="number"
                     min="0"
@@ -323,7 +324,7 @@ export function BodyCompositionCard({
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-[10px] text-neutral-500">BMR ที่ InBody คำนวณให้ (ถ้ามี — ไว้เทียบเฉยๆ ไม่ได้ใช้คำนวณจริง)</label>
+                <label className="mb-1 block text-[10px] text-neutral-500">{t("inbodyReportedBmr")}</label>
                 <input
                   type="number"
                   min="0"
@@ -338,7 +339,7 @@ export function BodyCompositionCard({
                 disabled={saving || !weightKg}
                 className="rounded-lg bg-violet-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-violet-500 disabled:opacity-50"
               >
-                {saving ? "กำลังบันทึก..." : "บันทึกผลตรวจ"}
+                {saving ? t("saving") : t("saveEntry")}
               </button>
             </>
           )}
@@ -351,10 +352,11 @@ export function BodyCompositionCard({
             <button
               key={e.id}
               onClick={() => deleteEntry(e.id)}
-              title="กดเพื่อลบ"
+              title={t("tapToDelete")}
               className="flex items-center gap-1 rounded-full border border-neutral-800 bg-neutral-900/60 px-2.5 py-1 text-xs text-neutral-400 transition hover:border-red-800 hover:text-red-300"
             >
-              {new Date(e.loggedAtMs).toLocaleDateString("th-TH", { day: "numeric", month: "short" })} · {e.weightKg.toFixed(1)}กก.
+              {new Date(e.loggedAtMs).toLocaleDateString(dateLocale, { day: "numeric", month: "short" })} · {e.weightKg.toFixed(1)}
+              {kgUnit}
               {e.bodyFatPercent !== null && ` · ${e.bodyFatPercent.toFixed(1)}%`}
               <svg viewBox="0 0 20 20" fill="none" className="h-2.5 w-2.5">
                 <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

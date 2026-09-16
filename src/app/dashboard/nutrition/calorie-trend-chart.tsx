@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 
 export interface CalorieDayBucket {
   label: string; // short date, e.g. "18 ส.ค."
@@ -16,6 +17,9 @@ const BAR_GAP = 6;
 // training day's higher target doesn't make that day look like a deficit).
 // Bars over target render amber, at/under render lime.
 export function CalorieTrendChart({ days }: { days: CalorieDayBucket[] }) {
+  const t = useTranslations("nutrition.calorieTrendChart");
+  const locale = useLocale();
+  const numberLocale = locale === "en" ? "en-US" : "th-TH";
   const [hover, setHover] = useState<number | null>(null);
   const max = Math.max(...days.map((d) => Math.max(d.calories, d.targetCalories)), 1);
   const loggedDays = days.filter((d) => d.calories > 0);
@@ -24,9 +28,10 @@ export function CalorieTrendChart({ days }: { days: CalorieDayBucket[] }) {
   return (
     <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
       <div className="mb-4 flex items-baseline justify-between">
-        <h2 className="font-medium">แคลอรี่รายวัน</h2>
+        <h2 className="font-medium">{t("title")}</h2>
         <p className="text-xs text-neutral-500">
-          {days.length} วันล่าสุด · เฉลี่ย <span className="text-neutral-400">{Math.round(avgCalories).toLocaleString("th-TH")} kcal</span>
+          {t("latestDays", { count: days.length })}{" "}
+          <span className="text-neutral-400">{t("avgKcal", { kcal: Math.round(avgCalories).toLocaleString(numberLocale) })}</span>
         </p>
       </div>
 
@@ -74,11 +79,14 @@ export function CalorieTrendChart({ days }: { days: CalorieDayBucket[] }) {
 
       {hover !== null ? (
         <p className="mt-2 text-center text-xs text-neutral-400">
-          {days[hover].label}: <span className="font-medium text-neutral-200">{Math.round(days[hover].calories).toLocaleString("th-TH")} kcal</span>{" "}
-          <span className="text-neutral-600">(เป้าหมาย {Math.round(days[hover].targetCalories).toLocaleString("th-TH")} kcal)</span>
+          {days[hover].label}:{" "}
+          <span className="font-medium text-neutral-200">{t("kcalValue", { kcal: Math.round(days[hover].calories).toLocaleString(numberLocale) })}</span>{" "}
+          <span className="text-neutral-600">
+            ({t("targetKcal", { kcal: Math.round(days[hover].targetCalories).toLocaleString(numberLocale) })})
+          </span>
         </p>
       ) : (
-        <p className="mt-2 text-center text-[10px] text-neutral-600">เส้นประ = เป้าหมายของวันนั้น</p>
+        <p className="mt-2 text-center text-[10px] text-neutral-600">{t("dashedLineNote")}</p>
       )}
     </div>
   );
