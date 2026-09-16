@@ -71,16 +71,20 @@ export function optionalNonNegative(value: unknown): number | null {
     : null;
 }
 
-// RPE (Rate of Perceived Exertion), 1-10 integer — used both for a whole
-// session (Activity.rpe, Borg/talk-test breathlessness framing) and per set
-// (ExerciseSet.rpe, reps-in-reserve framing: 10 = none left, 9 = ~1 left,
-// ...). Different meaning at each call site, but the same 1-10 integer
-// shape, so one validator covers both.
+// RPE (Rate of Perceived Exertion), 1-10 in half-point steps (7, 7.5, 8, ...)
+// — used both for a whole session (Activity.rpe, Borg/talk-test
+// breathlessness framing) and per set (ExerciseSet.rpe, reps-in-reserve
+// framing: 10 = none left, 9 = ~1 left, ...). Different meaning at each call
+// site, but the same 1-10 shape, so one validator covers both. Half-steps
+// only (not arbitrary decimals like 7.3) because that's how RPE is actually
+// used/reported in practice — n*2 landing on an integer is the same check
+// as "n is a multiple of 0.5" without floating-point rounding surprises
+// (0.5 itself is exactly representable in binary, so this is exact).
 export function optionalRpe(value: unknown): number | null {
   const provided = typeof value === "number" || (typeof value === "string" && value.trim() !== "");
   if (!provided) return null;
   const n = Number(value);
-  return Number.isInteger(n) && n >= 1 && n <= 10 ? n : NaN;
+  return Number.isFinite(n) && Number.isInteger(n * 2) && n >= 1 && n <= 10 ? n : NaN;
 }
 
 // Manual entries always have durationMin (required) and often distanceKm

@@ -356,8 +356,8 @@ export function LogActivityForm({
     }
     if (rpe.trim()) {
       const n = Number(rpe);
-      if (!Number.isInteger(n) || n < 1 || n > 10) {
-        setError("ระดับความเหนื่อย (RPE) ต้องเป็นจำนวนเต็ม 1-10 เท่านั้น (ห้ามมีจุดทศนิยม)");
+      if (!Number.isFinite(n) || !Number.isInteger(n * 2) || n < 1 || n > 10) {
+        setError("ระดับความเหนื่อย (RPE) ต้องเป็นจำนวนเต็มหรือครึ่ง (เช่น 7, 7.5) ระหว่าง 1-10 เท่านั้น");
         return;
       }
     }
@@ -371,8 +371,8 @@ export function LogActivityForm({
         }
         if (s.rpe.trim()) {
           const setRpe = Number(s.rpe);
-          if (!Number.isInteger(setRpe) || setRpe < 1 || setRpe > 10) {
-            setError(`ท่า "${r.name.trim()}" มี RPE ที่ไม่ใช่จำนวนเต็ม 1-10 (ห้ามมีจุดทศนิยม)`);
+          if (!Number.isFinite(setRpe) || !Number.isInteger(setRpe * 2) || setRpe < 1 || setRpe > 10) {
+            setError(`ท่า "${r.name.trim()}" มี RPE ที่ไม่ใช่จำนวนเต็มหรือครึ่ง (เช่น 7, 7.5) ระหว่าง 1-10`);
             return;
           }
         }
@@ -586,10 +586,10 @@ export function LogActivityForm({
                 type="number"
                 min="1"
                 max="10"
-                step="1"
+                step="0.5"
                 value={rpe}
                 onChange={(e) => setRpe(e.target.value)}
-                placeholder="เช่น 7"
+                placeholder="เช่น 7 หรือ 7.5"
                 className={INPUT_CLASS}
               />
               <RpeLevelsGuide title="แต่ละระดับหมายถึงอะไร?" levels={RPE_CARDIO_LEVELS} />
@@ -708,7 +708,7 @@ export function LogActivityForm({
                           type="number"
                           min="1"
                           max="10"
-                          step="1"
+                          step="0.5"
                           value={s.rpe}
                           onChange={(e) => updateSetRow(r.id, s.id, { rpe: e.target.value })}
                           placeholder="-"

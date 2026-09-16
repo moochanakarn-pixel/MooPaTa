@@ -124,10 +124,18 @@ describe("optionalRpe", () => {
     expect(optionalRpe(10)).toBe(10);
   });
 
-  it("signals 'provided but invalid' as NaN for out-of-range or non-integer values", () => {
+  it("allows half-point steps within 1-10", () => {
+    expect(optionalRpe(8.5)).toBe(8.5);
+    expect(optionalRpe("7.5")).toBe(7.5);
+    expect(optionalRpe(1)).toBe(1); // whole numbers are still fine
+    expect(optionalRpe(9.5)).toBe(9.5);
+  });
+
+  it("signals 'provided but invalid' as NaN for out-of-range or non-half-step values", () => {
     expect(optionalRpe(0)).toBeNaN(); // below 1
     expect(optionalRpe(11)).toBeNaN(); // above 10
-    expect(optionalRpe(8.5)).toBeNaN(); // not an integer
+    expect(optionalRpe(8.3)).toBeNaN(); // not a half-point step
+    expect(optionalRpe(8.1)).toBeNaN();
     expect(optionalRpe("abc")).toBeNaN();
   });
 });

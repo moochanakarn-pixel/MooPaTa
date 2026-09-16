@@ -26,6 +26,10 @@ describe("parseActivityText", () => {
     expect(parseActivityText("RPE: 6").rpe).toBe(6);
   });
 
+  it("keeps a half-point whole-session RPE as-is (no rounding, unlike per-set RPE)", () => {
+    expect(parseActivityText("ระดับความเหนื่อย: 7.5").rpe).toBe(7.5);
+  });
+
   it("does not truncate a comma-thousands calorie figure at the comma (regression)", () => {
     // This exact bug shipped once: "\d*" stopped matching at the first
     // comma, so parseFloat("1") came out of "แคลอรี่: 1,130" instead of 1130.
@@ -112,6 +116,22 @@ describe("parseActivityText", () => {
         sets: [
           { reps: 15, weightKg: 5, rpe: 8 },
           { reps: 10, weightKg: 4, rpe: 9 },
+        ],
+      },
+    ]);
+  });
+
+  it("rounds a decimal per-set RPE to the nearest half-point rather than the nearest integer", () => {
+    const text = `ท่า:
+ดันไหล่ดัมเบล | 1 | 15 | 5 | 7.6
+ดันไหล่ดัมเบล | 2 | 10 | 4 | 8.2`;
+    const parsed = parseActivityText(text);
+    expect(parsed.exercises).toEqual([
+      {
+        name: "ดันไหล่ดัมเบล",
+        sets: [
+          { reps: 15, weightKg: 5, rpe: 7.5 },
+          { reps: 10, weightKg: 4, rpe: 8 },
         ],
       },
     ]);

@@ -142,7 +142,7 @@ function parseExerciseSetLine(line: string): { name: string; reps: number; weigh
   const weightKg = cells[3] !== undefined ? firstNumber(cells[3]) : null;
   const rpe = cells[4] !== undefined ? firstNumber(cells[4]) : null;
   if (!name || reps === null) return null;
-  return { name, reps: Math.round(reps), weightKg, rpe: rpe !== null ? Math.round(rpe) : null };
+  return { name, reps: Math.round(reps), weightKg, rpe: rpe !== null ? Math.round(rpe * 2) / 2 : null };
 }
 
 export function parseActivityText(text: string): ParsedActivity {

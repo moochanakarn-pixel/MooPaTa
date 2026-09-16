@@ -310,12 +310,15 @@ model Activity {
   kilojoules         Float?
   sufferScore        Int?
   calories           Float?
-  // 1-10 subjective exertion (RPE) for the session as a whole — the
-  // talk-test/breathlessness framing (Borg-style), distinct from the
-  // per-set reps-in-reserve RPE on ExerciseSet below. Meaningful for any
-  // activity type but entered manually or via AI-import (from a watch's
-  // own exertion readout) — no formula derives it in-app.
-  rpe                Int?
+  // 1-10 subjective exertion (RPE) for the session as a whole, in
+  // half-point steps (7, 7.5, 8, ...) — the talk-test/breathlessness
+  // framing (Borg-style), distinct from the per-set reps-in-reserve RPE on
+  // ExerciseSet below. Meaningful for any activity type but entered
+  // manually or via AI-import (from a watch's own exertion readout) — no
+  // formula derives it in-app. Float rather than Int so a half-point value
+  // isn't silently truncated (see src/lib/activity-validation.ts's
+  // optionalRpe for the actual 1-10-in-halves validation).
+  rpe                Float?
   // Free-text summary for manual/AI-import entry — a workout screenshot
   // (Zepp/Garmin/Huawei/...) usually shows several metrics with no matching
   // structured column here (training effect, VO2max estimate, heart-rate
@@ -384,11 +387,12 @@ model ExerciseSet {
   order    Int
   reps     Int
   weightKg Float?
-  // 1-10 subjective exertion (RPE) for this specific set, reps-in-reserve
-  // framing (10 = 0 reps left, 9 = ~1 left, ...) — a different scale than
-  // Activity.rpe's whole-session exertion, so kept as a separate field
-  // rather than reusing one meaning across both models.
-  rpe      Int?
+  // 1-10 subjective exertion (RPE) for this specific set, in half-point
+  // steps (7, 7.5, 8, ...), reps-in-reserve framing (10 = 0 reps left, 9 =
+  // ~1 left, ...) — a different scale than Activity.rpe's whole-session
+  // exertion, so kept as a separate field rather than reusing one meaning
+  // across both models. Float, same reasoning as Activity.rpe above.
+  rpe      Float?
 
   exerciseId String
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
