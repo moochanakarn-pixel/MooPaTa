@@ -39,7 +39,7 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
             previewLoadingLabel={tc("loadingPreview")}
             previewAlt={t("downloadThisWeek")}
             defaultLang={locale === "en" ? "en" : "th"}
-            buildHref={(lang) => `/api/share/period?range=week&lang=${lang}`}
+            hrefBase="/api/share/period?range=week"
           />
         </div>
       </div>

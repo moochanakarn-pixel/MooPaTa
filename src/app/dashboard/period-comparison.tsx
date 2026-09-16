@@ -1,3 +1,5 @@
+"use client";
+
 import { useTranslations } from "next-intl";
 import {
   formatDistanceKm,
@@ -74,7 +76,7 @@ export function PeriodComparison({
           previewLoadingLabel={tc("loadingPreview")}
           previewAlt={t("downloadThisMonth")}
           defaultLang={locale === "en" ? "en" : "th"}
-          buildHref={(lang) => `/api/share/period?range=month&lang=${lang}`}
+          hrefBase="/api/share/period?range=month"
         />
       </div>
       <div className="grid grid-cols-3 gap-3">

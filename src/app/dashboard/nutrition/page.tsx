@@ -354,7 +354,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
           previewLoadingLabel={tc("loadingPreview")}
           previewAlt={t("downloadThisMonth")}
           defaultLang={locale === "en" ? "en" : "th"}
-          buildHref={(lang) => `/api/share/nutrition?lang=${lang}`}
+          hrefBase="/api/share/nutrition"
         />
       </p>
 

@@ -12,9 +12,13 @@ export type ShareLang = "th" | "en";
 // this one exists so those three simpler buttons can offer the same
 // language choice without three near-identical sheet implementations.
 //
-// `buildHref` takes the chosen language and returns the full share-card
-// URL (including `?lang=`) — the caller owns whatever other query params
-// that route needs (range=week/month, etc).
+// `hrefBase` is the share-card URL *without* `lang` (the caller owns
+// whatever other query params that route needs, e.g. range=week/month) —
+// this component appends `lang` itself. A plain string rather than a
+// `(lang) => string` callback deliberately, because some callers
+// (dashboard/nutrition/page.tsx) are Server Components: a function prop
+// can't be serialized across the server->client boundary ("Functions
+// cannot be passed directly to Client Components"), while a string can.
 export function QuickDownloadSheet({
   triggerLabel,
   triggerClassName,
@@ -24,7 +28,7 @@ export function QuickDownloadSheet({
   previewLoadingLabel,
   previewAlt,
   defaultLang,
-  buildHref,
+  hrefBase,
 }: {
   triggerLabel: string;
   triggerClassName: string;
@@ -34,12 +38,12 @@ export function QuickDownloadSheet({
   previewLoadingLabel: string;
   previewAlt: string;
   defaultLang: ShareLang;
-  buildHref: (lang: ShareLang) => string;
+  hrefBase: string;
 }) {
   const [open, setOpen] = useState(false);
   const [lang, setLang] = useState<ShareLang>(defaultLang);
 
-  const href = buildHref(lang);
+  const href = `${hrefBase}${hrefBase.includes("?") ? "&" : "?"}lang=${lang}`;
 
   // Same debounce-then-swap pattern as ShareActivityButton/
   // SummaryConfigurator's own previews — avoids re-running the actual

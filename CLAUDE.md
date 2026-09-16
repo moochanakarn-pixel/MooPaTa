@@ -332,10 +332,21 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     **`src/app/dashboard/quick-download-sheet.tsx`'s `QuickDownloadSheet`** — component เดียว รับ
     label/ข้อความทุกอย่างเป็น prop (ไม่เรียก `useTranslations` เองข้างใน เพราะต้องใช้ได้ทั้งจากหน้าที่
     แปลแล้วอย่างหน้าแรก/เชิงลึกที่ส่ง label ผ่าน `t()` มาให้ และในอนาคตอาจมีหน้านอกขอบเขต i18n เรียกด้วย)
-    รับแค่ `buildHref(lang) => string` ให้ caller คุม query param อื่นที่ route ของตัวเองต้องการเอง
-    (เช่น `range=week`) — ปุ่ม "ภาษา"/"ดาวน์โหลดรูปภาพ (PNG)"/"กำลังโหลดตัวอย่าง..." ที่ใช้ร่วมกันบ่อย
-    ย้ายไปอยู่ namespace `common` ใน `messages/th.json`/`messages/en.json` แทนที่จะประกาศซ้ำในแต่ละ
-    namespace ของ component
+    รับแค่ `hrefBase: string` (URL ของ route ตัวเอง ไม่รวม `lang`, เช่น `/api/share/period?range=week`)
+    ให้ caller คุม query param อื่นที่ route ของตัวเองต้องการเอง แล้ว component เติม `&lang=`/`?lang=`
+    ต่อท้ายเองตอน build href จริง — **เดิมเป็น `buildHref: (lang) => string` (callback function) แต่
+    พังจริงบน production**: `dashboard/nutrition/page.tsx` เป็น Server Component (ต้องเรียก Prisma/
+    session ตรง ๆ ไม่มีทางเป็น `"use client"` ได้) เรียก `<QuickDownloadSheet buildHref={(lang) => ...} />`
+    ตรง ๆ — ส่ง function เป็น prop ข้าม server→client boundary ไม่ได้ (React error "Functions cannot be
+    passed directly to Client Components") ทำให้หน้าเชิงลึกพังทั้งหน้า (500, error digest เฉย ๆ ไม่มี
+    stack ให้ดูฝั่ง client) เปลี่ยนเป็น string เพราะ serialize ข้าม boundary ได้ตรง ๆ ไม่ต้องพึ่ง function
+    เลย — ระหว่างแก้เจอบั๊กที่สองคู่กัน: `dashboard/period-comparison.tsx` เรียก `useTranslations()`
+    (client-only hook) โดยไม่มี `"use client"` เลยทั้งที่ import มาจาก `dashboard/page.tsx` (Server
+    Component) ตรง ๆ — เพิ่ม `"use client"` ให้ไฟล์นี้ด้วย (จำเป็นอยู่แล้วเพราะ hook, ไม่ใช่แค่เพราะ
+    `hrefBase`) — `ShareActivityButton`/`SummaryConfigurator` ไม่โดนบั๊กนี้เพราะรับแค่ prop primitive
+    (`activityId`/`defaultLang`) แล้ว build href เองข้างในทั้งหมด ไม่มี caller ไหนส่ง function เข้ามาเลย
+    — ปุ่ม "ภาษา"/"ดาวน์โหลดรูปภาพ (PNG)"/"กำลังโหลดตัวอย่าง..." ที่ใช้ร่วมกันบ่อย ย้ายไปอยู่ namespace
+    `common` ใน `messages/th.json`/`messages/en.json` แทนที่จะประกาศซ้ำในแต่ละ namespace ของ component
   - **หน้ารายละเอียดกิจกรรม (`ActivityDetailPage`) ยังไม่อยู่ในขอบเขตแปล UI (`### 5.`)** แต่ต้องรู้ภาษา
     UI ปัจจุบันอยู่ดีเพื่อตั้งค่า default ให้ตัวเลือกภาษาของการ์ด — เรียก `resolveLocale()`
     (`src/lib/locale.ts`) ตรง ๆ แทนที่จะพึ่ง `next-intl`'s `getLocale()` (ซึ่งก็เรียก `resolveLocale()`
