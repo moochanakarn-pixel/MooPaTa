@@ -287,13 +287,61 @@ InBody) — 2 อันหลังลิงก์ไป `/dashboard/nutrition?q
 เหมือนเข้าหน้าเชิงลึกแบบธรรมดา หน้าที่ไม่มีแท็บของตัวเอง (records, compare,
 achievements, activity detail) เข้าถึงผ่านลิงก์จากหน้าแรกเท่านั้น
 
-### 4. Share cards (Satori/`next/og`)
-- `src/app/api/share/{daily-summary,nutrition,period,[id]}/route.tsx` — สร้างรูปสรุปแชร์
-  (`[id]` = การ์ดกิจกรรมเดี่ยว เปิดจากปุ่ม "แชร์" ที่หน้ารายละเอียดกิจกรรม)
+### 4. Share cards (Satori/`next/og`) — จริง ๆ คือ "ดาวน์โหลด" ไม่ใช่ "แชร์"
+- `src/app/api/share/{daily-summary,nutrition,period,[id]}/route.tsx` — สร้างรูปสรุปเป็น PNG ให้
+  ดาวน์โหลด (`[id]` = การ์ดกิจกรรมเดี่ยว เปิดจากปุ่มที่หน้ารายละเอียดกิจกรรม) — **ไม่มีการเรียก
+  `navigator.share`/OS share sheet ที่ไหนในแอพเลย** ทุกปุ่มจบที่ดาวน์โหลดไฟล์ตรง ๆ (`<a download>`)
+  เพราะงั้นข้อความ UI ทุกจุดที่เกี่ยวกับฟีเจอร์นี้เลยใช้คำว่า "ดาวน์โหลด" ("Download") ไม่ใช่ "แชร์"
+  ("Share") — เดิมตั้งชื่อ/ปุ่มว่า "แชร์" มาตั้งแต่แรกสร้างฟีเจอร์ (ยังเหลือร่องรอยที่ชื่อไฟล์/component
+  `share-activity-button.tsx`/`ShareActivityButton`, `src/app/api/share/*` เป็นชื่อ route เดิมที่ไม่ได้
+  เปลี่ยนตาม เพราะเปลี่ยน route path จะ breaking การ์ดเก่าที่แชร์ไปแล้ว) แก้แค่ข้อความที่ผู้ใช้เห็น
+  ไม่ได้ไล่ rename ไฟล์/ตัวแปรทั้งหมด
 - สไตล์การ์ดร่วมกันอยู่ที่ `src/lib/share-card-styles.ts` (`cardStyle`, `rowCardStyle`, `titleStyle`,
   `iconCircleStyle`) — ใช้ทั้ง period/nutrition (โทนเข้มเดิม navy/green) และ daily-summary
 - ข้อจำกัดของ Satori ที่เจอแล้ว: ไม่รองรับ `conic-gradient()`, `justify-content: space-evenly`
   (ใช้ `"space-around"` แทน), ตัวอักษร "ล" ท้ายคำที่โดดเดี่ยว render เพี้ยน (เลี่ยงด้วยการใช้คำเต็ม)
+- **`?lang=th|en` — เลือกภาษาของเนื้อหาในรูปได้ ไม่ผูกกับภาษา UI ของแอพ** ทั้ง 4 route รองรับเหมือนกัน
+  (default `"th"` ถ้าไม่ส่งมา หรือส่งค่าอื่นที่ไม่ใช่ `"th"`/`"en"` มา) — ตั้งใจแยกจาก
+  `resolveLocale()`/`User.locale` ที่คุมภาษา UI (ดู "### 5. ภาษา (i18n)") เพราะเป็นคนละการตัดสินใจกัน:
+  ผู้ใช้เปิดแอพเป็นไทยอาจอยากดาวน์โหลดการ์ดเป็นอังกฤษไปโพสต์ก็ได้ (หรือกลับกัน) — ค่า default ที่ปุ่ม/sheet
+  ทุกจุดเลือกไว้ให้คือภาษา UI ปัจจุบันของผู้ใช้ (`resolveLocale()`/`useLocale()` แล้วแต่ context) แต่ผู้ใช้
+  เปลี่ยนได้เองทุกครั้งก่อนกดดาวน์โหลด ไม่ persist ข้ามครั้ง (ไม่มี field ใน DB เก็บ "ภาษาการ์ดที่เลือกล่าสุด")
+  — โครงสร้าง:
+  - **`src/lib/share-card-i18n.ts`** — ดิกชันนารีข้อความของทั้ง 4 การ์ด แยกจาก `messages/th.json`/
+    `messages/en.json` (แคตตาล็อกของ UI แอพเอง) เพราะ route handler พวกนี้ไม่ได้อยู่ใต้ React tree ที่
+    `NextIntlClientProvider` ห่อไว้ และเป็นคนละแนวคิดกับ locale ของ session ตามที่อธิบายข้างบน —
+    `parseShareLang(searchParams, fallback)` อ่าน `?lang=` แล้ว fallback ถ้าค่าไม่ใช่ `"th"`/`"en"`,
+    `shareT(lang)` คืน object ข้อความ/ฟังก์ชันสร้างข้อความ (เช่น `t.prBadge(name, weightKg)`,
+    `t.daysOfLabel(logged, total)`) ให้แต่ละ route เรียกใช้
+  - **`src/lib/format.ts` เพิ่ม optional param ตัวสุดท้าย `lang: FormatLang = "th"`** ให้
+    `formatDuration`/`formatDistanceKm`/`formatDistanceParts`/`formatSpeedKmh`/`formatPace`/
+    `formatSwimPace`/`activitySpeedValue`/`formatElevationM`/`formatActivityDate`/`activityTypeLabel`
+    (หน่วย: กม./ไมล์/กม.ต่อชม./นาทีต่อกม./ชม./นาที ฯลฯ ล้วนสลับ TH/EN ได้ตามนี้) — **ค่า default
+    `"th"` ทำให้ทุกจุดเรียกเดิมในแอพ (หน้าสถิติสูงสุด/เปรียบเทียบ/รายละเอียดกิจกรรม/month-highlights
+    ฯลฯ ที่ไม่ได้ส่ง `lang` มา) พฤติกรรมเหมือนเดิมทุกอย่าง ไม่กระทบเลย** — เฉพาะ 4 share route
+    เท่านั้นที่ส่ง `lang` (มาจาก `parseShareLang`) เข้าไปจริง ๆ — `formatSigned*`/`cadenceUnitLabel`
+    ไม่ได้แก้ (ตัวแรกไม่ได้ใช้ในการ์ดแชร์เลย, ตัวหลัง "rpm"/"spm" เหมือนกันทั้ง 2 ภาษาอยู่แล้ว)
+  - **ปุ่มดาวน์โหลดที่มี sheet ให้ปรับตัวเลือกอื่นอยู่แล้ว** (`ShareActivityButton`
+    ที่หน้ารายละเอียดกิจกรรม, `SummaryConfigurator` ที่ `/dashboard/summary`) — เพิ่มแถบเลือกภาษา
+    (ไทย/English) เข้าไปในฟอร์ม/sheet เดิมตรง ๆ ต่อ query param `lang=` เข้า href เดียวกับตัวเลือกอื่น
+    ที่มีอยู่แล้ว (style/bg/pos สำหรับกิจกรรม, fields/bg สำหรับสรุปประจำวัน) — คนละ state เดี่ยว ๆ
+    ไม่ผูกกับตัวเลือกอื่นเลย
+  - **ปุ่มดาวน์โหลดที่เดิมเป็นลิงก์ตรง ไม่มี sheet เลย** (ดาวน์โหลดสรุปสัปดาห์นี้/เดือนนี้ที่หน้าแรก,
+    ดาวน์โหลดสรุปเดือนนี้ที่หน้าเชิงลึก) — ต้องสร้าง sheet ใหม่ให้ แทนที่จะทำ 3 sheet แยกกันซ้ำโค้ดเกือบ
+    เป๊ะ ๆ (พรีวิวแบบ debounce, checkerboard backdrop, ปุ่มดาวน์โหลด) ดึงออกมาเป็น
+    **`src/app/dashboard/quick-download-sheet.tsx`'s `QuickDownloadSheet`** — component เดียว รับ
+    label/ข้อความทุกอย่างเป็น prop (ไม่เรียก `useTranslations` เองข้างใน เพราะต้องใช้ได้ทั้งจากหน้าที่
+    แปลแล้วอย่างหน้าแรก/เชิงลึกที่ส่ง label ผ่าน `t()` มาให้ และในอนาคตอาจมีหน้านอกขอบเขต i18n เรียกด้วย)
+    รับแค่ `buildHref(lang) => string` ให้ caller คุม query param อื่นที่ route ของตัวเองต้องการเอง
+    (เช่น `range=week`) — ปุ่ม "ภาษา"/"ดาวน์โหลดรูปภาพ (PNG)"/"กำลังโหลดตัวอย่าง..." ที่ใช้ร่วมกันบ่อย
+    ย้ายไปอยู่ namespace `common` ใน `messages/th.json`/`messages/en.json` แทนที่จะประกาศซ้ำในแต่ละ
+    namespace ของ component
+  - **หน้ารายละเอียดกิจกรรม (`ActivityDetailPage`) ยังไม่อยู่ในขอบเขตแปล UI (`### 5.`)** แต่ต้องรู้ภาษา
+    UI ปัจจุบันอยู่ดีเพื่อตั้งค่า default ให้ตัวเลือกภาษาของการ์ด — เรียก `resolveLocale()`
+    (`src/lib/locale.ts`) ตรง ๆ แทนที่จะพึ่ง `next-intl`'s `getLocale()` (ซึ่งก็เรียก `resolveLocale()`
+    เหมือนกันอยู่ดี แต่ import จาก `next-intl/server` จะดูเหมือนหน้านี้เข้าร่วมระบบ i18n ทั้งที่ยังไม่ได้
+    แปลข้อความ UI ของตัวเองเลยสักจุด — เรียก lib ตรง ๆ ชัดเจนกว่าว่าแค่ต้องการ locale ไปใช้อย่างเดียว
+    ไม่ได้ตั้งใจให้หน้านี้เข้าเกณฑ์ "แปลแล้ว")
 - **การ์ดสรุปผลประจำวัน** (`/dashboard/summary`, `daily-summary/route.tsx`) มีธีมของตัวเอง แยกจาก
   period/nutrition — พื้นหลัง gradient ส้ม/น้ำตาลอุ่นแทนโทนเข้ม navy/green เดิม, หัวการ์ดโชว์
   avatar+ชื่อผู้ใช้จริง (`avatarPath` self-upload อ่านไฟล์แล้ว embed เป็น data URI เพราะ

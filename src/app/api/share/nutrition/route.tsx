@@ -5,6 +5,7 @@ import { macrosForGrams } from "@/lib/food";
 import { getSessionUserId } from "@/lib/session";
 import { loadShareFonts } from "@/lib/share-fonts";
 import { cardStyle, rowCardStyle } from "@/lib/share-card-styles";
+import { parseShareLang, shareT } from "@/lib/share-card-i18n";
 
 // "Wrapped"-style monthly nutrition summary — same story-ratio PNG as the
 // activity period card (src/app/api/share/period/route.tsx), but built from
@@ -18,9 +19,13 @@ export async function GET(req: NextRequest) {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  const lang = parseShareLang(new URL(req.url).searchParams);
+  const t = shareT(lang);
+
   const now = new Date();
   const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const dateRangeLabel = `${periodStart.toLocaleDateString("th-TH", { day: "numeric", month: "short" })} – ${now.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}`;
+  const dateLocale = lang === "en" ? "en-US" : "th-TH";
+  const dateRangeLabel = `${periodStart.toLocaleDateString(dateLocale, { day: "numeric", month: "short" })} – ${now.toLocaleDateString(dateLocale, { day: "numeric", month: "short", year: "numeric" })}`;
   const daysElapsed = Math.floor((now.getTime() - periodStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
 
   const [foodLogs, waterAgg, weightLogs] = await Promise.all([
@@ -53,9 +58,9 @@ export async function GET(req: NextRequest) {
 
   const macroKcalTotal = avgProtein * 4 + avgCarb * 4 + avgFat * 9 || 1;
   const macroShares = [
-    { label: "โปรตีน", grams: avgProtein, kcal: avgProtein * 4, color: "#38bdf8" },
-    { label: "คาร์บ", grams: avgCarb, kcal: avgCarb * 4, color: "#f59e0b" },
-    { label: "ไขมัน", grams: avgFat, kcal: avgFat * 9, color: "#f43f5e" },
+    { label: t.proteinLabel, grams: avgProtein, kcal: avgProtein * 4, color: "#38bdf8" },
+    { label: t.carbLabel, grams: avgCarb, kcal: avgCarb * 4, color: "#f59e0b" },
+    { label: t.fatLabel, grams: avgFat, kcal: avgFat * 9, color: "#f43f5e" },
   ];
 
   let fonts;
@@ -118,28 +123,26 @@ export async function GET(req: NextRequest) {
             fontWeight: 700,
           }}
         >
-          สรุปโภชนาการเดือนนี้
+          {t.monthlyNutritionBadge}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-around", gap: 40, marginTop: 32, marginBottom: 32 }}>
           <div style={cardStyle}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
               <span style={{ fontSize: 100, fontWeight: 700, color: "white", lineHeight: 1 }}>
-                {Math.round(avgCalories).toLocaleString("th-TH")}
+                {Math.round(avgCalories).toLocaleString(dateLocale)}
               </span>
-              <span style={{ fontSize: 34, fontWeight: 700, color: "#a3a3a3" }}>kcal/วัน เฉลี่ย</span>
+              <span style={{ fontSize: 34, fontWeight: 700, color: "#a3a3a3" }}>{t.avgKcalPerDaySuffix}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 24 }}>
               <span style={{ fontSize: 28 }}>📝</span>
-              <span style={{ fontSize: 26, color: "#d4d4d4" }}>บันทึกอาหารแล้ว</span>
-              <span style={{ fontSize: 26, fontWeight: 700, color: "white" }}>
-                {loggedDays}/{daysElapsed} วัน
-              </span>
+              <span style={{ fontSize: 26, color: "#d4d4d4" }}>{t.foodLoggedLabel}</span>
+              <span style={{ fontSize: 26, fontWeight: 700, color: "white" }}>{t.daysOfLabel(loggedDays, daysElapsed)}</span>
             </div>
           </div>
 
           <div style={cardStyle}>
-            <span style={{ fontSize: 27, fontWeight: 700, color: "#c9c9c4", letterSpacing: 0.5 }}>แมโครเฉลี่ย/วัน</span>
+            <span style={{ fontSize: 27, fontWeight: 700, color: "#c9c9c4", letterSpacing: 0.5 }}>{t.avgMacroPerDayLabel}</span>
             <div style={{ display: "flex", height: 28, borderRadius: 999, overflow: "hidden", marginTop: 22 }}>
               {macroShares.map((m) => (
                 <div
@@ -153,7 +156,7 @@ export async function GET(req: NextRequest) {
                 <div key={m.label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ display: "flex", width: 18, height: 18, borderRadius: 999, background: m.color }} />
                   <span style={{ fontSize: 27, color: "#b5b5b0" }}>{m.label}</span>
-                  <span style={{ fontSize: 30, fontWeight: 700, color: "white" }}>{Math.round(m.grams)} ก.</span>
+                  <span style={{ fontSize: 30, fontWeight: 700, color: "white" }}>{t.gramsValue(Math.round(m.grams))}</span>
                 </div>
               ))}
             </div>
@@ -161,17 +164,17 @@ export async function GET(req: NextRequest) {
 
           <div style={rowCardStyle}>
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontSize: 42, fontWeight: 700, color: "white" }}>{avgWaterL.toFixed(1)} ลิตร</span>
-              <span style={{ fontSize: 26, color: "#9c9c97" }}>น้ำดื่มเฉลี่ย/วัน</span>
+              <span style={{ fontSize: 42, fontWeight: 700, color: "white" }}>{t.litersValue(avgWaterL.toFixed(1))}</span>
+              <span style={{ fontSize: 26, color: "#9c9c97" }}>{t.avgWaterPerDayLabel}</span>
             </div>
           </div>
 
           <div style={rowCardStyle}>
             <div style={{ display: "flex", flexDirection: "column" }}>
               <span style={{ fontSize: 42, fontWeight: 700, color: "white" }}>
-                {weightDelta !== null ? `${weightDelta > 0 ? "+" : ""}${weightDelta.toFixed(1)} กก.` : "—"}
+                {weightDelta !== null ? t.kgValue(`${weightDelta > 0 ? "+" : ""}${weightDelta.toFixed(1)}`) : t.noDataDash}
               </span>
-              <span style={{ fontSize: 26, color: "#9c9c97" }}>น้ำหนักเปลี่ยนแปลง</span>
+              <span style={{ fontSize: 26, color: "#9c9c97" }}>{t.weightChangeLabel}</span>
             </div>
           </div>
         </div>

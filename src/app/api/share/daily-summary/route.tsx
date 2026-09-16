@@ -10,6 +10,7 @@ import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
 import { activityTypeLabel, formatDistanceKm, formatDuration } from "@/lib/format";
 import { cardStyle, iconCircleStyle, rowCardStyle, titleStyle } from "@/lib/share-card-styles";
 import { contentTypeForAvatarPath, readAvatarFile } from "@/lib/avatar-storage";
+import { parseShareLang, shareT } from "@/lib/share-card-i18n";
 
 const CAL_RING_SIZE = 320;
 const CAL_RING_STROKE = 26;
@@ -89,6 +90,9 @@ export async function GET(req: NextRequest) {
   // can be dropped onto an IG/Line story photo instead of always carrying
   // its own backdrop.
   const transparent = url.searchParams.get("bg") === "transparent";
+  const lang = parseShareLang(url.searchParams);
+  const t = shareT(lang);
+  const dateLocale = lang === "en" ? "en-US" : "th-TH";
 
   const dayStart = new Date(date);
   dayStart.setHours(0, 0, 0, 0);
@@ -179,13 +183,12 @@ export async function GET(req: NextRequest) {
   const weekDots = needHeatmap ? buildWeekDots(weekFoodLogs.map((l) => l.loggedAt), date) : [];
 
   const dateLabel =
-    (isToday ? "วันนี้ · " : "") +
-    date.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
+    (isToday ? t.todayPrefix : "") + date.toLocaleDateString(dateLocale, { day: "numeric", month: "short", year: "numeric" });
 
   const macroShares = [
-    { label: "โปรตีน", grams: macros.proteinG, kcal: macros.proteinG * 4, color: "#38bdf8" },
-    { label: "คาร์บ", grams: macros.carbG, kcal: macros.carbG * 4, color: "#f59e0b" },
-    { label: "ไขมัน", grams: macros.fatG, kcal: macros.fatG * 9, color: "#f43f5e" },
+    { label: t.proteinLabel, grams: macros.proteinG, kcal: macros.proteinG * 4, color: "#38bdf8" },
+    { label: t.carbLabel, grams: macros.carbG, kcal: macros.carbG * 4, color: "#f59e0b" },
+    { label: t.fatLabel, grams: macros.fatG, kcal: macros.fatG * 9, color: "#f43f5e" },
   ];
   const macroKcalTotal = macroShares.reduce((s, m) => s + m.kcal, 0) || 1;
 
@@ -274,20 +277,20 @@ export async function GET(req: NextRequest) {
                 }}
               >
                 <span style={{ fontSize: 66, fontWeight: 700, color: "white", textAlign: "center", textShadow }}>
-                  {Math.round(macros.calories).toLocaleString("th-TH")}
+                  {Math.round(macros.calories).toLocaleString(dateLocale)}
                 </span>
                 <span style={{ fontSize: 26, color: "#a3a3a3", textShadow }}>kcal</span>
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <span style={{ fontSize: 32, color: "#d4d4d4", textShadow }}>
-                {targetCalories ? `จากเป้า ${targetCalories.toLocaleString("th-TH")} kcal` : "แคลอรี่วันนี้"}
+                {targetCalories ? t.fromTargetKcal(targetCalories.toLocaleString(dateLocale)) : t.todayCaloriesLabel}
               </span>
               {targetCalories && (
                 <span style={{ fontSize: 27, color: "#8f8f8a", textShadow }}>
                   {macros.calories <= targetCalories
-                    ? `เหลืออีก ${Math.round(targetCalories - macros.calories).toLocaleString("th-TH")} kcal`
-                    : `เกินเป้า ${Math.round(macros.calories - targetCalories).toLocaleString("th-TH")} kcal`}
+                    ? t.remainingKcal(Math.round(targetCalories - macros.calories).toLocaleString(dateLocale))
+                    : t.overTargetKcal(Math.round(macros.calories - targetCalories).toLocaleString(dateLocale))}
                 </span>
               )}
             </div>
@@ -299,7 +302,7 @@ export async function GET(req: NextRequest) {
       show: true,
       node: (
         <div key="macro" style={cardStyle}>
-          <span style={{ ...titleStyle, textShadow }}>แมโคร</span>
+          <span style={{ ...titleStyle, textShadow }}>{t.macroTitle}</span>
           <div style={{ display: "flex", height: 28, borderRadius: 999, overflow: "hidden", marginTop: 22 }}>
             {macroShares.map((m) => (
               <div key={m.label} style={{ display: "flex", width: `${(m.kcal / macroKcalTotal) * 100}%`, background: m.color }} />
@@ -310,7 +313,7 @@ export async function GET(req: NextRequest) {
               <div key={m.label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ display: "flex", width: 18, height: 18, borderRadius: 999, background: m.color }} />
                 <span style={{ fontSize: 27, color: "#b5b5b0", textShadow }}>{m.label}</span>
-                <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>{Math.round(m.grams)} ก.</span>
+                <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>{t.gramsValue(Math.round(m.grams))}</span>
               </div>
             ))}
           </div>
@@ -326,9 +329,11 @@ export async function GET(req: NextRequest) {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: 42, fontWeight: 700, color: "white", textShadow }}>
-              {`${(waterMl / 1000).toFixed(1)} ลิตร` + (targetWaterMl ? ` / ${(targetWaterMl / 1000).toFixed(1)} ลิตร` : "")}
+              {targetWaterMl
+                ? t.litersOfTarget((waterMl / 1000).toFixed(1), (targetWaterMl / 1000).toFixed(1))
+                : t.litersValue((waterMl / 1000).toFixed(1))}
             </span>
-            <span style={{ fontSize: 26, color: "#9c9c97", textShadow }}>น้ำดื่มวันนี้</span>
+            <span style={{ fontSize: 26, color: "#9c9c97", textShadow }}>{t.todayWaterLabel}</span>
           </div>
         </div>
       ),
@@ -338,7 +343,7 @@ export async function GET(req: NextRequest) {
       node: (
         <div key="exercise" style={cardStyle}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ ...titleStyle, textShadow }}>ออกกำลังกาย</span>
+            <span style={{ ...titleStyle, textShadow }}>{t.exerciseTitle}</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 22, marginTop: 22 }}>
             {activities.slice(0, 4).map((a, i) => (
@@ -347,11 +352,11 @@ export async function GET(req: NextRequest) {
                   <RunIcon />
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>{activityTypeLabel(a.type)}</span>
+                  <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>{activityTypeLabel(a.type, lang)}</span>
                   <span style={{ fontSize: 25, color: "#9c9c97", textShadow }}>
                     {[
-                      a.distanceMeters ? formatDistanceKm(a.distanceMeters, user.unitSystem) : null,
-                      formatDuration(a.durationSec),
+                      a.distanceMeters ? formatDistanceKm(a.distanceMeters, user.unitSystem, lang) : null,
+                      formatDuration(a.durationSec, lang),
                       a.calories ? `${Math.round(a.calories)} kcal` : null,
                     ]
                       .filter(Boolean)
@@ -368,13 +373,13 @@ export async function GET(req: NextRequest) {
       show: needGoal,
       node: (
         <div key="goal" style={cardStyle}>
-          <span style={{ ...titleStyle, textShadow }}>เป้าหมายระยะทางเดือนนี้</span>
+          <span style={{ ...titleStyle, textShadow }}>{t.monthlyGoalTitle}</span>
           <div style={{ display: "flex", height: 24, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden", marginTop: 22 }}>
             <div style={{ display: "flex", width: `${goalPct}%`, background: "linear-gradient(90deg, #fc4c02, #ff8a3d)" }} />
           </div>
           <div style={{ display: "flex", marginTop: 18, alignItems: "baseline", gap: 8 }}>
-            <span style={{ fontSize: 34, fontWeight: 700, color: "white", textShadow }}>{formatDistanceKm(monthDistanceM, user.unitSystem)}</span>
-            <span style={{ fontSize: 24, color: "#9c9c97", textShadow }}>/ {formatDistanceKm((user.monthlyGoalKm ?? 0) * 1000, user.unitSystem)}</span>
+            <span style={{ fontSize: 34, fontWeight: 700, color: "white", textShadow }}>{formatDistanceKm(monthDistanceM, user.unitSystem, lang)}</span>
+            <span style={{ fontSize: 24, color: "#9c9c97", textShadow }}>/ {formatDistanceKm((user.monthlyGoalKm ?? 0) * 1000, user.unitSystem, lang)}</span>
           </div>
         </div>
       ),
@@ -383,7 +388,7 @@ export async function GET(req: NextRequest) {
       show: needHeatmap,
       node: (
         <div key="heatmap" style={cardStyle}>
-          <span style={{ ...titleStyle, textShadow }}>ความสม่ำเสมอ 7 วันล่าสุด</span>
+          <span style={{ ...titleStyle, textShadow }}>{t.consistencyTitle}</span>
           <div style={{ display: "flex", gap: 14, marginTop: 24 }}>
             {weekDots.map((logged, i) => (
               <div
@@ -409,8 +414,8 @@ export async function GET(req: NextRequest) {
             <FlameIcon />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 42, fontWeight: 700, color: "white", textShadow }}>{streak} วันติดต่อกัน</span>
-            <span style={{ fontSize: 26, color: "#9c9c97", textShadow }}>สตรีคบันทึกอาหาร</span>
+            <span style={{ fontSize: 42, fontWeight: 700, color: "white", textShadow }}>{t.streakDays(streak ?? 0)}</span>
+            <span style={{ fontSize: 26, color: "#9c9c97", textShadow }}>{t.foodStreakLabel}</span>
           </div>
         </div>
       ),
@@ -424,12 +429,12 @@ export async function GET(req: NextRequest) {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: 42, fontWeight: 700, color: "white", textShadow }}>
-              {latestWeight ? `${latestWeight.weightKg.toFixed(1)} กก.` : "—"}
+              {latestWeight ? t.kgValue(latestWeight.weightKg.toFixed(1)) : t.noDataDash}
             </span>
             <span style={{ fontSize: 26, color: "#9c9c97", textShadow }}>
               {weightDelta !== null
-                ? `${weightDelta > 0 ? "+" : ""}${weightDelta.toFixed(1)} กก. จากครั้งก่อน`
-                : "น้ำหนักล่าสุด"}
+                ? t.weightDeltaFromPrev(t.kgValue(`${weightDelta > 0 ? "+" : ""}${weightDelta.toFixed(1)}`))
+                : t.latestWeightLabel}
             </span>
           </div>
         </div>
@@ -474,7 +479,7 @@ export async function GET(req: NextRequest) {
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 38, fontWeight: 700, color: "white", textShadow }}>สวัสดี, {user.name ?? "นักวิ่ง"}</span>
+            <span style={{ fontSize: 38, fontWeight: 700, color: "white", textShadow }}>{t.greeting(user.name ?? t.defaultName)}</span>
             <span style={{ fontSize: 22, color: "#c9a68f", textShadow }}>MooPaTa · {dateLabel}</span>
           </div>
         </div>
@@ -493,7 +498,7 @@ export async function GET(req: NextRequest) {
             textShadow,
           }}
         >
-          สรุปผลประจำวัน
+          {t.dailySummaryBadge}
         </div>
 
         <div

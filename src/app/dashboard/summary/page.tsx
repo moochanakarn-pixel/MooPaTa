@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUserId } from "@/lib/session";
+import { resolveLocale } from "@/lib/locale";
 import { SummaryConfigurator } from "./summary-configurator";
 
 export default async function SummaryPage() {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
+  const locale = await resolveLocale();
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
@@ -19,7 +21,7 @@ export default async function SummaryPage() {
       <p className="mb-8 text-sm text-neutral-500">
         สร้างภาพสรุปแคลอรี่ น้ำดื่ม และการออกกำลังกายของวันที่เลือก เอาไว้โพสต์สตอรี่ — เลือกได้เองว่าจะโชว์ข้อมูลไหนบ้างและเรียงลำดับยังไง
       </p>
-      <SummaryConfigurator />
+      <SummaryConfigurator defaultLang={locale} />
     </main>
   );
 }

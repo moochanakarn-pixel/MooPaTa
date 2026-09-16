@@ -7,6 +7,7 @@ import {
   formatSignedDuration,
   type UnitSystem,
 } from "@/lib/format";
+import { QuickDownloadSheet } from "./quick-download-sheet";
 
 export interface PeriodTotals {
   count: number;
@@ -54,6 +55,7 @@ export function PeriodComparison({
   locale: string;
 }) {
   const t = useTranslations("dashboard.periodComparison");
+  const tc = useTranslations("common");
   const numberLocale = locale === "en" ? "en-US" : "th-TH";
   const countDiff = thisMonth.count - lastMonth.count;
   const distanceDiff = thisMonth.distanceMeters - lastMonth.distanceMeters;
@@ -63,13 +65,17 @@ export function PeriodComparison({
     <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-medium">{t("title")}</h2>
-        <a
-          href="/api/share/period?range=month"
-          download
-          className="text-xs text-neutral-500 transition hover:text-neutral-300"
-        >
-          {t("shareThisMonth")}
-        </a>
+        <QuickDownloadSheet
+          triggerLabel={t("downloadThisMonth")}
+          triggerClassName="text-xs text-neutral-500 transition hover:text-neutral-300"
+          sheetTitle={t("downloadThisMonth")}
+          languageLabel={tc("language")}
+          downloadLabel={tc("downloadImage")}
+          previewLoadingLabel={tc("loadingPreview")}
+          previewAlt={t("downloadThisMonth")}
+          defaultLang={locale === "en" ? "en" : "th"}
+          buildHref={(lang) => `/api/share/period?range=month&lang=${lang}`}
+        />
       </div>
       <div className="grid grid-cols-3 gap-3">
         <Metric

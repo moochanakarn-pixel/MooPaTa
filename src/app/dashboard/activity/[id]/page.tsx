@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { activityColor } from "@/lib/activity-colors";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
+import { resolveLocale } from "@/lib/locale";
 import {
   activitySpeedValue,
   activityTypeLabel,
@@ -37,12 +38,13 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
-  const [user, activity] = await Promise.all([
+  const [user, activity, locale] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.activity.findUnique({
       where: { id: params.id },
       include: { exercises: { orderBy: { order: "asc" }, include: { sets: { orderBy: { order: "asc" } } } } },
     }),
+    resolveLocale(),
   ]);
   if (!activity || activity.userId !== userId) notFound();
 
@@ -112,7 +114,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
             </Link>
           )}
           <DeleteActivityButton activityId={activity.id} />
-          <ShareActivityButton activityId={activity.id} />
+          <ShareActivityButton activityId={activity.id} defaultLang={locale} />
         </div>
       </div>
 

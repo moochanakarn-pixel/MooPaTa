@@ -1,6 +1,9 @@
 {
   "common": {
-    "backToOverview": "Back to overview"
+    "backToOverview": "Back to overview",
+    "language": "Language",
+    "downloadImage": "Download image (PNG)",
+    "loadingPreview": "Loading preview..."
   },
   "bottomNav": {
     "addData": "Add data",
@@ -94,12 +97,12 @@
       "title": "Weekly distance",
       "last12Weeks": "Last 12 weeks ·",
       "avgKm": "avg {km} km",
-      "shareThisWeek": "Share this week's summary",
+      "downloadThisWeek": "Download this week's summary",
       "weekLabel": "Week {label}"
     },
     "periodComparison": {
       "title": "This month vs. last month",
-      "shareThisMonth": "Share this month's summary",
+      "downloadThisMonth": "Download this month's summary",
       "activities": "Activities",
       "distance": "Distance",
       "duration": "Time",
@@ -395,7 +398,7 @@
       "fillProfile": "Go fill in your profile",
       "editProfile": "Edit profile",
       "whereThisComesFrom": "Where this number comes from",
-      "shareThisMonth": "Share this month's summary",
+      "downloadThisMonth": "Download this month's summary",
       "bmiTitle": "BMI (Body Mass Index)",
       "bmiCategory": {
         "UNDER": "Underweight",

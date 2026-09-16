@@ -1,6 +1,9 @@
 {
   "common": {
-    "backToOverview": "กลับไปหน้ารวม"
+    "backToOverview": "กลับไปหน้ารวม",
+    "language": "ภาษา",
+    "downloadImage": "ดาวน์โหลดรูปภาพ (PNG)",
+    "loadingPreview": "กำลังโหลดตัวอย่าง..."
   },
   "bottomNav": {
     "addData": "เพิ่มข้อมูล",
@@ -94,12 +97,12 @@
       "title": "ระยะทางรายสัปดาห์",
       "last12Weeks": "12 สัปดาห์ล่าสุด ·",
       "avgKm": "เฉลี่ย {km} กม.",
-      "shareThisWeek": "แชร์สรุปสัปดาห์นี้",
+      "downloadThisWeek": "ดาวน์โหลดสรุปสัปดาห์นี้",
       "weekLabel": "สัปดาห์ {label}"
     },
     "periodComparison": {
       "title": "เดือนนี้ เทียบกับเดือนที่แล้ว",
-      "shareThisMonth": "แชร์สรุปเดือนนี้",
+      "downloadThisMonth": "ดาวน์โหลดสรุปเดือนนี้",
       "activities": "กิจกรรม",
       "distance": "ระยะทาง",
       "duration": "เวลา",
@@ -395,7 +398,7 @@
       "fillProfile": "ไปกรอกโปรไฟล์",
       "editProfile": "แก้โปรไฟล์",
       "whereThisComesFrom": "ตัวเลขนี้มาจากไหน",
-      "shareThisMonth": "แชร์สรุปเดือนนี้",
+      "downloadThisMonth": "ดาวน์โหลดสรุปเดือนนี้",
       "bmiTitle": "BMI (ดัชนีมวลกาย)",
       "bmiCategory": {
         "UNDER": "น้ำหนักน้อยกว่าเกณฑ์",

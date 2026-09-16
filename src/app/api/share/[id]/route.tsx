@@ -13,6 +13,7 @@ import { buildRoutePath, extractStravaPolyline, routeGeometryToSvgDataUri } from
 import { getSessionUserId } from "@/lib/session";
 import { loadShareFonts } from "@/lib/share-fonts";
 import { loadMascotLogoDataUri } from "@/lib/share-logo";
+import { parseShareLang, shareT } from "@/lib/share-card-i18n";
 
 // Generates a story-ratio (1080x1920) share card PNG for one activity —
 // distance, pace/speed, time, heart rate, and a route sketch — for the user
@@ -56,6 +57,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const cardStyle = searchParams.get("style") === "hero" ? "hero" : "grid";
   const posParam = searchParams.get("pos");
   const pos: Position = (POSITIONS as readonly string[]).includes(posParam ?? "") ? (posParam as Position) : "center";
+  const lang = parseShareLang(searchParams);
+  const t = shareT(lang);
 
   const [user, activity] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
@@ -71,10 +74,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   });
   const badges: string[] = [];
   if (activity.distanceMeters && activity.distanceMeters === bests._max.distanceMeters) {
-    badges.push("ระยะทางไกลที่สุด");
+    badges.push(t.longestDistanceBadge);
   }
   if (activity.avgSpeedMs && activity.avgSpeedMs === bests._max.avgSpeedMs) {
-    badges.push(activity.type === "Run" || activity.type === "Swim" ? "เพซเร็วที่สุด" : "ความเร็วสูงสุด");
+    badges.push(activity.type === "Run" || activity.type === "Swim" ? t.fastestPaceBadge : t.fastestSpeedBadge);
   }
   // Weight-training PRs (src/lib/exercise-stats.ts) don't fit the
   // distance/speed badges above at all, but they're exactly the kind of
@@ -84,7 +87,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const exerciseStats = await getExerciseStats(userId);
     for (const s of exerciseStats) {
       if (s.prActivityId === activity.id && s.prWeightKg !== null) {
-        badges.push(`PR ${s.name} ${s.prWeightKg} กก.`);
+        badges.push(t.prBadge(s.name, s.prWeightKg));
       }
     }
   }
@@ -95,7 +98,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // — but weight training and similar sessions never do, so showing
   // "0.00 กม." there was actively wrong rather than just sparse. Duration is
   // the one number every activity always has, so it's the universal fallback.
-  const distance = activity.distanceMeters ? formatDistanceParts(activity.distanceMeters, unit) : null;
+  const distance = activity.distanceMeters ? formatDistanceParts(activity.distanceMeters, unit, lang) : null;
   let heroValue: string;
   let heroUnit: string;
   if (distance) {
@@ -105,7 +108,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     const h = Math.floor(activity.durationSec / 3600);
     const m = Math.round((activity.durationSec % 3600) / 60);
     heroValue = h > 0 ? `${h}:${String(m).padStart(2, "0")}` : String(m);
-    heroUnit = h > 0 ? "ชม." : "นาที";
+    heroUnit = h > 0 ? t.hoursUnit : t.minutesUnit;
   }
 
   // Everything below the hero number, built as a plain list so a missing
@@ -116,34 +119,34 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // skipped when it's already the hero number above instead of repeating it.
   const statItems: { value: string; label: string }[] = [];
   if (distance) {
-    statItems.push({ value: formatDuration(activity.durationSec), label: "เวลา" });
+    statItems.push({ value: formatDuration(activity.durationSec, lang), label: t.timeLabel });
   }
   if (activity.avgSpeedMs) {
     statItems.push({
-      value: activitySpeedValue(activity.type, activity.avgSpeedMs, unit),
-      label: usesPace ? "เพซเฉลี่ย" : "ความเร็วเฉลี่ย",
+      value: activitySpeedValue(activity.type, activity.avgSpeedMs, unit, lang),
+      label: usesPace ? t.avgPaceLabel : t.avgSpeedLabel,
     });
   }
   if (activity.maxSpeedMs) {
     statItems.push({
-      value: activitySpeedValue(activity.type, activity.maxSpeedMs, unit),
-      label: usesPace ? "เพซสูงสุด" : "ความเร็วสูงสุด",
+      value: activitySpeedValue(activity.type, activity.maxSpeedMs, unit, lang),
+      label: usesPace ? t.maxPaceLabel : t.maxSpeedLabel,
     });
   }
   if (activity.elevationGainM) {
-    statItems.push({ value: formatElevationM(activity.elevationGainM, unit), label: "ไต่ระดับ" });
+    statItems.push({ value: formatElevationM(activity.elevationGainM, unit, lang), label: t.elevationLabel });
   }
   if (activity.avgHeartRate) {
-    statItems.push({ value: `${Math.round(activity.avgHeartRate)} bpm`, label: "หัวใจเฉลี่ย" });
+    statItems.push({ value: `${Math.round(activity.avgHeartRate)} bpm`, label: t.avgHrLabel });
   }
   if (activity.maxHeartRate) {
-    statItems.push({ value: `${Math.round(activity.maxHeartRate)} bpm`, label: "หัวใจสูงสุด" });
+    statItems.push({ value: `${Math.round(activity.maxHeartRate)} bpm`, label: t.maxHrLabel });
   }
   if (activity.avgCadence) {
-    statItems.push({ value: `${Math.round(activity.avgCadence)} ${cadenceUnitLabel(activity.type)}`, label: "เคเดนซ์เฉลี่ย" });
+    statItems.push({ value: `${Math.round(activity.avgCadence)} ${cadenceUnitLabel(activity.type)}`, label: t.avgCadenceLabel });
   }
   if (activity.calories) {
-    statItems.push({ value: `${Math.round(activity.calories)} kcal`, label: "แคลอรี่" });
+    statItems.push({ value: `${Math.round(activity.calories)} kcal`, label: t.caloriesLabel });
   }
   const statRows: { value: string; label: string }[][] = [];
   for (let i = 0; i < statItems.length; i += 3) statRows.push(statItems.slice(i, i + 3));
@@ -165,7 +168,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     console.error("Share card: could not draw route", err);
   }
 
-  const dateLabel = activity.startedAt.toLocaleDateString("th-TH", {
+  const dateLabel = activity.startedAt.toLocaleDateString(lang === "en" ? "en-US" : "th-TH", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -255,7 +258,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                 textShadow,
               }}
             >
-              {activityTypeLabel(activity.type)}
+              {activityTypeLabel(activity.type, lang)}
             </div>
             {badges.map((b) => (
               <div

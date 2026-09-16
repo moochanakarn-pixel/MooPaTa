@@ -5,6 +5,7 @@ import { activityTypeLabel, formatDistanceParts, formatDuration, formatElevation
 import { getSessionUserId } from "@/lib/session";
 import { loadShareFonts } from "@/lib/share-fonts";
 import { cardStyle } from "@/lib/share-card-styles";
+import { parseShareLang, shareT } from "@/lib/share-card-i18n";
 
 // Matches src/lib/activity-colors.ts, but as raw hex — satori (the engine
 // behind ImageResponse) only understands inline style values, not
@@ -38,7 +39,10 @@ export async function GET(req: NextRequest) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const range = req.nextUrl.searchParams.get("range") === "week" ? "week" : "month";
+  const searchParams = req.nextUrl.searchParams;
+  const range = searchParams.get("range") === "week" ? "week" : "month";
+  const lang = parseShareLang(searchParams);
+  const t = shareT(lang);
 
   const user = await db.user.findUnique({ where: { id: userId } });
   const unit = user?.unitSystem ?? "METRIC";
@@ -52,10 +56,10 @@ export async function GET(req: NextRequest) {
     periodStart = new Date(now);
     periodStart.setDate(periodStart.getDate() + diffToMonday);
     periodStart.setHours(0, 0, 0, 0);
-    periodLabel = "สรุปสัปดาห์นี้";
+    periodLabel = t.weekSummaryBadge;
   } else {
     periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    periodLabel = "สรุปเดือนนี้";
+    periodLabel = t.monthSummaryBadge;
   }
 
   const [agg, byType, longest] = await Promise.all([
@@ -79,8 +83,9 @@ export async function GET(req: NextRequest) {
     }),
   ]);
 
-  const distance = formatDistanceParts(agg._sum.distanceMeters ?? 0, unit);
-  const dateRangeLabel = `${periodStart.toLocaleDateString("th-TH", { day: "numeric", month: "short" })} – ${now.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" })}`;
+  const distance = formatDistanceParts(agg._sum.distanceMeters ?? 0, unit, lang);
+  const dateLocale = lang === "en" ? "en-US" : "th-TH";
+  const dateRangeLabel = `${periodStart.toLocaleDateString(dateLocale, { day: "numeric", month: "short" })} – ${now.toLocaleDateString(dateLocale, { day: "numeric", month: "short", year: "numeric" })}`;
 
   const totalDistanceM = agg._sum.distanceMeters ?? 0;
   const totalDurationSec = agg._sum.durationSec ?? 0;
@@ -166,11 +171,11 @@ export async function GET(req: NextRequest) {
                     space there silently disappears. */}
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                   <span style={{ fontSize: 26, color: "#d4d4d4" }}>
-                    ไกลที่สุด: {longest.name ?? activityTypeLabel(longest.type)}
+                    {t.longestPrefix(longest.name ?? activityTypeLabel(longest.type, lang))}
                   </span>
                   <span style={{ fontSize: 26, fontWeight: 700, color: "white" }}>
-                    {formatDistanceParts(longest.distanceMeters, unit).value}{" "}
-                    {formatDistanceParts(longest.distanceMeters, unit).unitLabel}
+                    {formatDistanceParts(longest.distanceMeters, unit, lang).value}{" "}
+                    {formatDistanceParts(longest.distanceMeters, unit, lang).unitLabel}
                   </span>
                 </div>
               </div>
@@ -182,25 +187,25 @@ export async function GET(req: NextRequest) {
               <div style={{ display: "flex", gap: 48 }}>
                 <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
                   <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>{agg._count._all}</span>
-                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>กิจกรรม</span>
+                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>{t.activitiesLabel}</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
                   <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>
-                    {formatDuration(agg._sum.durationSec ?? 0)}
+                    {formatDuration(agg._sum.durationSec ?? 0, lang)}
                   </span>
-                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>เวลารวม</span>
+                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>{t.totalTimeLabel}</span>
                 </div>
               </div>
               <div style={{ display: "flex", gap: 48 }}>
                 <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
                   <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>
-                    {formatElevationM(agg._sum.elevationGainM, unit)}
+                    {formatElevationM(agg._sum.elevationGainM, unit, lang)}
                   </span>
-                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>ไต่ระดับรวม</span>
+                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>{t.totalElevationLabel}</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
-                  <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>{formatSpeedKmh(avgSpeedMs, unit)}</span>
-                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>ความเร็วเฉลี่ย</span>
+                  <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>{formatSpeedKmh(avgSpeedMs, unit, lang)}</span>
+                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>{t.avgSpeedLabel}</span>
                 </div>
               </div>
             </div>
@@ -210,27 +215,27 @@ export async function GET(req: NextRequest) {
             <div style={cardStyle}>
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div style={{ display: "flex", height: 20, width: 520, borderRadius: 999, overflow: "hidden" }}>
-                  {byType.map((t) => (
+                  {byType.map((bt) => (
                     <div
-                      key={t.type}
+                      key={bt.type}
                       style={{
                         display: "flex",
-                        width: `${((t._sum.distanceMeters ?? 0) / (totalDistanceM || 1)) * 100}%`,
-                        background: typeColor(t.type),
+                        width: `${((bt._sum.distanceMeters ?? 0) / (totalDistanceM || 1)) * 100}%`,
+                        background: typeColor(bt.type),
                       }}
                     />
                   ))}
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {byType.map((t) => (
-                    <div key={t.type} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: 520 }}>
+                  {byType.map((bt) => (
+                    <div key={bt.type} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: 520 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div style={{ display: "flex", width: 16, height: 16, borderRadius: 999, background: typeColor(t.type) }} />
-                        <span style={{ fontSize: 26, color: "#d4d4d4" }}>{activityTypeLabel(t.type)}</span>
+                        <div style={{ display: "flex", width: 16, height: 16, borderRadius: 999, background: typeColor(bt.type) }} />
+                        <span style={{ fontSize: 26, color: "#d4d4d4" }}>{activityTypeLabel(bt.type, lang)}</span>
                       </div>
                       <span style={{ fontSize: 26, fontWeight: 700, color: "white" }}>
-                        {formatDistanceParts(t._sum.distanceMeters ?? 0, unit).value}{" "}
-                        {formatDistanceParts(t._sum.distanceMeters ?? 0, unit).unitLabel} · {t._count._all} ครั้ง
+                        {formatDistanceParts(bt._sum.distanceMeters ?? 0, unit, lang).value}{" "}
+                        {formatDistanceParts(bt._sum.distanceMeters ?? 0, unit, lang).unitLabel} · {t.timesSuffix(bt._count._all)}
                       </span>
                     </div>
                   ))}

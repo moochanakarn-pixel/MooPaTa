@@ -26,6 +26,7 @@ import { ProgressPhotosCard, type ProgressPhotoAngleState } from "./progress-pho
 import { LoggingStreakCard, type StreakWeekDay } from "./logging-streak-card";
 import { BodyCompositionCard, type BodyCompositionEntry } from "./body-composition-card";
 import { PHOTO_ANGLES } from "@/lib/progress-photo-types";
+import { QuickDownloadSheet } from "../quick-download-sheet";
 
 const TREND_DAYS = 14;
 const STREAK_DAYS_BACK = 60;
@@ -121,7 +122,11 @@ function MacroBar({ proteinG, carbG, fatG }: { proteinG: number; carbG: number; 
 export default async function NutritionPage({ searchParams }: { searchParams: { quick?: string } }) {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
-  const [t, locale] = await Promise.all([getTranslations("nutrition.page"), getLocale()]);
+  const [t, tc, locale] = await Promise.all([
+    getTranslations("nutrition.page"),
+    getTranslations("common"),
+    getLocale(),
+  ]);
   const numberLocale = locale === "en" ? "en-US" : "th-TH";
 
   const user = await db.user.findUnique({ where: { id: userId } });
@@ -340,9 +345,17 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
           {t("whereThisComesFrom")}
         </Link>{" "}
         ·{" "}
-        <a href="/api/share/nutrition" download className="text-neutral-400 hover:text-neutral-200 hover:underline">
-          {t("shareThisMonth")}
-        </a>
+        <QuickDownloadSheet
+          triggerLabel={t("downloadThisMonth")}
+          triggerClassName="text-neutral-400 hover:text-neutral-200 hover:underline"
+          sheetTitle={t("downloadThisMonth")}
+          languageLabel={tc("language")}
+          downloadLabel={tc("downloadImage")}
+          previewLoadingLabel={tc("loadingPreview")}
+          previewAlt={t("downloadThisMonth")}
+          defaultLang={locale === "en" ? "en" : "th"}
+          buildHref={(lang) => `/api/share/nutrition?lang=${lang}`}
+        />
       </p>
 
       <LoggingStreakCard

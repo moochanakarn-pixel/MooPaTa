@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { QuickDownloadSheet } from "./quick-download-sheet";
 
 export interface WeekBucket {
   label: string; // short date, e.g. "18 ส.ค."
@@ -13,6 +14,8 @@ const BAR_GAP = 6;
 
 export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
   const t = useTranslations("dashboard.trendChart");
+  const tc = useTranslations("common");
+  const locale = useLocale();
   const [hover, setHover] = useState<number | null>(null);
   const gradientId = useId();
   const max = Math.max(...weeks.map((w) => w.km), 1);
@@ -27,13 +30,17 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
           <p className="text-xs text-neutral-500">
             {t("last12Weeks")} <span className="text-neutral-400">{t("avgKm", { km: avg.toFixed(1) })}</span>
           </p>
-          <a
-            href="/api/share/period?range=week"
-            download
-            className="text-xs text-neutral-500 transition hover:text-neutral-300"
-          >
-            {t("shareThisWeek")}
-          </a>
+          <QuickDownloadSheet
+            triggerLabel={t("downloadThisWeek")}
+            triggerClassName="text-xs text-neutral-500 transition hover:text-neutral-300"
+            sheetTitle={t("downloadThisWeek")}
+            languageLabel={tc("language")}
+            downloadLabel={tc("downloadImage")}
+            previewLoadingLabel={tc("loadingPreview")}
+            previewAlt={t("downloadThisWeek")}
+            defaultLang={locale === "en" ? "en" : "th"}
+            buildHref={(lang) => `/api/share/period?range=week&lang=${lang}`}
+          />
         </div>
       </div>
 

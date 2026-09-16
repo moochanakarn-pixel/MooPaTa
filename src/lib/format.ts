@@ -1,39 +1,53 @@
-export function formatDuration(sec: number): string {
+// `lang` is only used by the share-card image routes (src/app/api/share/*),
+// which render bilingual PNGs on demand and are the one place in the app
+// where the same request can ask for either language regardless of the
+// viewer's own UI locale (src/lib/locale.ts) — every other call site in the
+// app (records, compare, activity detail, month-highlights, etc.) doesn't
+// pass it and keeps getting Thai, unaffected by this addition.
+export type FormatLang = "th" | "en";
+
+export function formatDuration(sec: number, lang: FormatLang = "th"): string {
   const h = Math.floor(sec / 3600);
   const m = Math.round((sec % 3600) / 60);
+  if (lang === "en") return h > 0 ? `${h}h ${m}m` : `${m}m`;
   return h > 0 ? `${h} ชม. ${m} น.` : `${m} นาที`;
 }
 
 export type UnitSystem = "METRIC" | "IMPERIAL";
 const METERS_PER_MILE = 1609.344;
 
-export function formatDistanceKm(meters?: number | null, unit: UnitSystem = "METRIC"): string {
+export function formatDistanceKm(meters?: number | null, unit: UnitSystem = "METRIC", lang: FormatLang = "th"): string {
   if (meters === null || meters === undefined) return "-";
-  if (unit === "IMPERIAL") return `${(meters / METERS_PER_MILE).toFixed(2)} ไมล์`;
-  return `${(meters / 1000).toFixed(2)} กม.`;
+  if (unit === "IMPERIAL") return `${(meters / METERS_PER_MILE).toFixed(2)} ${lang === "en" ? "mi" : "ไมล์"}`;
+  return `${(meters / 1000).toFixed(2)} ${lang === "en" ? "km" : "กม."}`;
 }
 
 // Split value/unit, for hero-sized stat displays that render the number and
 // unit at different font sizes (e.g. the share card).
-export function formatDistanceParts(meters: number | null, unit: UnitSystem = "METRIC"): { value: string; unitLabel: string } {
+export function formatDistanceParts(
+  meters: number | null,
+  unit: UnitSystem = "METRIC",
+  lang: FormatLang = "th"
+): { value: string; unitLabel: string } {
   const value = unit === "IMPERIAL" ? (meters ?? 0) / METERS_PER_MILE : (meters ?? 0) / 1000;
-  return { value: value.toFixed(2), unitLabel: unit === "IMPERIAL" ? "ไมล์" : "กม." };
+  const unitLabel = unit === "IMPERIAL" ? (lang === "en" ? "mi" : "ไมล์") : lang === "en" ? "km" : "กม.";
+  return { value: value.toFixed(2), unitLabel };
 }
 
-export function formatSpeedKmh(metersPerSec?: number | null, unit: UnitSystem = "METRIC"): string {
+export function formatSpeedKmh(metersPerSec?: number | null, unit: UnitSystem = "METRIC", lang: FormatLang = "th"): string {
   if (metersPerSec === null || metersPerSec === undefined) return "-";
-  if (unit === "IMPERIAL") return `${(metersPerSec * 2.236936).toFixed(1)} ไมล์/ชม.`;
-  return `${(metersPerSec * 3.6).toFixed(1)} กม./ชม.`;
+  if (unit === "IMPERIAL") return `${(metersPerSec * 2.236936).toFixed(1)} ${lang === "en" ? "mph" : "ไมล์/ชม."}`;
+  return `${(metersPerSec * 3.6).toFixed(1)} ${lang === "en" ? "km/h" : "กม./ชม."}`;
 }
 
 // Running pace, expressed as minutes:seconds per km (or mile for imperial users).
-export function formatPace(metersPerSec?: number | null, unit: UnitSystem = "METRIC"): string {
+export function formatPace(metersPerSec?: number | null, unit: UnitSystem = "METRIC", lang: FormatLang = "th"): string {
   if (!metersPerSec) return "-"; // pace is undefined (division by zero) at 0 speed, not just missing
   const perUnitMeters = unit === "IMPERIAL" ? METERS_PER_MILE : 1000;
   const secPerUnit = perUnitMeters / metersPerSec;
   const m = Math.floor(secPerUnit / 60);
   const s = Math.round(secPerUnit % 60);
-  return `${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? "ไมล์" : "กม."}`;
+  return `${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? (lang === "en" ? "mi" : "ไมล์") : lang === "en" ? "km" : "กม."}`;
 }
 
 const YARDS_PER_100 = 91.44; // 100 yd, the customary imperial-pool swim distance
@@ -42,13 +56,13 @@ const YARDS_PER_100 = 91.44; // 100 yd, the customary imperial-pool swim distanc
 // imperial units) — the convention swimmers actually use, distinct from
 // formatPace's per-km/mile running convention. Nobody describes swim effort
 // as "minutes per kilometer."
-export function formatSwimPace(metersPerSec?: number | null, unit: UnitSystem = "METRIC"): string {
+export function formatSwimPace(metersPerSec?: number | null, unit: UnitSystem = "METRIC", lang: FormatLang = "th"): string {
   if (!metersPerSec) return "-";
   const perUnitMeters = unit === "IMPERIAL" ? YARDS_PER_100 : 100;
   const secPerUnit = perUnitMeters / metersPerSec;
   const m = Math.floor(secPerUnit / 60);
   const s = Math.round(secPerUnit % 60);
-  return `${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? "100 หลา" : "100 ม."}`;
+  return `${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? (lang === "en" ? "100yd" : "100 หลา") : lang === "en" ? "100m" : "100 ม."}`;
 }
 
 // The one place that decides which "how fast" convention an activity type
@@ -58,10 +72,15 @@ export function formatSwimPace(metersPerSec?: number | null, unit: UnitSystem = 
 // so every page picks the same convention the same way, instead of each
 // call site re-deriving its own isRun-only check that quietly showed
 // swimming in the cycling convention (km/h) — swimmers don't think in km/h.
-export function activitySpeedValue(type: string, metersPerSec?: number | null, unit: UnitSystem = "METRIC"): string {
-  if (type === "Run") return formatPace(metersPerSec, unit);
-  if (type === "Swim") return formatSwimPace(metersPerSec, unit);
-  return formatSpeedKmh(metersPerSec, unit);
+export function activitySpeedValue(
+  type: string,
+  metersPerSec?: number | null,
+  unit: UnitSystem = "METRIC",
+  lang: FormatLang = "th"
+): string {
+  if (type === "Run") return formatPace(metersPerSec, unit, lang);
+  if (type === "Swim") return formatSwimPace(metersPerSec, unit, lang);
+  return formatSpeedKmh(metersPerSec, unit, lang);
 }
 
 // Cadence's unit depends on the activity the same way pace/speed does
@@ -76,10 +95,10 @@ export function cadenceUnitLabel(type: string): string {
   return type === "Ride" ? "rpm" : "spm";
 }
 
-export function formatElevationM(meters?: number | null, unit: UnitSystem = "METRIC"): string {
+export function formatElevationM(meters?: number | null, unit: UnitSystem = "METRIC", lang: FormatLang = "th"): string {
   if (meters === null || meters === undefined) return "-";
-  if (unit === "IMPERIAL") return `${Math.round(meters * 3.28084)} ฟุต`;
-  return `${Math.round(meters)} ม.`;
+  if (unit === "IMPERIAL") return `${Math.round(meters * 3.28084)} ${lang === "en" ? "ft" : "ฟุต"}`;
+  return `${Math.round(meters)} ${lang === "en" ? "m" : "ม."}`;
 }
 
 // --- Signed deltas, for comparing one activity against another ---
@@ -141,8 +160,8 @@ export function formatSignedCount(diff: number): string {
   return `${sign}${Math.abs(diff)}`;
 }
 
-export function formatActivityDate(date: Date): string {
-  return new Date(date).toLocaleDateString("th-TH", {
+export function formatActivityDate(date: Date, lang: FormatLang = "th"): string {
+  return new Date(date).toLocaleDateString(lang === "en" ? "en-US" : "th-TH", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -163,6 +182,24 @@ const ACTIVITY_LABELS: Record<string, string> = {
   Badminton: "แบดมินตัน",
 };
 
-export function activityTypeLabel(type: string): string {
+// English map exists only for the share-card image routes (see FormatLang's
+// comment above) — every other page that shows an activity type stays Thai
+// via the default, same as the rest of this file's lang param.
+const ACTIVITY_LABELS_EN: Record<string, string> = {
+  Run: "Run",
+  Ride: "Ride",
+  VirtualRide: "Virtual Ride",
+  Walk: "Walk",
+  Hike: "Hike",
+  Swim: "Swim",
+  WeightTraining: "Weight Training",
+  Workout: "Workout",
+  Football: "Football",
+  Soccer: "Football",
+  Badminton: "Badminton",
+};
+
+export function activityTypeLabel(type: string, lang: FormatLang = "th"): string {
+  if (lang === "en") return ACTIVITY_LABELS_EN[type] ?? type;
   return ACTIVITY_LABELS[type] ?? type;
 }

@@ -32,7 +32,13 @@ function yesterdayKey(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function SummaryConfigurator() {
+const LANG_OPTIONS = [
+  { value: "th", label: "ไทย" },
+  { value: "en", label: "English" },
+] as const;
+type Lang = (typeof LANG_OPTIONS)[number]["value"];
+
+export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang }) {
   const [dateMode, setDateMode] = useState<"today" | "yesterday" | "custom">("today");
   const [customDate, setCustomDate] = useState(todayKey());
   const [fields, setFields] = useState<FieldOption[]>(DEFAULT_FIELDS);
@@ -42,15 +48,16 @@ export function SummaryConfigurator() {
   // can be dropped onto an IG/Line story photo too, instead of always
   // carrying its own backdrop.
   const [transparent, setTransparent] = useState(false);
+  const [lang, setLang] = useState<Lang>(defaultLang);
 
   const date = dateMode === "today" ? todayKey() : dateMode === "yesterday" ? yesterdayKey() : customDate;
 
   const href = useMemo(() => {
     const enabled = fields.filter((f) => f.enabled).map((f) => f.id);
-    const params = new URLSearchParams({ date, fields: enabled.join(",") });
+    const params = new URLSearchParams({ date, fields: enabled.join(","), lang });
     if (transparent) params.set("bg", "transparent");
     return `/api/share/daily-summary?${params.toString()}`;
-  }, [date, fields, transparent]);
+  }, [date, fields, transparent, lang]);
 
   // Re-rendering the card (a real Satori/next-og image generation, not
   // free) on every single toggle click or drag-over event would mean
@@ -121,6 +128,23 @@ export function SummaryConfigurator() {
             className={`${INPUT_CLASS} mt-3`}
           />
         )}
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
+        <h2 className="mb-3 font-medium">ภาษา</h2>
+        <div className="flex gap-2 rounded-xl bg-neutral-900 p-1">
+          {LANG_OPTIONS.map((o) => (
+            <button
+              key={o.value}
+              onClick={() => setLang(o.value)}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                lang === o.value ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
