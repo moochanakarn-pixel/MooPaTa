@@ -420,6 +420,7 @@
       "fat": "ไขมัน",
       "gramsValue": "{value} ก.",
       "caloriesToday": "แคลอรี่วันนี้",
+      "calculationDetails": "ดูรายละเอียดการคำนวณ",
       "calculatedFromInbody": "คำนวณจากผลตรวจ InBody ล่าสุด (Katch-McArdle)",
       "baseTarget": "เป้าหมายพื้นฐาน",
       "addedFromActivity": "เพิ่มจากกิจกรรมวันนี้",

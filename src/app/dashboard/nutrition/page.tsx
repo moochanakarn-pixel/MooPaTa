@@ -384,41 +384,52 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
             TDEE <span className="font-medium text-neutral-300">{targets.tdee.toLocaleString(numberLocale)}</span> kcal
           </span>
         </div>
-        {targets.usedBodyComposition && <p className="mt-2 text-center text-[11px] text-violet-400">{t("calculatedFromInbody")}</p>}
+        {/* Collapsed by default — the ring + BMR/TDEE line above already
+            answers "how much can I eat today", so the InBody note, the
+            per-user explanation sentence, and the base/activity/eaten/
+            remaining breakdown are "why is it this number" detail that
+            most visits don't need. <details>/<summary> needs no client JS
+            (this page is a Server Component), same technique as
+            RpeLevelsGuide in log-activity-form.tsx. */}
+        <details className="mt-3 text-center">
+          <summary className="cursor-pointer text-xs text-neutral-500 hover:text-neutral-300">{t("calculationDetails")}</summary>
 
-        {/* explainCalorieTarget() plugs this user's own TDEE/goal/rate into
-            the same formula the knowledge page (/dashboard/knowledge)
-            explains in the abstract — so someone whose goal isn't a deficit
-            (คงน้ำหนัก/เพิ่มน้ำหนัก) sees exactly why their own number is
-            what it is, not just a generic "ลดน้ำหนัก"-flavored explanation. */}
-        <p className="mt-3 text-center text-xs leading-relaxed text-neutral-500">
-          {explainCalorieTarget(profile, baseTargets)}
-        </p>
+          {targets.usedBodyComposition && <p className="mt-2 text-center text-[11px] text-violet-400">{t("calculatedFromInbody")}</p>}
 
-        <div className="mt-5 space-y-2 border-t border-neutral-800 pt-4 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-neutral-500">{t("baseTarget")}</span>
-            <span className="font-medium text-neutral-200">{baseTargets.targetCalories.toLocaleString(numberLocale)} kcal</span>
-          </div>
-          {targets.targetCalories > baseTargets.targetCalories && (
+          {/* explainCalorieTarget() plugs this user's own TDEE/goal/rate into
+              the same formula the knowledge page (/dashboard/knowledge)
+              explains in the abstract — so someone whose goal isn't a deficit
+              (คงน้ำหนัก/เพิ่มน้ำหนัก) sees exactly why their own number is
+              what it is, not just a generic "ลดน้ำหนัก"-flavored explanation. */}
+          <p className="mt-3 text-center text-xs leading-relaxed text-neutral-500">
+            {explainCalorieTarget(profile, baseTargets)}
+          </p>
+
+          <div className="mt-5 space-y-2 border-t border-neutral-800 pt-4 text-left text-xs">
             <div className="flex items-center justify-between">
-              <span className="text-neutral-500">{t("addedFromActivity")}</span>
-              <span className="font-medium text-emerald-400">
-                +{(targets.targetCalories - baseTargets.targetCalories).toLocaleString(numberLocale)} kcal
+              <span className="text-neutral-500">{t("baseTarget")}</span>
+              <span className="font-medium text-neutral-200">{baseTargets.targetCalories.toLocaleString(numberLocale)} kcal</span>
+            </div>
+            {targets.targetCalories > baseTargets.targetCalories && (
+              <div className="flex items-center justify-between">
+                <span className="text-neutral-500">{t("addedFromActivity")}</span>
+                <span className="font-medium text-emerald-400">
+                  +{(targets.targetCalories - baseTargets.targetCalories).toLocaleString(numberLocale)} kcal
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <span className="text-neutral-500">{t("eatenSoFar")}</span>
+              <span className="font-medium text-neutral-200">{Math.round(todayCaloriesEaten).toLocaleString(numberLocale)} kcal</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-neutral-500">{t("remaining")}</span>
+              <span className={`font-semibold ${todayCaloriesEaten > targets.targetCalories ? "text-amber-400" : "text-lime-400"}`}>
+                {Math.round(targets.targetCalories - todayCaloriesEaten).toLocaleString(numberLocale)} kcal
               </span>
             </div>
-          )}
-          <div className="flex items-center justify-between">
-            <span className="text-neutral-500">{t("eatenSoFar")}</span>
-            <span className="font-medium text-neutral-200">{Math.round(todayCaloriesEaten).toLocaleString(numberLocale)} kcal</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-neutral-500">{t("remaining")}</span>
-            <span className={`font-semibold ${todayCaloriesEaten > targets.targetCalories ? "text-amber-400" : "text-lime-400"}`}>
-              {Math.round(targets.targetCalories - todayCaloriesEaten).toLocaleString(numberLocale)} kcal
-            </span>
-          </div>
-        </div>
+        </details>
       </div>
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">

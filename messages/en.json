@@ -420,6 +420,7 @@
       "fat": "Fat",
       "gramsValue": "{value} g",
       "caloriesToday": "Today's calories",
+      "calculationDetails": "View calculation details",
       "calculatedFromInbody": "Calculated from your latest InBody scan (Katch-McArdle)",
       "baseTarget": "Base target",
       "addedFromActivity": "Added from today's activity",
