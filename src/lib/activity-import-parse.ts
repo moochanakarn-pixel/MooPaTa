@@ -18,6 +18,12 @@ export interface ParsedActivity {
   // cadenceUnitLabel's comment in src/lib/format.ts. Read off the source
   // screenshot as-is; nothing here converts between the two.
   avgCadence: number | null;
+  // Best pace/speed for the session, already converted to m/s (same unit
+  // Activity.maxSpeedMs stores) — see parseBestSpeedMs's comment for how
+  // the raw "mm:ss" or plain-number text gets interpreted, which depends
+  // on `type` above (a pace-based type like Run/Swim expects mm:ss, any
+  // other type expects a plain km/h number).
+  maxSpeedMs: number | null;
   // Whole-session RPE (Rate of Perceived Exertion, Borg/talk-test framing,
   // 1-10) — a watch's own summary screen often shows this directly, same
   // zero-formula "just read it off the source" approach as the other
@@ -57,7 +63,7 @@ function firstNumber(line: string): number | null {
 // keywords first, so e.g. "หัวใจสูงสุด" (contains no "เฉลี่ย") never gets
 // misread by a looser matcher placed before it.
 const FIELD_MATCHERS: {
-  key: Exclude<keyof ParsedActivity, "type" | "exercises" | "notes">;
+  key: Exclude<keyof ParsedActivity, "type" | "exercises" | "notes" | "maxSpeedMs">;
   test: (l: string) => boolean;
 }[] = [
   { key: "maxHeartRate", test: (l) => /หัวใจสูงสุด|max.*heart|heart.*max/i.test(l) },
@@ -77,6 +83,36 @@ const FIELD_MATCHERS: {
 // among all these, so it can't go through FIELD_MATCHERS' firstNumber path
 // above. Matched and stripped separately in parseActivityText's loop.
 const NOTES_LINE = /^(?:หมายเหตุ|โน้ต|note)s?\s*[:\-]\s*(.*)$/i;
+
+// "เพซที่ดีที่สุด: ..." / "ความเร็วสูงสุด: ..." / "best pace: ..." /
+// "max speed: ..." — captured as raw text (not through firstNumber like
+// the plain-number fields above) because its shape differs by activity
+// type: "5:30" (mm:ss pace) for Run/Swim, or a plain "25.3" (km/h) for
+// everything else. Held raw until parseBestSpeedMs converts it once
+// `result.type` is known, same reason NOTES_LINE is handled separately.
+const BEST_PACE_LINE = /^(?:เพซที่ดีที่สุด|เพซดีที่สุด|ความเร็วสูงสุด|best\s*pace|max\s*pace|max\s*speed)s?\s*[:\-]\s*(.*)$/i;
+
+// Converts the raw text BEST_PACE_LINE captured into m/s, the unit
+// Activity.maxSpeedMs stores — using `type` to decide which shape to
+// expect, the same per-type dispatch activitySpeedValue() (src/lib/
+// format.ts) uses to *display* this field. A pace-based type (Run/Swim)
+// must be "mm:ss"; anything else must be a plain km/h number — a mismatch
+// between what the type expects and what the AI actually wrote (e.g. a
+// bare number for a run, or "mm:ss" for cycling) is ambiguous enough that
+// guessing wrong would silently store a nonsense figure, so it's skipped
+// (returns null) rather than guessed at.
+function parseBestSpeedMs(raw: string, type: string | null): number | null {
+  const paceUnitMeters = type === "Run" ? 1000 : type === "Swim" ? 100 : null;
+  const mmss = raw.match(/^(\d+):(\d{1,2})/);
+  if (paceUnitMeters !== null) {
+    if (!mmss) return null;
+    const totalSec = Number(mmss[1]) * 60 + Number(mmss[2]);
+    return totalSec > 0 ? paceUnitMeters / totalSec : null;
+  }
+  if (mmss) return null;
+  const kmh = firstNumber(raw);
+  return kmh !== null && kmh > 0 ? kmh / 3.6 : null;
+}
 
 // "HH:MM:SS" duration text (Huawei/Apple Health's own format) -> total
 // minutes, rounded. Requires all three groups — a bare two-group "45:30"
@@ -154,10 +190,14 @@ export function parseActivityText(text: string): ParsedActivity {
     avgHeartRate: null,
     maxHeartRate: null,
     avgCadence: null,
+    maxSpeedMs: null,
     rpe: null,
     notes: null,
     exercises: [],
   };
+  // Held raw until the loop below finishes and result.type is final — see
+  // BEST_PACE_LINE/parseBestSpeedMs's comments for why.
+  let bestPaceRaw: string | null = null;
 
   const lines = text
     .split("\n")
@@ -201,6 +241,15 @@ export function parseActivityText(text: string): ParsedActivity {
       }
     }
 
+    if (bestPaceRaw === null) {
+      const bestPaceMatch = line.match(BEST_PACE_LINE);
+      if (bestPaceMatch) {
+        const value = bestPaceMatch[1].trim();
+        if (value && value !== "-") bestPaceRaw = value;
+        continue;
+      }
+    }
+
     for (const matcher of FIELD_MATCHERS) {
       if (!matcher.test(line)) continue;
       if (result[matcher.key] === null) {
@@ -212,5 +261,6 @@ export function parseActivityText(text: string): ParsedActivity {
   }
 
   result.exercises = Array.from(exercisesByName.values());
+  if (bestPaceRaw !== null) result.maxSpeedMs = parseBestSpeedMs(bestPaceRaw, result.type);
   return result;
 }

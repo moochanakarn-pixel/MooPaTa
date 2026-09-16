@@ -196,4 +196,51 @@ describe("parseActivityText", () => {
     const parsed = parseActivityText("สควอทบาร์เบล | 1 | 10 | --");
     expect(parsed.exercises).toEqual([{ name: "สควอทบาร์เบล", sets: [{ reps: 10, weightKg: null, rpe: null }] }]);
   });
+
+  describe("best pace/speed (maxSpeedMs)", () => {
+    it("converts an mm:ss run pace to m/s (per km)", () => {
+      const parsed = parseActivityText("ประเภท: วิ่ง\nเพซที่ดีที่สุด: 5:30");
+      expect(parsed.maxSpeedMs).toBeCloseTo(1000 / 330, 5); // 5:30 = 330s/km
+    });
+
+    it("converts an mm:ss swim pace to m/s (per 100m, not per km)", () => {
+      const parsed = parseActivityText("ประเภท: ว่ายน้ำ\nเพซที่ดีที่สุด: 1:45");
+      expect(parsed.maxSpeedMs).toBeCloseTo(100 / 105, 5); // 1:45 = 105s/100m
+    });
+
+    it("converts a plain km/h number for a non-pace type", () => {
+      const parsed = parseActivityText("ประเภท: ปั่นจักรยาน\nความเร็วสูงสุด: 32.4");
+      expect(parsed.maxSpeedMs).toBeCloseTo(32.4 / 3.6, 5);
+    });
+
+    it("also matches the English 'best pace'/'max speed' keywords", () => {
+      expect(parseActivityText("ประเภท: วิ่ง\nBest Pace: 5:30").maxSpeedMs).toBeCloseTo(1000 / 330, 5);
+      expect(parseActivityText("ประเภท: ปั่นจักรยาน\nMax Speed: 32.4").maxSpeedMs).toBeCloseTo(32.4 / 3.6, 5);
+    });
+
+    it("treats a bare '-' answer as no value", () => {
+      expect(parseActivityText("ประเภท: วิ่ง\nเพซที่ดีที่สุด: -").maxSpeedMs).toBeNull();
+    });
+
+    it("resolves correctly even when the best-pace line appears before the type line", () => {
+      // The raw text is held until the whole line loop finishes and
+      // result.type is final, so line order within the pasted answer
+      // shouldn't matter — the prompt just happens to ask for type first.
+      const parsed = parseActivityText("เพซที่ดีที่สุด: 5:30\nประเภท: วิ่ง");
+      expect(parsed.maxSpeedMs).toBeCloseTo(1000 / 330, 5);
+    });
+
+    it("skips a bare number given for a pace-based type instead of guessing a unit", () => {
+      // A run/swim expects "mm:ss"; a plain number here is ambiguous (could
+      // be misreading km/h onto a pace-based sport) so it's dropped rather
+      // than silently stored as if it meant something.
+      const parsed = parseActivityText("ประเภท: วิ่ง\nความเร็วสูงสุด: 25");
+      expect(parsed.maxSpeedMs).toBeNull();
+    });
+
+    it("skips an mm:ss answer given for a non-pace type instead of guessing a unit", () => {
+      const parsed = parseActivityText("ประเภท: ปั่นจักรยาน\nเพซที่ดีที่สุด: 5:30");
+      expect(parsed.maxSpeedMs).toBeNull();
+    });
+  });
 });

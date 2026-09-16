@@ -91,6 +91,7 @@ const AI_PROMPT_TEMPLATE = `อ่านค่าจากรูปสรุป�
 หัวใจเฉลี่ย: [bpm]
 หัวใจสูงสุด: [bpm]
 เคเดนซ์เฉลี่ย: [spm ถ้าวิ่ง/เดิน หรือ rpm ถ้าปั่นจักรยาน]
+เพซที่ดีที่สุด: [นาที:วินาที ต่อกม. ถ้าวิ่ง, นาที:วินาที ต่อ 100ม. ถ้าว่ายน้ำ, หรือกม./ชม. ถ้ากิจกรรมอื่น — อ่านจาก "เพซดีที่สุด"/"Best Pace"/"Max Speed" ในรูป]
 ระดับความเหนื่อย: [RPE 1-10 ถ้ารูปมีบอกไว้]
 หมายเหตุ: [สรุปข้อมูลอื่นที่มีในรูปแต่ไม่ตรงกับหัวข้อด้านบนเป็นประโยคสั้นๆ บรรทัดเดียว เช่น Training Effect, VO2max, โซนหัวใจ, กล้ามเนื้อที่ใช้ — ถ้าไม่มีข้อมูลอื่นเหลือให้ใส่ "-"]
 
@@ -329,6 +330,24 @@ export function LogActivityForm({
     if (parsed.avgHeartRate !== null) setAvgHeartRate(String(parsed.avgHeartRate));
     if (parsed.maxHeartRate !== null) setMaxHeartRate(String(parsed.maxHeartRate));
     if (parsed.avgCadence !== null) setAvgCadence(String(parsed.avgCadence));
+    if (parsed.maxSpeedMs !== null) {
+      // parseActivityText already converted this to m/s using whatever
+      // type it read off the same text — re-derive which fields to fill
+      // from the type that's about to actually be in effect (the just-
+      // parsed one if valid, else whatever's already selected), not the
+      // component's `usesPace`/`paceUnit` above, which still reflect the
+      // *pre-setType* render and would be stale the moment parsed.type
+      // differs from what's currently selected.
+      const effectiveType = parsed.type && TYPES.some((t) => t.value === parsed.type) ? parsed.type : type;
+      const effectivePaceUnit = paceUnitMeters(effectiveType);
+      if (effectivePaceUnit !== null) {
+        const totalSec = effectivePaceUnit / parsed.maxSpeedMs;
+        setBestPaceMin(String(Math.floor(totalSec / 60)));
+        setBestPaceSec(String(Math.round(totalSec % 60)));
+      } else {
+        setBestSpeedKmh(String(Math.round(parsed.maxSpeedMs * 3.6 * 10) / 10));
+      }
+    }
     if (parsed.rpe !== null) setRpe(String(parsed.rpe));
     if (parsed.notes !== null) setNotes(parsed.notes);
     if (parsed.exercises.length > 0) {
@@ -359,6 +378,7 @@ export function LogActivityForm({
       parsed.avgHeartRate !== null ||
       parsed.maxHeartRate !== null ||
       parsed.avgCadence !== null ||
+      parsed.maxSpeedMs !== null ||
       parsed.rpe !== null ||
       parsed.notes !== null ||
       parsed.exercises.length > 0;
@@ -526,7 +546,7 @@ export function LogActivityForm({
           <textarea
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
-            placeholder={`ประเภท: วิ่ง\nระยะเวลา: 02:53:39\nระยะทาง: 5.2\nแคลอรี่: 350\nหัวใจเฉลี่ย: 130\nหัวใจสูงสุด: 165\nเคเดนซ์เฉลี่ย: 168\nระดับความเหนื่อย: 7\nหมายเหตุ: -`}
+            placeholder={`ประเภท: วิ่ง\nระยะเวลา: 02:53:39\nระยะทาง: 5.2\nแคลอรี่: 350\nหัวใจเฉลี่ย: 130\nหัวใจสูงสุด: 165\nเคเดนซ์เฉลี่ย: 168\nเพซที่ดีที่สุด: 5:30\nระดับความเหนื่อย: 7\nหมายเหตุ: -`}
             rows={7}
             className={`${INPUT_CLASS} resize-y font-mono text-xs`}
           />
