@@ -529,7 +529,11 @@ export async function GET(req: NextRequest) {
       "Content-Type": "image/png",
       "Content-Length": String(buffer.byteLength),
       "Content-Disposition": `attachment; filename="moopata-summary-${localDateKey(date)}.png"`,
-      "Cache-Control": "no-cache, no-store",
+      // Short private cache keyed by the full URL (which already encodes
+      // date/fields/bg/lang) so re-previewing a combo already generated in
+      // the configurator reuses it instead of re-rendering through Satori
+      // — see api/share/[id]/route.tsx's fuller comment on the same header.
+      "Cache-Control": "private, max-age=120",
     },
   });
 }

@@ -193,7 +193,9 @@ export async function GET(req: NextRequest) {
       "Content-Type": "image/png",
       "Content-Length": String(buffer.byteLength),
       "Content-Disposition": `attachment; filename="moopata-nutrition-summary.png"`,
-      "Cache-Control": "no-cache, no-store",
+      // Short private cache keyed by the full URL (bg/lang) — see
+      // api/share/[id]/route.tsx's fuller comment on the same header.
+      "Cache-Control": "private, max-age=120",
     },
   });
 }

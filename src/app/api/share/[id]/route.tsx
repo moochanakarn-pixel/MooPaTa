@@ -230,37 +230,17 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           0
         );
 
-  // The type badge + one PR badge per exercise that hit one (built earlier
-  // as `badges`) sit in a flex-wrap row — with several long PR badges (e.g.
-  // "PR Kneeling X-frame Back Fly/Row 12 กก.") that can wrap onto 2-3 lines
-  // instead of the single row a flat constant would assume, which was
-  // exactly the gap that caused the clipping above. Simulates the same
-  // greedy wrap flexWrap does, estimating each badge's rendered width from
-  // its text length, to get a row *count* instead of assuming one.
-  const BADGE_AREA_WIDTH = 1080 - 2 * 64;
-  const badgeLabels = [
-    { text: activityTypeLabel(activity.type, lang), extraPx: 48 }, // "10px 24px" padding
-    ...badges.map((b) => ({ text: `🏆 ${b}`, extraPx: 40 })), // "10px 20px" padding
-  ];
-  let badgeRows = 0;
-  let badgeRowWidth = 0;
-  for (const { text, extraPx } of badgeLabels) {
-    const w = text.length * 15 + extraPx; // ~15px/char at 22-26px bold
-    if (badgeRowWidth === 0 || badgeRowWidth + 12 + w > BADGE_AREA_WIDTH) {
-      badgeRows += 1;
-      badgeRowWidth = w;
-    } else {
-      badgeRowWidth += 12 + w;
-    }
-  }
-  const badgesHeight = badgeRows * 60 + (badgeRows - 1) * 12;
-
+  // Unlike grid/hero, the list card shows only the type badge, never the PR
+  // badges (see the comment on that div further down) — always exactly one
+  // row, so no line-wrap estimate is needed here the way there briefly was
+  // when PR badges were still shown (that's what caused the clipping this
+  // whole height-estimation approach exists to avoid).
   const listHeaderHeight =
     96 + // mascot logo
     40 + // gap below logo
     46 + // date row
     28 + // gap
-    badgesHeight +
+    60 + // type badge row
     28 + // gap
     (activity.name ? 50 + 28 : 0) + // activity name + gap, only if present
     58; // "ท่าออกกำลังกาย" section title + gap
@@ -289,7 +269,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           <div style={{ display: "flex", flexDirection: "column", marginTop: 40, gap: 28 }}>
             <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{dateLabel}</span>
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            {/* No PR badges here (unlike grid/hero below) — a PR badge's
+                text ("PR Reverse pecfly 12 กก.") is just that exercise's own
+                name + weight, which the full exercise list right below
+                already shows in detail — repeating it up here as a row of
+                badges was pure duplication for a card whose whole point is
+                the exercise list itself, per user request. */}
+            <div style={{ display: "flex" }}>
               <div
                 style={{
                   display: "flex",
@@ -304,25 +290,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
               >
                 {activityTypeLabel(activity.type, lang)}
               </div>
-              {badges.map((b) => (
-                <div
-                  key={b}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "10px 20px",
-                    borderRadius: 999,
-                    background: "rgba(245,158,11,0.15)",
-                    color: "#f59e0b",
-                    fontSize: 22,
-                    fontWeight: 700,
-                    textShadow,
-                  }}
-                >
-                  🏆 {b}
-                </div>
-              ))}
             </div>
 
             {activity.name && (
@@ -541,7 +508,16 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       "Content-Type": "image/png",
       "Content-Length": String(buffer.byteLength),
       "Content-Disposition": 'attachment; filename="moopata-activity.png"',
-      "Cache-Control": "no-cache, no-store",
+      // The URL already fully encodes everything that affects the image
+      // (activity id + style/bg/pos/lang), so re-requesting the exact same
+      // combo — e.g. toggling back to a style already previewed in the
+      // sheet — can safely reuse the browser's own copy instead of
+      // re-rendering through Satori again, which was the slow part of the
+      // preview. `private` (never a shared/CDN cache, this is
+      // session-gated) + a short max-age caps how stale a cached preview
+      // can get if the activity is edited/deleted moments after generating
+      // one — low-risk since that's a narrow window to hit in practice.
+      "Cache-Control": "private, max-age=120",
     },
   });
 }
