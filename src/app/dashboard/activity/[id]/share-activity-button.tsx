@@ -8,11 +8,15 @@ const BG_OPTIONS = [
 ] as const;
 type Bg = (typeof BG_OPTIONS)[number]["value"];
 
-const STYLE_OPTIONS = [
+// "list" only makes sense for an activity that actually logged exercises —
+// filtered out of the options shown otherwise (see `hasExercises` below)
+// rather than left selectable to produce an empty/pointless card.
+const ALL_STYLE_OPTIONS = [
   { value: "grid", label: "กริดสถิติ" },
   { value: "hero", label: "ตัวเลขเด่น" },
+  { value: "list", label: "รายการท่า" },
 ] as const;
-type Style = (typeof STYLE_OPTIONS)[number]["value"];
+type Style = (typeof ALL_STYLE_OPTIONS)[number]["value"];
 
 const POSITION_OPTIONS = [
   { value: "top", label: "บน" },
@@ -39,7 +43,16 @@ type Lang = (typeof LANG_OPTIONS)[number]["value"];
 // the app) — every one of these buttons only ever produces a downloadable
 // PNG, so the visible copy says "ดาวน์โหลด" (download), not "แชร์" (share),
 // to match what it actually does.
-export function ShareActivityButton({ activityId, defaultLang = "th" }: { activityId: string; defaultLang?: Lang }) {
+export function ShareActivityButton({
+  activityId,
+  defaultLang = "th",
+  hasExercises = false,
+}: {
+  activityId: string;
+  defaultLang?: Lang;
+  hasExercises?: boolean;
+}) {
+  const styleOptions = hasExercises ? ALL_STYLE_OPTIONS : ALL_STYLE_OPTIONS.filter((o) => o.value !== "list");
   const [open, setOpen] = useState(false);
   const [bg, setBg] = useState<Bg>("card");
   const [style, setStyle] = useState<Style>("grid");
@@ -107,7 +120,7 @@ export function ShareActivityButton({ activityId, defaultLang = "th" }: { activi
 
             <p className="mb-1.5 text-xs text-neutral-500">สไตล์การ์ด</p>
             <div className="mb-3 flex gap-2 rounded-xl bg-neutral-950 p-1">
-              {STYLE_OPTIONS.map((o) => (
+              {styleOptions.map((o) => (
                 <button
                   key={o.value}
                   onClick={() => setStyle(o.value)}
@@ -135,26 +148,39 @@ export function ShareActivityButton({ activityId, defaultLang = "th" }: { activi
               ))}
             </div>
 
-            <p className="mb-1.5 text-xs text-neutral-500">ตำแหน่งรายละเอียด</p>
-            <div className="mb-4 flex gap-2 rounded-xl bg-neutral-950 p-1">
-              {POSITION_OPTIONS.map((o) => (
-                <button
-                  key={o.value}
-                  onClick={() => setPos(o.value)}
-                  className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition ${
-                    pos === o.value ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
-                  }`}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
+            {/* Positioning the details block vertically is meaningless for
+                "list" — its height is exactly as tall as its content, always
+                starting from the top, so this whole section is hidden
+                rather than left selectable with no visible effect. */}
+            {style !== "list" && (
+              <>
+                <p className="mb-1.5 text-xs text-neutral-500">ตำแหน่งรายละเอียด</p>
+                <div className="mb-4 flex gap-2 rounded-xl bg-neutral-950 p-1">
+                  {POSITION_OPTIONS.map((o) => (
+                    <button
+                      key={o.value}
+                      onClick={() => setPos(o.value)}
+                      className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition ${
+                        pos === o.value ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
+                      }`}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
 
             {/* Checkerboard backdrop makes a transparent PNG's transparency
                 actually visible in the preview, instead of it just looking
-                identical to a solid-black card. */}
+                identical to a solid-black card. "list" has no fixed aspect
+                ratio (its height depends on how many exercises/sets got
+                logged), so its preview box scales to fit the image instead
+                of cropping it into a fixed 9:16 frame like grid/hero. */}
             <div
-              className="relative mx-auto mb-4 aspect-[9/16] w-full max-w-[200px] overflow-hidden rounded-xl"
+              className={`relative mx-auto mb-4 w-full max-w-[200px] overflow-hidden rounded-xl ${
+                style === "list" ? "max-h-[420px] min-h-[160px]" : "aspect-[9/16]"
+              }`}
               style={{ backgroundImage: "repeating-conic-gradient(#3f3f46 0% 25%, #27272a 0% 50%)", backgroundSize: "16px 16px" }}
             >
               {previewLoading && (
@@ -167,7 +193,9 @@ export function ShareActivityButton({ activityId, defaultLang = "th" }: { activi
                 key={previewHref}
                 src={previewHref}
                 alt="ตัวอย่างรูปดาวน์โหลด"
-                className={`h-full w-full object-cover transition-opacity ${previewLoading ? "opacity-0" : "opacity-100"}`}
+                className={`w-full transition-opacity ${
+                  style === "list" ? "h-auto object-contain" : "h-full object-cover"
+                } ${previewLoading ? "opacity-0" : "opacity-100"}`}
                 ref={(el) => {
                   if (el?.complete) setPreviewLoading(false);
                 }}

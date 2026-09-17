@@ -54,7 +54,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const searchParams = new URL(req.url).searchParams;
   const transparent = searchParams.get("bg") === "transparent";
-  const cardStyle = searchParams.get("style") === "hero" ? "hero" : "grid";
+  const styleParam = searchParams.get("style");
+  const cardStyle = styleParam === "hero" ? "hero" : styleParam === "list" ? "list" : "grid";
   const posParam = searchParams.get("pos");
   const pos: Position = (POSITIONS as readonly string[]).includes(posParam ?? "") ? (posParam as Position) : "center";
   const lang = parseShareLang(searchParams);
@@ -62,7 +63,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const [user, activity] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
-    db.activity.findUnique({ where: { id: params.id }, include: { exercises: true } }),
+    db.activity.findUnique({
+      where: { id: params.id },
+      // Sets are only needed for ?style=list's full breakdown — harmless to
+      // always fetch them (a manual activity's exercise list is small)
+      // rather than branching the query on `cardStyle` too.
+      include: { exercises: { orderBy: { order: "asc" }, include: { sets: { orderBy: { order: "asc" } } } } },
+    }),
   ]);
   if (!activity || activity.userId !== userId) {
     return new Response("Not found", { status: 404 });
@@ -198,7 +205,172 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // has a `textShadow` key present at all whose value is `undefined`.
   const textShadow = transparent ? "0 2px 10px rgba(0,0,0,0.85)" : "none";
 
-  const image = new ImageResponse(
+  // ?style=list has no fixed 1080x1920 aspect like grid/hero — its content
+  // (every exercise's every set, plus a PR badge per exercise that hit one)
+  // can be any length, so the canvas height is computed from the actual
+  // content instead of a constant. Each constant below is a rough per-row
+  // pixel estimate (font size + line spacing/padding at the sizes used in
+  // the JSX further down) rather than an exact measurement — Satori has no
+  // layout-measurement API to ask "how tall did this render", so this is
+  // the only way to size the canvas before rendering it. A little too tall
+  // just leaves harmless blank space at the bottom; a little too short
+  // clips content (confirmed by hand — a session with several PR badges
+  // wrapping onto 3 lines lost its whole last exercise card off the bottom
+  // edge when this only budgeted one badge row), so every constant here
+  // leans generous.
+  const EXERCISE_TITLE_HEIGHT = 60;
+  const SET_ROW_HEIGHT = 50;
+  const EXERCISE_CARD_PADDING = 50; // 24 top + 24 bottom + a few px slack
+  const EXERCISE_CARD_GAP = 22;
+  const listExercisesHeight =
+    activity.exercises.length === 0
+      ? 60
+      : activity.exercises.reduce(
+          (sum, ex) => sum + EXERCISE_TITLE_HEIGHT + ex.sets.length * SET_ROW_HEIGHT + EXERCISE_CARD_PADDING + EXERCISE_CARD_GAP,
+          0
+        );
+
+  // The type badge + one PR badge per exercise that hit one (built earlier
+  // as `badges`) sit in a flex-wrap row — with several long PR badges (e.g.
+  // "PR Kneeling X-frame Back Fly/Row 12 กก.") that can wrap onto 2-3 lines
+  // instead of the single row a flat constant would assume, which was
+  // exactly the gap that caused the clipping above. Simulates the same
+  // greedy wrap flexWrap does, estimating each badge's rendered width from
+  // its text length, to get a row *count* instead of assuming one.
+  const BADGE_AREA_WIDTH = 1080 - 2 * 64;
+  const badgeLabels = [
+    { text: activityTypeLabel(activity.type, lang), extraPx: 48 }, // "10px 24px" padding
+    ...badges.map((b) => ({ text: `🏆 ${b}`, extraPx: 40 })), // "10px 20px" padding
+  ];
+  let badgeRows = 0;
+  let badgeRowWidth = 0;
+  for (const { text, extraPx } of badgeLabels) {
+    const w = text.length * 15 + extraPx; // ~15px/char at 22-26px bold
+    if (badgeRowWidth === 0 || badgeRowWidth + 12 + w > BADGE_AREA_WIDTH) {
+      badgeRows += 1;
+      badgeRowWidth = w;
+    } else {
+      badgeRowWidth += 12 + w;
+    }
+  }
+  const badgesHeight = badgeRows * 60 + (badgeRows - 1) * 12;
+
+  const listHeaderHeight =
+    96 + // mascot logo
+    40 + // gap below logo
+    46 + // date row
+    28 + // gap
+    badgesHeight +
+    28 + // gap
+    (activity.name ? 50 + 28 : 0) + // activity name + gap, only if present
+    58; // "ท่าออกกำลังกาย" section title + gap
+  const listHeight = Math.round(2 * 64 + listHeaderHeight + listExercisesHeight + 40); // + flat safety margin
+
+  let image: InstanceType<typeof ImageResponse>;
+  if (cardStyle === "list") {
+    image = new ImageResponse(
+      (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            background: transparent ? "transparent" : "linear-gradient(160deg, #0b0f19 0%, #171313 55%, #1c0f08 100%)",
+            padding: 64,
+            fontFamily: "Noto Sans Thai",
+          }}
+        >
+          <div style={{ display: "flex" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={mascotLogo} width={96} height={96} style={{ borderRadius: 24 }} />
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", marginTop: 40, gap: 28 }}>
+            <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{dateLabel}</span>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              <div
+                style={{
+                  display: "flex",
+                  padding: "10px 24px",
+                  borderRadius: 999,
+                  background: "rgba(252,76,2,0.15)",
+                  color: "#fc4c02",
+                  fontSize: 26,
+                  fontWeight: 700,
+                  textShadow,
+                }}
+              >
+                {activityTypeLabel(activity.type, lang)}
+              </div>
+              {badges.map((b) => (
+                <div
+                  key={b}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "10px 20px",
+                    borderRadius: 999,
+                    background: "rgba(245,158,11,0.15)",
+                    color: "#f59e0b",
+                    fontSize: 22,
+                    fontWeight: 700,
+                    textShadow,
+                  }}
+                >
+                  🏆 {b}
+                </div>
+              ))}
+            </div>
+
+            {activity.name && (
+              <div style={{ display: "flex", fontSize: 34, fontWeight: 700, color: "white", textShadow }}>
+                {activity.name}
+              </div>
+            )}
+
+            <div style={{ display: "flex", fontSize: 30, fontWeight: 700, color: "white", textShadow }}>
+              {t.exercisesListTitle}
+            </div>
+
+            {activity.exercises.length === 0 ? (
+              <span style={{ fontSize: 24, color: "#a3a3a3", textShadow }}>{t.noExercisesText}</span>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: EXERCISE_CARD_GAP }}>
+                {activity.exercises.map((ex) => (
+                  <div
+                    key={ex.id}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                      borderRadius: 20,
+                      border: "2px solid rgba(255,255,255,0.14)",
+                      padding: 24,
+                    }}
+                  >
+                    <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>{ex.name}</span>
+                    {ex.sets.map((s, i) => (
+                      <div key={s.id} style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 24, color: "#a3a3a3", textShadow }}>{t.setLabel(i + 1)}</span>
+                        <span style={{ fontSize: 26, fontWeight: 600, color: "white", textShadow }}>
+                          {t.setDetail(s.reps, s.weightKg, s.rpe)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ),
+      { width: 1080, height: listHeight, fonts }
+    );
+  } else {
+    image = new ImageResponse(
     (
       <div
         style={{
@@ -354,7 +526,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       height: 1920,
       fonts,
     }
-  );
+    );
+  }
 
   // ImageResponse streams chunked with no Content-Length, which some
   // browsers' download managers (triggered by the <a download> links on the

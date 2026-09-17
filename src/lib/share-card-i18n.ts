@@ -81,6 +81,17 @@ const dict = {
     foodStreakLabel: "สตรีคบันทึกอาหาร",
     latestWeightLabel: "น้ำหนักล่าสุด",
     weightDeltaFromPrev: (signed: string) => `${signed} จากครั้งก่อน`,
+
+    // ?style=list on the single-activity card (src/app/api/share/[id]) —
+    // the full exercise/set breakdown, not the grid/hero cards' summary
+    // numbers. setDetail mirrors activity/[id]/page.tsx's own inline
+    // "{reps} ครั้ง × {weightKg} กก. (RPE {rpe})" rendering exactly, so the
+    // card reads the same as the page it was captured from.
+    exercisesListTitle: "ท่าออกกำลังกาย",
+    setLabel: (n: number) => `เซ็ท ${n}`,
+    setDetail: (reps: number, weightKg: number | null, rpe: number | null) =>
+      `${reps} ครั้ง${weightKg !== null ? ` × ${weightKg} กก.` : ""}${rpe !== null ? ` (RPE ${rpe})` : ""}`,
+    noExercisesText: "ยังไม่มีท่าออกกำลังกายบันทึกไว้",
   },
   en: {
     prBadge: (name: string, weightKg: number) => `PR ${name} ${weightKg} kg`,
@@ -141,6 +152,12 @@ const dict = {
     foodStreakLabel: "Food logging streak",
     latestWeightLabel: "Latest weight",
     weightDeltaFromPrev: (signed: string) => `${signed} from last`,
+
+    exercisesListTitle: "Exercises",
+    setLabel: (n: number) => `Set ${n}`,
+    setDetail: (reps: number, weightKg: number | null, rpe: number | null) =>
+      `${reps} reps${weightKg !== null ? ` × ${weightKg} kg` : ""}${rpe !== null ? ` (RPE ${rpe})` : ""}`,
+    noExercisesText: "No exercises logged",
   },
 };
 
