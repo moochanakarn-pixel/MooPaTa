@@ -391,12 +391,32 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
   `ShareActivityButton` เป็น bottom sheet ให้เลือกก่อนดาวน์โหลด แทนที่จะดาวน์โหลดทันทีแบบเดิม):
   - **`?bg=transparent`** — next/og คืน PNG แบบมี alpha channel ในตัวอยู่แล้ว (ไม่ต้องพึ่ง lib เพิ่ม)
     แค่ไม่ set `background` บน div รากก็ได้ PNG โปร่งใส เอาไปวางทับรูปพื้นหลังอื่นต่อได้ (สไตล์เดียวกับ
-    "Transparent" template ของ Strava) — element ที่มีตัวอักษรทุกจุดต้องมี `textShadow` (ค่าคงที่
-    `0 2px 10px rgba(0,0,0,0.85)` ตอน transparent, `"none"` ตอนปกติ) กันอ่านไม่ออกเวลาไปทับรูปสว่าง ๆ
-    — **ห้าม set `textShadow: undefined`** (ต้องเป็น string เสมอ อย่างน้อย `"none"`) เจอแล้วว่า satori
-    (ที่ next/og ใช้ข้างใน) crash "Cannot read properties of undefined (reading 'toString')" ถ้า style
-    object มี key `textShadow` โผล่มาแต่ value เป็น `undefined` — error message ไม่บอกเลยว่าปัญหาอยู่ตรง
-    field ไหน กว่าจะรู้ต้องไล่ดูว่า mode ไหน error มีค่า string จริงถึงผ่าน
+    "Transparent" template ของ Strava) — element ที่มีตัวอักษรทุกจุดต้องมี `textShadow` (`"none"` ตอนปกติ,
+    ดูค่าตอน transparent ด้านล่าง) กันอ่านไม่ออกเวลาไปทับรูปสว่าง ๆ — **ห้าม set `textShadow: undefined`**
+    (ต้องเป็น string เสมอ อย่างน้อย `"none"`) เจอแล้วว่า satori (ที่ next/og ใช้ข้างใน) crash "Cannot read
+    properties of undefined (reading 'toString')" ถ้า style object มี key `textShadow` โผล่มาแต่ value
+    เป็น `undefined` — error message ไม่บอกเลยว่าปัญหาอยู่ตรง field ไหน กว่าจะรู้ต้องไล่ดูว่า mode ไหน
+    error มีค่า string จริงถึงผ่าน
+  - **ค่า `textShadow`/พื้นหลัง badge ตอน transparent ต้องเข้มพอจะอ่านออกบนพื้นหลังสว่าง ไม่ใช่แค่บนพื้นเข้ม
+    แบบธีมปกติของแอพ** — ค่าเดิม (`0 2px 10px rgba(0,0,0,0.85)`, blur กว้างค่าเดียว) ผู้ใช้แจ้งว่า
+    "โหมดโปร่งใส...มีปัญหา...เอาไปใช้วางทับภาพ" ตรวจด้วยการ render PNG จริงแล้วเอาไป composite ทับพื้นขาว/
+    ดำ/checkerboard ด้วย Pillow (นอกแอพ แค่ debug เฉพาะตอนนั้น) พบว่าตัวอักษร (รวมถึงเลข hero 180px ตัวหนา)
+    อ่านออกชัดเจนบนพื้นดำ (เพราะสีตัวอักษรเป็นขาว/เทาอ่อนอยู่แล้ว ไม่ง้อ shadow มากก็พอไหว) แต่แทบมองไม่เห็น
+    เลยบนพื้นขาว เพราะ blur กว้างแต่บาง กระจาย opacity ของเงาจนไม่เหลือขอบทึบพอจะกันสีตัวอักษรอ่อน ๆ ให้
+    ต่างจากพื้นหลังสว่าง ๆ — ปัญหานี้เกิดกับ "การ์ดวางทับภาพ" โดยตรงเพราะรูปพื้นหลังจริงมีทั้งโทนสว่างและเข้ม
+    ปนกัน ไม่ใช่แค่พื้นเข้มแบบธีมเดิมของแอพเสมอไป — แก้โดยเปลี่ยน `textShadow` ตอน transparent เป็นเงาซ้อน
+    5 ชั้น (4 ทิศทแยงมุม blur แคบ ๆ ทำหน้าที่เหมือนเส้น outline รอบตัวอักษร + glow กว้างอีกชั้นแทรกลึกกว่า)
+    แทนเงาเบลอกว้างค่าเดียว — satori ไม่รองรับ `-webkit-text-stroke` เลยใช้ trick ซ้อน shadow หลายทิศทาง
+    แทน (poor-man's text-stroke) — พร้อมกันนั้นพื้นหลัง badge pill (type badge/PR badge ที่การ์ดกิจกรรมเดี่ยว,
+    badge "สรุปผลประจำวัน" ที่การ์ดสรุปประจำวัน) เดิม alpha แค่ 0.15 ตายตัวไม่ว่า transparent หรือไม่ ก็โดน
+    ปัญหาเดียวกัน (pill จางจนแทบไม่เหลือรูปทรงบนพื้นหลังที่ไม่ใช่ธีมเข้มของแอพเอง) เพิ่มฟังก์ชัน
+    `badgeBg(rgb)` (นิยามซ้ำในทั้ง `[id]/route.tsx` และ `daily-summary/route.tsx` — ไม่คุ้มดึงออกมาเป็น
+    shared lib แค่ 2 จุดใช้) คืน alpha 0.55 ตอน transparent, 0.15 ตอนปกติเหมือนเดิม — ทั้งสองจุดที่แก้เป็น
+    การปรับค่าคงที่ตอน transparent เท่านั้น ไม่กระทบรูปลักษณ์ตอนไม่ใช่ transparent เลย (ตอนปกติ `textShadow`
+    ยังเป็น `"none"`, badge ยังเป็น alpha 0.15 เท่าเดิม) — ตรวจสอบจริงด้วยการ composite PNG ที่ fix แล้วทับ
+    พื้นขาว/ดำ/checkerboard ซ้ำอีกรอบ ยืนยันว่าตัวอักษร+badge อ่านออกชัดเจนทั้งสองโทนพื้นหลัง — เฉพาะ
+    `period`/`nutrition` (`src/app/api/share/{period,nutrition}/route.tsx`) เท่านั้นที่**ไม่รองรับ**
+    `?bg=transparent` เลย (ไม่มี `transparent` param/`textShadow` ในไฟล์นั้นตั้งแต่แรก) เลยไม่ต้องแก้อะไร
   - **hero number ปรับตามประเภทกิจกรรม** — เดิม hero ใช้ระยะทางตายตัวเสมอ พังกับเวทเทรนนิ่ง/กิจกรรมที่
     ไม่มีระยะทาง (โชว์ "0.00 กม." ที่ไม่มีความหมาย) ตอนนี้เช็ค `activity.distanceMeters` ก่อน ถ้าไม่มี
     fallback ไปโชว์เวลาที่ใช้แทน (`h:mm` ถ้าเกิน 1 ชม., นาทีเฉย ๆ ถ้าไม่ถึง) — stat row ด้านล่างก็ทำ

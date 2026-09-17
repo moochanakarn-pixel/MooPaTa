@@ -203,7 +203,28 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // parser chokes (crashes rendering with an unrelated-looking "Cannot read
   // properties of undefined" deep inside @vercel/og) on a style object that
   // has a `textShadow` key present at all whose value is `undefined`.
-  const textShadow = transparent ? "0 2px 10px rgba(0,0,0,0.85)" : "none";
+  //
+  // A single soft blurred shadow (the original value here) only helps
+  // against a *dark* photo — verified by compositing a rendered transparent
+  // PNG onto solid white vs. solid black backdrops with Pillow: on black,
+  // the light grey/white text reads fine even with no shadow at all; on
+  // white, even the 180px bold hero number was nearly invisible, because a
+  // wide blur spreads what little dark pixel coverage it has too thin to
+  // read as a solid backing. Four tight, barely-blurred offsets in each
+  // diagonal direction (a poor-man's text-stroke — satori has no
+  // `-webkit-text-stroke` support) plus a wider soft glow on top gives text
+  // a near-solid dark outline that stays legible over *any* photo — light,
+  // dark, or busy — not just the dark gradient this card normally sits on.
+  const textShadow = transparent
+    ? "-2px -2px 3px rgba(0,0,0,0.9), 2px -2px 3px rgba(0,0,0,0.9), -2px 2px 3px rgba(0,0,0,0.9), 2px 2px 3px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.6)"
+    : "none";
+  // Same reasoning as textShadow above: at their normal 0.15 alpha, the
+  // badge pills read as a barely-there tint of whatever's behind them once
+  // the card's own dark backdrop is gone — confirmed in the same composited
+  // check. Boosting alpha only in transparent mode gives them a proper
+  // solid chip appearance regardless of the photo underneath, mirroring the
+  // borderTop treatment already applied below for the same reason.
+  const badgeBg = (rgb: string) => (transparent ? `rgba(${rgb},0.55)` : `rgba(${rgb},0.15)`);
 
   // ?style=list has no fixed 1080x1920 aspect like grid/hero — its content
   // (every exercise's every set, plus a PR badge per exercise that hit one)
@@ -281,7 +302,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                   display: "flex",
                   padding: "10px 24px",
                   borderRadius: 999,
-                  background: "rgba(252,76,2,0.15)",
+                  background: badgeBg("252,76,2"),
                   color: "#fc4c02",
                   fontSize: 26,
                   fontWeight: 700,
@@ -390,7 +411,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                 display: "flex",
                 padding: "10px 24px",
                 borderRadius: 999,
-                background: "rgba(252,76,2,0.15)",
+                background: badgeBg("252,76,2"),
                 color: "#fc4c02",
                 fontSize: 26,
                 fontWeight: 700,
@@ -408,7 +429,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                   gap: 8,
                   padding: "10px 20px",
                   borderRadius: 999,
-                  background: "rgba(245,158,11,0.15)",
+                  background: badgeBg("245,158,11"),
                   color: "#f59e0b",
                   fontSize: 22,
                   fontWeight: 700,

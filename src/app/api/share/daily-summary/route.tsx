@@ -227,8 +227,18 @@ export async function GET(req: NextRequest) {
   // shadow only when the card's own backdrop is gone. Explicitly "none"
   // rather than omitted: an `undefined` textShadow value (not just a
   // missing key) crashes satori — see that file's comment for the full
-  // explanation of why.
-  const textShadow = transparent ? "0 2px 10px rgba(0,0,0,0.85)" : "none";
+  // explanation of why, and for why this is a tight multi-directional
+  // outline + soft glow rather than a single blur: a single blur only
+  // helps against a dark photo, verified by compositing onto solid
+  // white/black — against white even the biggest bold text was nearly
+  // invisible with the old single-shadow value.
+  const textShadow = transparent
+    ? "-2px -2px 3px rgba(0,0,0,0.9), 2px -2px 3px rgba(0,0,0,0.9), -2px 2px 3px rgba(0,0,0,0.9), 2px 2px 3px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.6)"
+    : "none";
+  // Same reasoning as textShadow: the badge pill reads as a barely-there
+  // tint once the card's own dark backdrop is gone, so alpha is boosted
+  // only in transparent mode — see [id]/route.tsx's identical `badgeBg`.
+  const badgeBg = (rgb: string) => (transparent ? `rgba(${rgb},0.55)` : `rgba(${rgb},0.15)`);
 
   // Each block is a small JSX fragment plus the flag that decides whether
   // it's worth showing at all — built once, then filtered/ordered by the
@@ -491,7 +501,7 @@ export async function GET(req: NextRequest) {
             marginTop: 28,
             padding: "10px 24px",
             borderRadius: 999,
-            background: "rgba(163,230,53,0.15)",
+            background: badgeBg("163,230,53"),
             color: "#a3e635",
             fontSize: 26,
             fontWeight: 700,
