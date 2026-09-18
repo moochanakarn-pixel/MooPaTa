@@ -275,23 +275,32 @@ export function bmiCategory(bmi: number): BmiCategory {
 
 // Bumps the base water goal on days with logged exercise — roughly 500ml
 // per 30 minutes of activity, capped so one very long day doesn't push the
-// recommendation somewhere unreasonable.
+// recommendation somewhere unreasonable. Scaled continuously by the
+// fraction of a 30-minute block (not floored to whole blocks) — a floor
+// used to mean a 29-minute run got exactly 0 while a 30-minute one got the
+// full 500ml, an all-or-nothing cliff one minute apart that a real user
+// hit and flagged (a legit 4km run landed on the "nothing" side purely by
+// one minute). Continuous scaling still naturally keeps genuinely short
+// activities (a couple of minutes) near zero without a hard threshold, so
+// it preserves the original intent (don't reward barely-there activity)
+// without the cliff.
 const WATER_BONUS_ML_PER_BLOCK = 500;
 const WATER_BLOCK_SECONDS = 30 * 60;
 const MAX_WATER_BONUS_ML = 1500;
 
 export function activityWaterBonusMl(totalActivityDurationSecToday: number): number {
-  const blocks = Math.floor(totalActivityDurationSecToday / WATER_BLOCK_SECONDS);
-  return Math.min(blocks * WATER_BONUS_ML_PER_BLOCK, MAX_WATER_BONUS_ML);
+  const blockFraction = totalActivityDurationSecToday / WATER_BLOCK_SECONDS;
+  return Math.min(Math.round(blockFraction * WATER_BONUS_ML_PER_BLOCK), MAX_WATER_BONUS_ML);
 }
 
 // Bumps carb/protein targets on days with logged exercise — roughly 15g
 // carbs (glycogen replenishment) and 5g protein per 30 minutes, same
-// block-based shape as the water bonus and capped for the same reason.
-// The block count itself is still duration-only (an activity with no
+// continuous-scaling shape as the water bonus above and for the same
+// reason (no all-or-nothing cliff at the 30-minute mark). The duration
+// itself is still what drives the base amount (an activity with no
 // calories logged at all still gets a sensible bonus — Activity.calories
 // is optional, and plenty of manually-typed activities have no watch
-// behind them), but each block's grams get scaled by intensityMultiplier
+// behind them), but the scaled amount gets multiplied by intensityMultiplier
 // (see below) so 30 minutes of sitting on a bike doing nothing and 30
 // minutes of an all-out interval session no longer grant the exact same
 // bonus just because they share a duration.
@@ -307,10 +316,10 @@ export interface ActivityMacroBonus {
 }
 
 export function activityMacroBonus(totalActivityDurationSecToday: number, intensityMultiplier = 1): ActivityMacroBonus {
-  const blocks = Math.floor(totalActivityDurationSecToday / ACTIVITY_BLOCK_SECONDS);
+  const blockFraction = totalActivityDurationSecToday / ACTIVITY_BLOCK_SECONDS;
   return {
-    carbG: Math.min(Math.round(blocks * CARB_BONUS_G_PER_BLOCK * intensityMultiplier), MAX_CARB_BONUS_G),
-    proteinG: Math.min(Math.round(blocks * PROTEIN_BONUS_G_PER_BLOCK * intensityMultiplier), MAX_PROTEIN_BONUS_G),
+    carbG: Math.min(Math.round(blockFraction * CARB_BONUS_G_PER_BLOCK * intensityMultiplier), MAX_CARB_BONUS_G),
+    proteinG: Math.min(Math.round(blockFraction * PROTEIN_BONUS_G_PER_BLOCK * intensityMultiplier), MAX_PROTEIN_BONUS_G),
   };
 }
 

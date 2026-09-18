@@ -181,17 +181,27 @@ describe("BMI", () => {
 });
 
 describe("activity-based bonuses", () => {
-  it("water bonus accrues per 30-minute block and caps out", () => {
+  it("water bonus scales continuously with duration (no all-or-nothing cliff at 30 minutes) and caps out", () => {
     expect(activityWaterBonusMl(0)).toBe(0);
-    expect(activityWaterBonusMl(29 * 60)).toBe(0); // not a full block yet
+    // A 29-minute run used to land on the "nothing" side of a hard 30-minute
+    // floor (a real user hit this exact case: a legit 4km run got 0) —
+    // continuous scaling gives it almost the full block's worth instead.
+    expect(activityWaterBonusMl(29 * 60)).toBe(483);
     expect(activityWaterBonusMl(30 * 60)).toBe(500);
+    expect(activityWaterBonusMl(15 * 60)).toBe(250); // half a block, half the bonus
     expect(activityWaterBonusMl(90 * 60)).toBe(1500);
     expect(activityWaterBonusMl(10 * 60 * 60)).toBe(1500); // capped, not unbounded
   });
 
-  it("macro bonus accrues per 30-minute block and caps out independently for carb/protein", () => {
+  it("macro bonus scales continuously with duration and caps out independently for carb/protein", () => {
     expect(activityMacroBonus(60 * 60)).toEqual({ carbG: 30, proteinG: 10 });
     expect(activityMacroBonus(10 * 60 * 60)).toEqual({ carbG: 90, proteinG: 30 });
+    // Same 29-minute case as the water bonus test above — almost a full
+    // block's worth, not zero.
+    expect(activityMacroBonus(29 * 60)).toEqual({ carbG: 15, proteinG: 5 });
+    // A genuinely short activity still lands well below a full block,
+    // preserving the original intent without a hard cutoff.
+    expect(activityMacroBonus(5 * 60)).toEqual({ carbG: 3, proteinG: 1 });
   });
 
   it("applyActivityBonus keeps targetCalories internally consistent with the macro bonus", () => {
