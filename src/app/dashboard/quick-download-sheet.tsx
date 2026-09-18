@@ -25,6 +25,8 @@ export function QuickDownloadSheet({
   sheetTitle,
   languageLabel,
   downloadLabel,
+  generatingLabel,
+  downloadFailedLabel,
   previewLoadingLabel,
   previewAlt,
   closeLabel,
@@ -39,6 +41,8 @@ export function QuickDownloadSheet({
   sheetTitle: string;
   languageLabel: string;
   downloadLabel: string;
+  generatingLabel: string;
+  downloadFailedLabel: string;
   previewLoadingLabel: string;
   previewAlt: string;
   closeLabel: string;
@@ -50,6 +54,8 @@ export function QuickDownloadSheet({
 }) {
   const [open, setOpen] = useState(false);
   const [lang, setLang] = useState<ShareLang>(defaultLang);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadFailed, setDownloadFailed] = useState(false);
   // Same ?bg=transparent option ShareActivityButton/SummaryConfigurator
   // already offer for their own cards — period/nutrition (the routes this
   // sheet fronts) gained the same backend support alongside this toggle.
@@ -60,6 +66,45 @@ export function QuickDownloadSheet({
   const [transparent, setTransparent] = useState(false);
 
   const href = `${hrefBase}${hrefBase.includes("?") ? "&" : "?"}lang=${lang}${transparent ? "&bg=transparent" : ""}`;
+
+  // Fetches the PNG ourselves instead of a plain `<a href download>` — the
+  // route behind `hrefBase` can be genuinely slow to render (real Satori/
+  // next-og work per request, no cache hit for a combo nobody's previewed
+  // yet), and a bare `<a>` click gives no way to know a download is even in
+  // flight. Without that feedback the natural next move is clicking
+  // download again, which used to fire a second independent request and
+  // leave the browser saving two files under different names once both
+  // finished. `downloading` disables the button for the duration so a
+  // second click during that wait is a no-op — the filename comes from the
+  // route's own Content-Disposition header rather than being duplicated
+  // here, since this component fronts more than one route (period range=
+  // week/month, nutrition) with different names.
+  async function handleDownload() {
+    if (downloading) return;
+    setDownloading(true);
+    setDownloadFailed(false);
+    try {
+      const res = await fetch(href);
+      if (!res.ok) throw new Error(`share card request failed: ${res.status}`);
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? "moopata-share.png";
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+      setOpen(false);
+    } catch (err) {
+      console.error("Share card download failed", err);
+      setDownloadFailed(true);
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   // Same debounce-then-swap pattern as ShareActivityButton/
   // SummaryConfigurator's own previews — avoids re-running the actual
@@ -164,24 +209,37 @@ export function QuickDownloadSheet({
               />
             </div>
 
-            <a
-              href={href}
-              download
-              onClick={() => setOpen(false)}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#fc4c02] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e04402]"
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={downloading}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#fc4c02] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-                <path
-                  d="M10 3v10m0 0-3.5-3.5M10 13l3.5-3.5"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path d="M4 15.5v.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-              </svg>
-              {downloadLabel}
-            </a>
+              {downloading ? (
+                <>
+                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 animate-spin">
+                    <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
+                    <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                  </svg>
+                  {generatingLabel}
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                    <path
+                      d="M10 3v10m0 0-3.5-3.5M10 13l3.5-3.5"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path d="M4 15.5v.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                  </svg>
+                  {downloadLabel}
+                </>
+              )}
+            </button>
+            {downloadFailed && <p className="mt-2 text-center text-xs text-red-400">{downloadFailedLabel}</p>}
           </div>
         </div>
       )}

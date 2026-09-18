@@ -58,8 +58,47 @@ export function ShareActivityButton({
   const [style, setStyle] = useState<Style>("grid");
   const [pos, setPos] = useState<Pos>("center");
   const [lang, setLang] = useState<Lang>(defaultLang);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadFailed, setDownloadFailed] = useState(false);
 
   const href = `/api/share/${activityId}?bg=${bg}&style=${style}&pos=${pos}&lang=${lang}`;
+
+  // A plain `<a href download>` gives no way to know the download actually
+  // started — for this route that can matter: rendering the card is real
+  // Satori/next-og work (see the perf comment in the route for `?style=
+  // list`, the worst case), so on a slow render the click used to close the
+  // sheet and go completely silent for however long that took. With no
+  // feedback, the natural next move is clicking "ดาวน์โหลด" again — a
+  // second `<a>` click fires a second independent request, and when both
+  // eventually finish the browser saves two files under different names
+  // (e.g. "moopata-activity(1).png"). Fetching the image ourselves gives a
+  // real in-flight state to show (and disable the button on, so a second
+  // click during that time is a no-op instead of a second request) before
+  // handing the bytes to a synthetic anchor to actually save.
+  async function handleDownload() {
+    if (downloading) return;
+    setDownloading(true);
+    setDownloadFailed(false);
+    try {
+      const res = await fetch(href);
+      if (!res.ok) throw new Error(`share card request failed: ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = "moopata-activity.png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+      setOpen(false);
+    } catch (err) {
+      console.error("Share card download failed", err);
+      setDownloadFailed(true);
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   // Same debounce-then-swap pattern as summary-configurator.tsx's preview —
   // avoids re-running the actual next/og image generation on every click
@@ -228,24 +267,39 @@ export function ShareActivityButton({
               />
             </div>
 
-            <a
-              href={href}
-              download
-              onClick={() => setOpen(false)}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#fc4c02] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e04402]"
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={downloading}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#fc4c02] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-                <path
-                  d="M10 3v10m0 0-3.5-3.5M10 13l3.5-3.5"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path d="M4 15.5v.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-              </svg>
-              ดาวน์โหลดรูปภาพ (PNG)
-            </a>
+              {downloading ? (
+                <>
+                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 animate-spin">
+                    <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
+                    <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                  </svg>
+                  กำลังสร้างรูป...
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                    <path
+                      d="M10 3v10m0 0-3.5-3.5M10 13l3.5-3.5"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path d="M4 15.5v.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                  </svg>
+                  ดาวน์โหลดรูปภาพ (PNG)
+                </>
+              )}
+            </button>
+            {downloadFailed && (
+              <p className="mt-2 text-center text-xs text-red-400">สร้างรูปไม่สำเร็จ ลองใหม่อีกครั้ง</p>
+            )}
           </div>
         </div>
       )}

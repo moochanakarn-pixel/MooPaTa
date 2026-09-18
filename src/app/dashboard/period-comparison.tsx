@@ -73,6 +73,8 @@ export function PeriodComparison({
           sheetTitle={t("downloadThisMonth")}
           languageLabel={tc("language")}
           downloadLabel={tc("downloadImage")}
+          generatingLabel={tc("generatingImage")}
+          downloadFailedLabel={tc("downloadFailed")}
           previewLoadingLabel={tc("loadingPreview")}
           previewAlt={t("downloadThisMonth")}
           closeLabel={tc("close")}

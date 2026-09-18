@@ -393,6 +393,44 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     viewport ทำให้ปุ่มอยู่นอกจอ `outside of the viewport` คลิกไม่ได้) คลิกปุ่ม X และกด Esc ยืนยันว่า
     sheet ปิดจริงทั้ง `ShareActivityButton` (หน้ารายละเอียดกิจกรรม) และ `QuickDownloadSheet` (ปุ่ม
     ดาวน์โหลดสรุปสัปดาห์นี้ที่หน้าแรก) ครบทั้ง 2 ทางปิดใหม่
+  - **ปุ่มดาวน์โหลดทั้งหมด (`ShareActivityButton`/`QuickDownloadSheet`/`SummaryConfigurator`) เคยกด
+    แล้วเงียบไปพักนึง เข้าใจผิดว่าไม่ทำงาน แล้วกดซ้ำจะได้ไฟล์ซ้ำ 2 ไฟล์** — ผู้ใช้แจ้งเจอเองระหว่างเทส
+    `?style=list` (ดูข้อด้านบน) — สาเหตุคือทั้ง 3 ปุ่มเดิมเป็น `<a href={href} download>` ธรรมดา
+    (`ShareActivityButton` ยัง `onClick={() => setOpen(false)}` ปิด sheet ทันทีด้วย) ซึ่งเป็นแค่
+    navigation ไปโหลดไฟล์ ไม่มีทาง hook JS event ใด ๆ มาบอกได้เลยว่า "กำลังโหลดอยู่" หรือ "โหลดเสร็จแล้ว"
+    — พอ route เบื้องหลังใช้เวลานาน (ดู perf comment ด้านบน: render จริงหลาย ๆ วิ, แถม `ImageResponse`
+    บล็อก event loop ทั้ง process ถ้ามี render ใหญ่อื่นค้างอยู่พอดี) ผู้ใช้เห็นแค่ sheet ปิดไปเฉย ๆ
+    ไม่มี indicator อะไรเลย เข้าใจว่าไม่ทำงานเลยกดปุ่ม "ดาวน์โหลด" ซ้ำ → ยิง request ที่สองที่เป็นอิสระ
+    จากอันแรกเต็มตัว พอทั้งสอง request เสร็จ (ไม่ว่าจะช้าแค่ไหน) browser จะเซฟเป็น 2 ไฟล์คนละชื่อ (เช่น
+    "moopata-activity(1).png") เพราะ `<a download>` ไม่มีกลไกกันขอซ้ำในตัวเลย — แก้โดยเปลี่ยนทั้ง 3 จุด
+    จาก `<a download>` เป็น `<button>` ที่ `fetch(href)` เอง แล้วค่อยสร้าง `Blob`/`URL.createObjectURL`
+    + `<a>` สังเคราะห์คลิกเองเพื่อเซฟไฟล์ (pattern เดียวกันทั้ง 3 จุด, มี state `downloading`/
+    `downloadFailed` ของตัวเอง) — **`if (downloading) return` ที่ต้นฟังก์ชัน + ปุ่ม `disabled={downloading}`
+    ร่วมกันกันไม่ให้กดซ้ำยิง request ที่สองได้เลยระหว่างรอ** (ต่างจาก `<a>` เดิมที่กดกี่ทีก็ fire ใหม่ได้
+    ทุกครั้งไม่มีทางกัน) ระหว่างรอปุ่มโชว์สปินเนอร์ + "กำลังสร้างรูป..." แทนข้อความปกติ ให้เห็นชัดว่ากำลัง
+    ทำงานอยู่จริง ไม่ใช่ค้าง — ปิด sheet เฉพาะตอนโหลดสำเร็จแล้วเท่านั้น (ไม่ปิดทันทีที่กดแบบเดิมอีกต่อไป
+    ยกเว้น `SummaryConfigurator` ที่เป็นหน้าเต็มอยู่แล้วไม่มี sheet ให้ปิด) ถ้า fetch fail (เช่น 500/
+    network error) โชว์ข้อความ "สร้างรูปไม่สำเร็จ ลองใหม่อีกครั้ง" ใต้ปุ่มแทนที่จะเงียบแล้วปล่อยให้ผู้ใช้
+    งงต่อว่าทำไมไม่มีไฟล์ลงมา — ชื่อไฟล์: `ShareActivityButton` hardcode `"moopata-activity.png"` ตรง ๆ
+    (มีแค่ route เดียว ชื่อไม่มีทางเปลี่ยน) ส่วน `QuickDownloadSheet`/`SummaryConfigurator` **อ่านชื่อไฟล์
+    จาก response header `Content-Disposition` ของ route เอง** (`disposition.match(/filename="([^"]+)"/)`)
+    แทนที่จะ hardcode ซ้ำในฝั่ง client เพราะ `QuickDownloadSheet` ตัวเดียวหน้าหลายจุดเรียกไป 2 route ที่
+    ตั้งชื่อไฟล์ไม่เหมือนกัน (`period` มี `range=week|month` ในชื่อ, `nutrition` ชื่อคงที่) — อ่านจาก
+    header เป็นจุดเดียวที่ชื่อไฟล์ไม่มีวันไม่ตรงกับที่ route ตั้งใจจริง ๆ ไม่ต้อง sync สองที่ — เพิ่ม key
+    `common.generatingImage`/`common.downloadFailed` ใน `messages/th.json`/`messages/en.json` ให้ 3
+    caller ของ `QuickDownloadSheet` (`period-comparison.tsx`, `trend-chart.tsx`, `nutrition/page.tsx`)
+    ส่งเข้าไปเหมือน `closeLabel` ก่อนหน้า — ทดสอบจริงด้วย Playwright ทั้ง `ShareActivityButton`
+    (เลือกสไตล์ `list` เพื่อให้ render ช้าจริง ตามสถานการณ์ที่ผู้ใช้เจอ) และ `QuickDownloadSheet`
+    (ปุ่มดาวน์โหลดสรุปสัปดาห์นี้ที่หน้าแรก): ยืนยันว่ากดครั้งแรกปุ่มเปลี่ยนเป็น "กำลังสร้างรูป..." +
+    `disabled` ทันที, กดซ้ำระหว่างนั้นไม่ทำให้จำนวน network request ไปที่ route เพิ่มขึ้นเลย (นับจาก
+    `page.on("request")`), ได้ `download` event แค่ครั้งเดียวพร้อมชื่อไฟล์ถูกต้อง, และ sheet ปิดเองหลัง
+    โหลดสำเร็จ — **หมายเหตุที่พบระหว่างเทสแต่ไม่ใช่บั๊กที่แก้รอบนี้**: preview `<img>` เดิม (ก่อนแก้ปุ่ม
+    ดาวน์โหลด) fire request ไปที่ route เดียวกัน **2 ครั้ง** ตอนสลับ style/bg (เห็นจาก
+    `page.on("request")` เหมือนกัน) — น่าจะเป็น artifact ของ service worker (แอพเป็น PWA มี service
+    worker) ที่ intercept แล้ว forward request ต่อ ทำให้ Playwright เห็นเป็น 2 request layer แยกกันทั้งที่
+    เป็น network round-trip เดียว ไม่ใช่ preview เรียก Satori render จริง 2 รอบ — ไม่กระทบไฟล์ที่ดาวน์โหลด
+    เลย (คนละกลไกกับปุ่มดาวน์โหลดที่แก้ในข้อนี้) ยังไม่ได้ไล่ยืนยัน root cause ให้ชัดเจน 100% เก็บไว้เป็น
+    จุดสังเกตเผื่อมีใครเจอปัญหาที่เกี่ยวข้องในอนาคต
   - **หน้ารายละเอียดกิจกรรม (`ActivityDetailPage`) ยังไม่อยู่ในขอบเขตแปล UI (`### 5.`)** แต่ต้องรู้ภาษา
     UI ปัจจุบันอยู่ดีเพื่อตั้งค่า default ให้ตัวเลือกภาษาของการ์ด — เรียก `resolveLocale()`
     (`src/lib/locale.ts`) ตรง ๆ แทนที่จะพึ่ง `next-intl`'s `getLocale()` (ซึ่งก็เรียก `resolveLocale()`

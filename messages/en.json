@@ -3,6 +3,8 @@
     "backToOverview": "Back to overview",
     "language": "Language",
     "downloadImage": "Download image (PNG)",
+    "generatingImage": "Generating image...",
+    "downloadFailed": "Failed to generate image. Try again.",
     "loadingPreview": "Loading preview...",
     "close": "Close",
     "background": "Background",
