@@ -4,7 +4,10 @@
     "language": "Language",
     "downloadImage": "Download image (PNG)",
     "loadingPreview": "Loading preview...",
-    "close": "Close"
+    "close": "Close",
+    "background": "Background",
+    "opaque": "Opaque",
+    "transparent": "Transparent"
   },
   "bottomNav": {
     "addData": "Add data",

@@ -20,8 +20,14 @@ export async function GET(req: NextRequest) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const lang = parseShareLang(new URL(req.url).searchParams);
+  const searchParams = new URL(req.url).searchParams;
+  const lang = parseShareLang(searchParams);
   const t = shareT(lang);
+  // Same ?bg=transparent option as the activity/daily-summary/period share
+  // cards — see api/share/[id]/route.tsx's fuller comment on why
+  // textShadow/badgeBg need to change shape, not just toggle, once the
+  // card's own dark backdrop is gone.
+  const transparent = searchParams.get("bg") === "transparent";
 
   const now = new Date();
   const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -76,6 +82,11 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  const textShadow = transparent
+    ? "-2px -2px 3px rgba(0,0,0,0.9), 2px -2px 3px rgba(0,0,0,0.9), -2px 2px 3px rgba(0,0,0,0.9), 2px 2px 3px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.6)"
+    : "none";
+  const badgeBg = (rgb: string) => (transparent ? `rgba(${rgb},0.55)` : `rgba(${rgb},0.15)`);
+
   const image = new ImageResponse(
     (
       <div
@@ -84,7 +95,7 @@ export async function GET(req: NextRequest) {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          background: "linear-gradient(160deg, #0b0f19 0%, #14170f 55%, #0e1c08 100%)",
+          background: transparent ? "transparent" : "linear-gradient(160deg, #0b0f19 0%, #14170f 55%, #0e1c08 100%)",
           padding: 64,
           fontFamily: "Noto Sans Thai",
         }}
@@ -93,8 +104,8 @@ export async function GET(req: NextRequest) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={mascotLogo} width={56} height={56} style={{ borderRadius: 14 }} />
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: "white" }}>MooPaTa</span>
-            <span style={{ fontSize: 20, color: "#a3a3a3" }}>{dateRangeLabel}</span>
+            <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>MooPaTa</span>
+            <span style={{ fontSize: 20, color: "#a3a3a3", textShadow }}>{dateRangeLabel}</span>
           </div>
         </div>
 
@@ -105,10 +116,11 @@ export async function GET(req: NextRequest) {
             marginTop: 28,
             padding: "10px 24px",
             borderRadius: 999,
-            background: "rgba(163,230,53,0.15)",
+            background: badgeBg("163,230,53"),
             color: "#a3e635",
             fontSize: 26,
             fontWeight: 700,
+            textShadow,
           }}
         >
           {t.monthlyNutritionBadge}
@@ -117,20 +129,20 @@ export async function GET(req: NextRequest) {
         <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-around", gap: 40, marginTop: 32, marginBottom: 32 }}>
           <div style={cardStyle}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
-              <span style={{ fontSize: 100, fontWeight: 700, color: "white", lineHeight: 1 }}>
+              <span style={{ fontSize: 100, fontWeight: 700, color: "white", lineHeight: 1, textShadow }}>
                 {Math.round(avgCalories).toLocaleString(dateLocale)}
               </span>
-              <span style={{ fontSize: 34, fontWeight: 700, color: "#a3a3a3" }}>{t.avgKcalPerDaySuffix}</span>
+              <span style={{ fontSize: 34, fontWeight: 700, color: "#a3a3a3", textShadow }}>{t.avgKcalPerDaySuffix}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 24 }}>
               <span style={{ fontSize: 28 }}>📝</span>
-              <span style={{ fontSize: 26, color: "#d4d4d4" }}>{t.foodLoggedLabel}</span>
-              <span style={{ fontSize: 26, fontWeight: 700, color: "white" }}>{t.daysOfLabel(loggedDays, daysElapsed)}</span>
+              <span style={{ fontSize: 26, color: "#d4d4d4", textShadow }}>{t.foodLoggedLabel}</span>
+              <span style={{ fontSize: 26, fontWeight: 700, color: "white", textShadow }}>{t.daysOfLabel(loggedDays, daysElapsed)}</span>
             </div>
           </div>
 
           <div style={cardStyle}>
-            <span style={{ fontSize: 27, fontWeight: 700, color: "#c9c9c4", letterSpacing: 0.5 }}>{t.avgMacroPerDayLabel}</span>
+            <span style={{ fontSize: 27, fontWeight: 700, color: "#c9c9c4", letterSpacing: 0.5, textShadow }}>{t.avgMacroPerDayLabel}</span>
             <div style={{ display: "flex", height: 28, borderRadius: 999, overflow: "hidden", marginTop: 22 }}>
               {macroShares.map((m) => (
                 <div
@@ -143,8 +155,8 @@ export async function GET(req: NextRequest) {
               {macroShares.map((m) => (
                 <div key={m.label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{ display: "flex", width: 18, height: 18, borderRadius: 999, background: m.color }} />
-                  <span style={{ fontSize: 27, color: "#b5b5b0" }}>{m.label}</span>
-                  <span style={{ fontSize: 30, fontWeight: 700, color: "white" }}>{t.gramsValue(Math.round(m.grams))}</span>
+                  <span style={{ fontSize: 27, color: "#b5b5b0", textShadow }}>{m.label}</span>
+                  <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>{t.gramsValue(Math.round(m.grams))}</span>
                 </div>
               ))}
             </div>
@@ -152,17 +164,17 @@ export async function GET(req: NextRequest) {
 
           <div style={rowCardStyle}>
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontSize: 42, fontWeight: 700, color: "white" }}>{t.litersValue(avgWaterL.toFixed(1))}</span>
-              <span style={{ fontSize: 26, color: "#9c9c97" }}>{t.avgWaterPerDayLabel}</span>
+              <span style={{ fontSize: 42, fontWeight: 700, color: "white", textShadow }}>{t.litersValue(avgWaterL.toFixed(1))}</span>
+              <span style={{ fontSize: 26, color: "#9c9c97", textShadow }}>{t.avgWaterPerDayLabel}</span>
             </div>
           </div>
 
           <div style={rowCardStyle}>
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <span style={{ fontSize: 42, fontWeight: 700, color: "white" }}>
+              <span style={{ fontSize: 42, fontWeight: 700, color: "white", textShadow }}>
                 {weightDelta !== null ? t.kgValue(`${weightDelta > 0 ? "+" : ""}${weightDelta.toFixed(1)}`) : t.noDataDash}
               </span>
-              <span style={{ fontSize: 26, color: "#9c9c97" }}>{t.weightChangeLabel}</span>
+              <span style={{ fontSize: 26, color: "#9c9c97", textShadow }}>{t.weightChangeLabel}</span>
             </div>
           </div>
         </div>

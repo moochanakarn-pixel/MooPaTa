@@ -471,9 +471,23 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     shared lib แค่ 2 จุดใช้) คืน alpha 0.55 ตอน transparent, 0.15 ตอนปกติเหมือนเดิม — ทั้งสองจุดที่แก้เป็น
     การปรับค่าคงที่ตอน transparent เท่านั้น ไม่กระทบรูปลักษณ์ตอนไม่ใช่ transparent เลย (ตอนปกติ `textShadow`
     ยังเป็น `"none"`, badge ยังเป็น alpha 0.15 เท่าเดิม) — ตรวจสอบจริงด้วยการ composite PNG ที่ fix แล้วทับ
-    พื้นขาว/ดำ/checkerboard ซ้ำอีกรอบ ยืนยันว่าตัวอักษร+badge อ่านออกชัดเจนทั้งสองโทนพื้นหลัง — เฉพาะ
-    `period`/`nutrition` (`src/app/api/share/{period,nutrition}/route.tsx`) เท่านั้นที่**ไม่รองรับ**
-    `?bg=transparent` เลย (ไม่มี `transparent` param/`textShadow` ในไฟล์นั้นตั้งแต่แรก) เลยไม่ต้องแก้อะไร
+    พื้นขาว/ดำ/checkerboard ซ้ำอีกรอบ ยืนยันว่าตัวอักษร+badge อ่านออกชัดเจนทั้งสองโทนพื้นหลัง —
+    **`period`/`nutrition` ก็รองรับ `?bg=transparent` แล้วเช่นกัน** (เดิมพบจาก audit ตรวจหน้าดาวน์โหลด
+    ว่าไม่รองรับเลย ทั้งที่ comment เดิมของ `Cache-Control` header ในไฟล์ทั้งสองบอกไว้ว่า "keyed by the
+    full URL (range/bg/lang)" อยู่แล้ว — แปลว่าตั้งใจไว้แต่ตกหล่นไม่ได้ทำจริง) เพิ่ม `transparent`
+    param + `textShadow`/`badgeBg` แบบเดียวกับ `[id]`/`daily-summary` เป๊ะ ๆ (ก็อป pattern เดียวกันตรง ๆ
+    ไม่ได้ดึงออกมาเป็น shared helper เพราะแค่ 4 จุดใช้ ยังไม่คุ้มสร้าง abstraction ใหม่) ทั้งสองไฟล์เพิ่ม
+    element ที่มี `background: typeColor(...)`/`m.color` (แถบ/จุดสีประเภทกิจกรรม, แถบ macro) **ไม่ต้องแตะ
+    เลย** เพราะเป็นสีทึบอิ่มตัวอยู่แล้ว ไม่ใช่ translucent overlay ที่จะจางหายแบบ badge pill — ทดสอบจริง
+    เหมือนกัน (composite ทับพื้นขาว/ดำ ยืนยันอ่านออกชัดเจน) — **`QuickDownloadSheet` (component ที่ใช้
+    ร่วมกันของทั้งสองปุ่ม "ดาวน์โหลดสัปดาห์นี้/เดือนนี้" ที่หน้าแรก และ "ดาวน์โหลดสรุปโภชนาการเดือนนี้"
+    ที่หน้าเชิงลึก) เพิ่มแถบ "พื้นหลัง" (ทึบ/โปร่งใส) ให้ด้วย** ตามแพทเทิร์นเดียวกับ `SummaryConfigurator`
+    — เพิ่ม prop `backgroundLabel`/`opaqueLabel`/`transparentLabel` (ตาม pattern เดียวกับ `closeLabel`
+    ก่อนหน้า) + key `common.background`/`common.opaque`/`common.transparent` ใหม่ ให้ทั้ง 3 caller
+    ส่งเข้าไป — state `transparent` **ไม่ persist ข้ามการเปิด sheet** (ต่างจาก `SummaryConfigurator` ที่
+    จำค่าไว้ข้ามครั้งด้วย `localStorage` — sheet นี้เป็นปุ่มกดดาวน์โหลดเร็ว ๆ ครั้งเดียว ไม่ใช่หน้าที่คน
+    ปรับตั้งค่าแล้วใช้ซ้ำทุกวันแบบหน้า `/dashboard/summary`) — ทดสอบจริงด้วย Playwright: เปิด sheet,
+    กด "โปร่งใส", ยืนยันทั้ง href ปุ่มดาวน์โหลดและ src ของรูปพรีวิวมี `&bg=transparent` ต่อท้ายถูกต้อง
   - **hero number ปรับตามประเภทกิจกรรม** — เดิม hero ใช้ระยะทางตายตัวเสมอ พังกับเวทเทรนนิ่ง/กิจกรรมที่
     ไม่มีระยะทาง (โชว์ "0.00 กม." ที่ไม่มีความหมาย) ตอนนี้เช็ค `activity.distanceMeters` ก่อน ถ้าไม่มี
     fallback ไปโชว์เวลาที่ใช้แทน (`h:mm` ถ้าเกิน 1 ชม., นาทีเฉย ๆ ถ้าไม่ถึง) — stat row ด้านล่างก็ทำ

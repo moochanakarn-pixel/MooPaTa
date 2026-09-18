@@ -44,6 +44,13 @@ export async function GET(req: NextRequest) {
   const range = searchParams.get("range") === "week" ? "week" : "month";
   const lang = parseShareLang(searchParams);
   const t = shareT(lang);
+  // Same ?bg=transparent option as the activity/daily-summary share cards —
+  // see api/share/[id]/route.tsx's fuller comment on why textShadow/badgeBg
+  // need to change shape (not just toggle on/off) once the card's own dark
+  // backdrop is gone: a single soft shadow only helps against a dark photo,
+  // and a 0.15-alpha badge pill reads as a barely-there tint against
+  // anything that isn't this card's own background.
+  const transparent = searchParams.get("bg") === "transparent";
 
   const user = await db.user.findUnique({ where: { id: userId } });
   const unit = user?.unitSystem ?? "METRIC";
@@ -105,6 +112,14 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  // Explicitly "none" rather than undefined — satori crashes if a style
+  // object has a textShadow key at all whose value is undefined (see
+  // api/share/[id]/route.tsx for the full explanation).
+  const textShadow = transparent
+    ? "-2px -2px 3px rgba(0,0,0,0.9), 2px -2px 3px rgba(0,0,0,0.9), -2px 2px 3px rgba(0,0,0,0.9), 2px 2px 3px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.6)"
+    : "none";
+  const badgeBg = (rgb: string) => (transparent ? `rgba(${rgb},0.55)` : `rgba(${rgb},0.15)`);
+
   const image = new ImageResponse(
     (
       <div
@@ -113,7 +128,7 @@ export async function GET(req: NextRequest) {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          background: "linear-gradient(160deg, #0b0f19 0%, #171313 55%, #1c0f08 100%)",
+          background: transparent ? "transparent" : "linear-gradient(160deg, #0b0f19 0%, #171313 55%, #1c0f08 100%)",
           padding: 64,
           fontFamily: "Noto Sans Thai",
         }}
@@ -122,8 +137,8 @@ export async function GET(req: NextRequest) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={mascotLogo} width={56} height={56} style={{ borderRadius: 14 }} />
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: "white" }}>MooPaTa</span>
-            <span style={{ fontSize: 20, color: "#a3a3a3" }}>{dateRangeLabel}</span>
+            <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>MooPaTa</span>
+            <span style={{ fontSize: 20, color: "#a3a3a3", textShadow }}>{dateRangeLabel}</span>
           </div>
         </div>
 
@@ -134,10 +149,11 @@ export async function GET(req: NextRequest) {
             marginTop: 28,
             padding: "10px 24px",
             borderRadius: 999,
-            background: "rgba(252,76,2,0.15)",
+            background: badgeBg("252,76,2"),
             color: "#fc4c02",
             fontSize: 26,
             fontWeight: 700,
+            textShadow,
           }}
         >
           {periodLabel}
@@ -146,8 +162,8 @@ export async function GET(req: NextRequest) {
         <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-around", gap: 40, marginTop: 32, marginBottom: 32 }}>
           <div style={cardStyle}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
-              <span style={{ fontSize: 100, fontWeight: 700, color: "white", lineHeight: 1 }}>{distance.value}</span>
-              <span style={{ fontSize: 34, fontWeight: 700, color: "#a3a3a3" }}>{distance.unitLabel}</span>
+              <span style={{ fontSize: 100, fontWeight: 700, color: "white", lineHeight: 1, textShadow }}>{distance.value}</span>
+              <span style={{ fontSize: 34, fontWeight: 700, color: "#a3a3a3", textShadow }}>{distance.unitLabel}</span>
             </div>
 
             {longest && (
@@ -158,10 +174,10 @@ export async function GET(req: NextRequest) {
                     node's boundary with an adjacent element, so a literal
                     space there silently disappears. */}
                 <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                  <span style={{ fontSize: 26, color: "#d4d4d4" }}>
+                  <span style={{ fontSize: 26, color: "#d4d4d4", textShadow }}>
                     {t.longestPrefix(longest.name ?? activityTypeLabel(longest.type, lang))}
                   </span>
-                  <span style={{ fontSize: 26, fontWeight: 700, color: "white" }}>
+                  <span style={{ fontSize: 26, fontWeight: 700, color: "white", textShadow }}>
                     {formatDistanceParts(longest.distanceMeters, unit, lang).value}{" "}
                     {formatDistanceParts(longest.distanceMeters, unit, lang).unitLabel}
                   </span>
@@ -174,26 +190,26 @@ export async function GET(req: NextRequest) {
             <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
               <div style={{ display: "flex", gap: 48 }}>
                 <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
-                  <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>{agg._count._all}</span>
-                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>{t.activitiesLabel}</span>
+                  <span style={{ fontSize: 40, fontWeight: 700, color: "white", textShadow }}>{agg._count._all}</span>
+                  <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{t.activitiesLabel}</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
-                  <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>
+                  <span style={{ fontSize: 40, fontWeight: 700, color: "white", textShadow }}>
                     {formatDuration(agg._sum.durationSec ?? 0, lang)}
                   </span>
-                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>{t.totalTimeLabel}</span>
+                  <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{t.totalTimeLabel}</span>
                 </div>
               </div>
               <div style={{ display: "flex", gap: 48 }}>
                 <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
-                  <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>
+                  <span style={{ fontSize: 40, fontWeight: 700, color: "white", textShadow }}>
                     {formatElevationM(agg._sum.elevationGainM, unit, lang)}
                   </span>
-                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>{t.totalElevationLabel}</span>
+                  <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{t.totalElevationLabel}</span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
-                  <span style={{ fontSize: 40, fontWeight: 700, color: "white" }}>{formatSpeedKmh(avgSpeedMs, unit, lang)}</span>
-                  <span style={{ fontSize: 22, color: "#a3a3a3" }}>{t.avgSpeedLabel}</span>
+                  <span style={{ fontSize: 40, fontWeight: 700, color: "white", textShadow }}>{formatSpeedKmh(avgSpeedMs, unit, lang)}</span>
+                  <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{t.avgSpeedLabel}</span>
                 </div>
               </div>
             </div>
@@ -219,9 +235,9 @@ export async function GET(req: NextRequest) {
                     <div key={bt.type} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: 520 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{ display: "flex", width: 16, height: 16, borderRadius: 999, background: typeColor(bt.type) }} />
-                        <span style={{ fontSize: 26, color: "#d4d4d4" }}>{activityTypeLabel(bt.type, lang)}</span>
+                        <span style={{ fontSize: 26, color: "#d4d4d4", textShadow }}>{activityTypeLabel(bt.type, lang)}</span>
                       </div>
-                      <span style={{ fontSize: 26, fontWeight: 700, color: "white" }}>
+                      <span style={{ fontSize: 26, fontWeight: 700, color: "white", textShadow }}>
                         {formatDistanceParts(bt._sum.distanceMeters ?? 0, unit, lang).value}{" "}
                         {formatDistanceParts(bt._sum.distanceMeters ?? 0, unit, lang).unitLabel} · {t.timesSuffix(bt._count._all)}
                       </span>

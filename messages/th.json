@@ -4,7 +4,10 @@
     "language": "ภาษา",
     "downloadImage": "ดาวน์โหลดรูปภาพ (PNG)",
     "loadingPreview": "กำลังโหลดตัวอย่าง...",
-    "close": "ปิด"
+    "close": "ปิด",
+    "background": "พื้นหลัง",
+    "opaque": "ทึบ",
+    "transparent": "โปร่งใส"
   },
   "bottomNav": {
     "addData": "เพิ่มข้อมูล",
