@@ -3,7 +3,8 @@
     "backToOverview": "กลับไปหน้ารวม",
     "language": "ภาษา",
     "downloadImage": "ดาวน์โหลดรูปภาพ (PNG)",
-    "loadingPreview": "กำลังโหลดตัวอย่าง..."
+    "loadingPreview": "กำลังโหลดตัวอย่าง...",
+    "close": "ปิด"
   },
   "bottomNav": {
     "addData": "เพิ่มข้อมูล",

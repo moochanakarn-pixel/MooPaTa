@@ -3,7 +3,8 @@
     "backToOverview": "Back to overview",
     "language": "Language",
     "downloadImage": "Download image (PNG)",
-    "loadingPreview": "Loading preview..."
+    "loadingPreview": "Loading preview...",
+    "close": "Close"
   },
   "bottomNav": {
     "addData": "Add data",

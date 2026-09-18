@@ -378,6 +378,21 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     (`activityId`/`defaultLang`) แล้ว build href เองข้างในทั้งหมด ไม่มี caller ไหนส่ง function เข้ามาเลย
     — ปุ่ม "ภาษา"/"ดาวน์โหลดรูปภาพ (PNG)"/"กำลังโหลดตัวอย่าง..." ที่ใช้ร่วมกันบ่อย ย้ายไปอยู่ namespace
     `common` ใน `messages/th.json`/`messages/en.json` แทนที่จะประกาศซ้ำในแต่ละ namespace ของ component
+  - **ปิด sheet ได้ 3 ทางแล้ว: แตะพื้นหลัง (เดิม), ปุ่ม X มุมขวาหัว sheet, กด Esc** — เดิม
+    `ShareActivityButton`/`QuickDownloadSheet` (2 ตัวที่เป็น sheet จริง — `SummaryConfigurator` เป็น
+    หน้าเต็มที่ `/dashboard/summary` ไม่ใช่ sheet เลยไม่เข้าเกณฑ์นี้) ปิดได้ทางเดียวคือแตะพื้นหลัง พบจาก
+    audit ตรวจหน้าดาวน์โหลด — เพิ่ม `useEffect` ฟัง `keydown` เรียก `setOpen(false)` เมื่อ
+    `e.key === "Escape"` (ผูกเฉพาะตอน `open === true` และ cleanup listener ตอน unmount/ปิด) กับปุ่ม X
+    (`aria-label` เท่านั้น ไม่มีข้อความโชว์) วางไว้แถวเดียวกับหัวข้อ sheet (`flex justify-between`) —
+    `ShareActivityButton` hardcode `aria-label="ปิด"` ตรง ๆ (หน้ารายละเอียดกิจกรรมยังไม่อยู่ในขอบเขต
+    i18n อยู่แล้ว) ส่วน `QuickDownloadSheet` เพิ่ม prop `closeLabel: string` ให้ caller ส่งมา (ตาม
+    แพทเทิร์นเดียวกับ `languageLabel`/`downloadLabel`/`previewLoadingLabel` เดิม) เพิ่ม key
+    `common.close` ใน `messages/th.json`/`messages/en.json` ให้ 3 caller (`period-comparison.tsx`,
+    `trend-chart.tsx`, `nutrition/page.tsx`) เรียก `tc("close")` ส่งเข้าไปเหมือน common label อื่น ๆ —
+    ทดสอบจริงด้วย Playwright (เปิดหน้าจริงผ่าน session cookie, viewport มือถือ 390×844 เพราะ default
+    viewport ทำให้ปุ่มอยู่นอกจอ `outside of the viewport` คลิกไม่ได้) คลิกปุ่ม X และกด Esc ยืนยันว่า
+    sheet ปิดจริงทั้ง `ShareActivityButton` (หน้ารายละเอียดกิจกรรม) และ `QuickDownloadSheet` (ปุ่ม
+    ดาวน์โหลดสรุปสัปดาห์นี้ที่หน้าแรก) ครบทั้ง 2 ทางปิดใหม่
   - **หน้ารายละเอียดกิจกรรม (`ActivityDetailPage`) ยังไม่อยู่ในขอบเขตแปล UI (`### 5.`)** แต่ต้องรู้ภาษา
     UI ปัจจุบันอยู่ดีเพื่อตั้งค่า default ให้ตัวเลือกภาษาของการ์ด — เรียก `resolveLocale()`
     (`src/lib/locale.ts`) ตรง ๆ แทนที่จะพึ่ง `next-intl`'s `getLocale()` (ซึ่งก็เรียก `resolveLocale()`

@@ -27,6 +27,7 @@ export function QuickDownloadSheet({
   downloadLabel,
   previewLoadingLabel,
   previewAlt,
+  closeLabel,
   defaultLang,
   hrefBase,
 }: {
@@ -37,6 +38,7 @@ export function QuickDownloadSheet({
   downloadLabel: string;
   previewLoadingLabel: string;
   previewAlt: string;
+  closeLabel: string;
   defaultLang: ShareLang;
   hrefBase: string;
 }) {
@@ -59,6 +61,18 @@ export function QuickDownloadSheet({
     return () => clearTimeout(timer);
   }, [open, href, previewHref]);
 
+  // Same reasoning as ShareActivityButton's identical effect — tap-outside
+  // already closes the sheet, this adds Escape as the other conventional
+  // way to dismiss it.
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
   return (
     <>
       <button onClick={() => setOpen(true)} className={triggerClassName}>
@@ -72,7 +86,18 @@ export function QuickDownloadSheet({
             className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border-t border-neutral-800 bg-neutral-900 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
           >
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-neutral-700" />
-            <h2 className="mb-3 text-sm font-medium text-neutral-200">{sheetTitle}</h2>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-medium text-neutral-200">{sheetTitle}</h2>
+              <button
+                onClick={() => setOpen(false)}
+                aria-label={closeLabel}
+                className="-m-1 rounded-lg p-1 text-neutral-500 transition hover:bg-neutral-800 hover:text-neutral-300"
+              >
+                <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5">
+                  <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
 
             <p className="mb-1.5 text-xs text-neutral-500">{languageLabel}</p>
             <div className="mb-4 flex gap-2 rounded-xl bg-neutral-950 p-1">
