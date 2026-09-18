@@ -19,6 +19,42 @@ const DEFAULT_FIELDS: FieldOption[] = [
   { id: "weight", label: "น้ำหนักตัว — ถ้าเคยบันทึกไว้", enabled: true },
 ];
 
+// Remembers which fields are on/off, their order, and the background choice
+// across visits — these are the settings someone tends to land on once and
+// reuse every day, unlike date (always want "today" by default) or language
+// (deliberately never persisted, per the share-card ?lang= convention —
+// see CLAUDE.md's "### 4. Share cards"). Per-device only (`localStorage`,
+// not the DB) since it's a personal convenience, not something that needs
+// to follow the account across devices.
+const STORAGE_KEY = "moopata_summary_config_v1";
+interface StoredConfig {
+  fieldOrder: string[];
+  fieldEnabled: Record<string, boolean>;
+  transparent: boolean;
+}
+
+// Merges saved field order/enabled state onto the *current* DEFAULT_FIELDS
+// definitions (never trusts a stored `label`, which would go stale the
+// moment that copy changes) — drops any stored id that no longer exists
+// (a field removed since), and appends any field that exists now but wasn't
+// in the older saved list (a field added since) at the end with its default
+// enabled state, so neither kind of drift can silently hide/orphan a field.
+function applyStoredFields(stored: StoredConfig): FieldOption[] {
+  const byId = new Map(DEFAULT_FIELDS.map((f) => [f.id, f]));
+  const seen = new Set<string>();
+  const ordered: FieldOption[] = [];
+  for (const id of stored.fieldOrder) {
+    const def = byId.get(id);
+    if (!def) continue;
+    ordered.push({ ...def, enabled: stored.fieldEnabled[id] ?? def.enabled });
+    seen.add(id);
+  }
+  for (const f of DEFAULT_FIELDS) {
+    if (!seen.has(f.id)) ordered.push(f);
+  }
+  return ordered;
+}
+
 const INPUT_CLASS =
   "w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
 
@@ -93,6 +129,37 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
       return next;
     });
   }
+
+  // Reads localStorage only after mount (never in the initial useState, and
+  // never during SSR) — `window`/`localStorage` don't exist on the server,
+  // and reading them in a lazy useState initializer would run during SSR
+  // too and crash the render. The one-render flash from default → saved
+  // config right after mount is an acceptable tradeoff for that safety.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const stored = JSON.parse(raw) as StoredConfig;
+      setFields(applyStoredFields(stored));
+      if (typeof stored.transparent === "boolean") setTransparent(stored.transparent);
+    } catch {
+      // Private browsing, blocked storage, or corrupt JSON — just keep the
+      // defaults already showing; this is a convenience, not a requirement.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const stored: StoredConfig = {
+        fieldOrder: fields.map((f) => f.id),
+        fieldEnabled: Object.fromEntries(fields.map((f) => [f.id, f.enabled])),
+        transparent,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+    } catch {
+      // Same as above — best-effort only, never worth surfacing an error for.
+    }
+  }, [fields, transparent]);
 
   const anyEnabled = fields.some((f) => f.enabled);
 
