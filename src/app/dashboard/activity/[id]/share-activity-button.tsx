@@ -130,7 +130,13 @@ export function ShareActivityButton({
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          // Otherwise a failed download's error message survives closing
+          // the sheet and reappears immediately on reopen, before any new
+          // attempt — looks like the fresh open itself just failed.
+          setDownloadFailed(false);
+          setOpen(true);
+        }}
         className="inline-flex items-center gap-1.5 rounded-lg bg-[#fc4c02] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#e04402]"
       >
         <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">

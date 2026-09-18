@@ -134,7 +134,16 @@ export function QuickDownloadSheet({
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className={triggerClassName}>
+      <button
+        onClick={() => {
+          // Otherwise a failed download's error message survives closing
+          // the sheet and reappears immediately on reopen, before any new
+          // attempt — looks like the fresh open itself just failed.
+          setDownloadFailed(false);
+          setOpen(true);
+        }}
+        className={triggerClassName}
+      >
         {triggerLabel}
       </button>
 
