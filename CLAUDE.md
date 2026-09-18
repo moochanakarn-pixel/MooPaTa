@@ -878,6 +878,19 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
 - Supplements: `/dashboard/supplements`, checklist รายวันจาก `SupplementLog`
 - Push notifications: `src/lib/push.ts` + `src/app/api/cron/{water-reminder,whey-reminder}` —
   ต้องมี `PushSubscription` และ flag ที่เกี่ยวข้องเปิดอยู่ทั้งคู่ (ดู comment ใน schema)
+  - **`cron/water-reminder`'s atomic claim (`lastWaterReminderSentAt = now`) ต้องอยู่หลังเช็ค `on_pace`
+    เท่านั้น ห้ามย้ายกลับไปก่อน** — เคยมีบั๊กจริง (เจอจากการตรวจโค้ดแบบ audit ไม่ใช่จาก user report):
+    เดิม claim เกิดก่อนคำนวณ `on_pace` ถ้าผลเป็น on_pace (ดื่มทันเป้าแล้ว ไม่ต้องส่ง) โค้ดจะ `continue`
+    ออกจาก loop ทันทีโดยไม่คืนค่า timestamp เดิม (คืนค่าคืนเฉพาะกรณี `sentCount === 0` เท่านั้น) ทำให้
+    `lastWaterReminderSentAt` ถูกอัปเดตเป็น "เพิ่งส่ง" ทั้งที่ไม่เคยส่ง push จริงเลย — พอผู้ใช้ทันเป้าตอน
+    เช็ครอบหนึ่ง แล้วมาตกเป้าทีหลังในหน้าต่างเวลาเดียวกัน ระบบจะเข้าใจผิดว่าเพิ่งเตือนไปแล้วและข้ามรอบ
+    ถัดไปตาม `waterReminderIntervalMin` เงียบ ๆ (reason จะกลายเป็น `too_soon` แทนที่จะส่งจริง) — แก้โดย
+    ย้าย atomic claim ไปวางหลังเช็ค `if (drunkMl >= expectedMl)` แทน (claim เฉพาะตอนตัดสินใจจะส่งจริง
+    แล้วเท่านั้น) ยังคงกัน cron ยิงซ้อนกันส่ง push ซ้ำได้เหมือนเดิม เพราะยังเป็น atomic `updateMany`
+    เทียบ staleness เหมือนเดิมทุกอย่าง แค่เช็คช้าลงหนึ่งจังหวะ — ทดสอบยืนยันจริงด้วยการ seed user ที่
+    on_pace ก่อน (ยิง cron รอบแรกได้ reason `on_pace`, query ตรงจาก Prisma ยืนยันว่า
+    `lastWaterReminderSentAt` ยังเป็น `null` อยู่) แล้วขยับ window ให้ตกเป้า (ยิงรอบสองได้ reason
+    `no_active_subscription` ซึ่งแปลว่าโค้ดพยายามส่งจริงแล้ว ไม่ใช่ `too_soon` แบบที่บั๊กเดิมจะให้)
 - PWA: `manifest.webmanifest`, service worker — ติดตั้งเป็นแอพได้
 
 ## Workflow ตอนแก้โค้ด (ทำทุกครั้งก่อน commit)

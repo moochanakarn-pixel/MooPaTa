@@ -69,22 +69,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Atomically claim the right to send this user's reminder before doing
-    // so — re-checks the same staleness condition as the read above, but as
-    // a single conditional UPDATE, so an overlapping cron invocation (a
-    // manual trigger while the scheduled run is still mid-loop, a retried
-    // request) can't also pass the check above and send a second, duplicate
-    // push for the same window. Only one concurrent request can win this.
-    const staleThreshold = new Date(now.getTime() - user.waterReminderIntervalMin * 60_000);
-    const claim = await db.user.updateMany({
-      where: { id: userId, OR: [{ lastWaterReminderSentAt: null }, { lastWaterReminderSentAt: { lte: staleThreshold } }] },
-      data: { lastWaterReminderSentAt: now },
-    });
-    if (claim.count === 0) {
-      results.push({ userId, sent: false, reason: "too_soon" });
-      continue;
-    }
-
     const profile = {
       weightKg: user.weightKg,
       heightCm: user.heightCm,
@@ -108,6 +92,28 @@ export async function POST(req: NextRequest) {
     const expectedMl = targetMl * expectedFraction;
     if (drunkMl >= expectedMl) {
       results.push({ userId, sent: false, reason: "on_pace" });
+      continue;
+    }
+
+    // Atomically claim the right to send this user's reminder now that we've
+    // actually decided to — re-checks the same staleness condition as the
+    // read above, but as a single conditional UPDATE, so an overlapping cron
+    // invocation (a manual trigger while the scheduled run is still
+    // mid-loop, a retried request) can't also pass the check above and send
+    // a second, duplicate push for the same window. Only one concurrent
+    // request can win this. Deliberately placed here rather than right after
+    // the "too_soon" check above: claiming before knowing whether we're
+    // about to send at all meant an "on_pace" user (drank enough, no push
+    // sent) still had lastWaterReminderSentAt bumped to now — so if they
+    // later fell behind pace within the same window, the app believed a
+    // reminder had *just* gone out and silently withheld the real one.
+    const staleThreshold = new Date(now.getTime() - user.waterReminderIntervalMin * 60_000);
+    const claim = await db.user.updateMany({
+      where: { id: userId, OR: [{ lastWaterReminderSentAt: null }, { lastWaterReminderSentAt: { lte: staleThreshold } }] },
+      data: { lastWaterReminderSentAt: now },
+    });
+    if (claim.count === 0) {
+      results.push({ userId, sent: false, reason: "too_soon" });
       continue;
     }
 
