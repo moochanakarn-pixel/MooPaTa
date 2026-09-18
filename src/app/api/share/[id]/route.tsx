@@ -262,7 +262,20 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // finishes quickly regardless of how many sets a session actually has —
   // truncating (with a note, never silently) rather than ever feeding an
   // unbounded amount of content into this render path again.
-  const MAX_LIST_SETS = 80;
+  //
+  // Lowered from 80 to 50 after the first pass: even with the ~2x node-
+  // count cut below (single <span> per set), 80 sets still measured
+  // ~70-80s worst case — long enough that it was still the dominant
+  // contributor to "one big render blocks the whole server" (see the
+  // comment above). 50 sets measured ~35-40s in the same environment,
+  // roughly halving that worst-case blocking window. Trade-off: a
+  // realistically heavy single session (e.g. 12 exercises × 6 sets = 72)
+  // can now hit this cap and get truncated where it wouldn't have at 80 —
+  // accepted deliberately, since a shorter worst-case freeze for everyone
+  // else matters more than never truncating an unusually long session for
+  // the one person who logged it (they still get the note + everything up
+  // to the cap, not an error).
+  const MAX_LIST_SETS = 50;
   let listSetsRemaining = MAX_LIST_SETS;
   let omittedSetCount = 0;
   const visibleExercises: { id: string; name: string; sets: (typeof activity.exercises)[number]["sets"] }[] = [];
