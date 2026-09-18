@@ -102,6 +102,15 @@ export function computeAvgSpeedMs(distanceKm: number | null, durationMin: number
   return (distanceKm * 1000) / (durationMin * 60);
 }
 
+// `startedAt` was only ever checked for being a parseable date, not for
+// being a sane one — a typo'd year or a wrong AM/PM in the form could log an
+// activity days or years in the future, which then silently corrupts every
+// feature that assumes "today" is the latest possible activity date (streak,
+// heatmap, monthly goal progress, activity-bonus nutrition calc for "today").
+export function isFutureDate(d: Date): boolean {
+  return d.getTime() > Date.now();
+}
+
 // Activity.notes — free text, capped to the column's 500-char limit
 // (schema.prisma's comment on the field explains why a clip rather than a
 // whole-request rejection here, unlike the numeric optional fields above).

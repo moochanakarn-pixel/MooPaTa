@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeAvgSpeedMs, optionalNonNegative, optionalNotes, optionalRpe, parseExercises } from "./activity-validation";
+import { computeAvgSpeedMs, isFutureDate, optionalNonNegative, optionalNotes, optionalRpe, parseExercises } from "./activity-validation";
 
 describe("parseExercises", () => {
   it("returns an empty array when the field wasn't sent at all", () => {
@@ -155,6 +155,17 @@ describe("computeAvgSpeedMs", () => {
     expect(computeAvgSpeedMs(-1, 40)).toBeNull();
     expect(computeAvgSpeedMs(5, 0)).toBeNull();
     expect(computeAvgSpeedMs(5, -1)).toBeNull();
+  });
+});
+
+describe("isFutureDate", () => {
+  it("is true for a date after now", () => {
+    expect(isFutureDate(new Date(Date.now() + 60_000))).toBe(true);
+  });
+
+  it("is false for now or a date in the past", () => {
+    expect(isFutureDate(new Date(Date.now() - 60_000))).toBe(false);
+    expect(isFutureDate(new Date("2020-01-01"))).toBe(false);
   });
 });
 

@@ -17,18 +17,23 @@ export async function POST() {
     db.progressPhotoLog.findMany({ where: { userId }, select: { photoPath: true } }),
   ]);
 
-  await db.user.delete({ where: { id: userId } });
-  destroySession();
-
   // Progress photos (and the self-uploaded avatar) live as plain files on
   // disk, not a cascaded DB relation — Prisma's onDelete:Cascade drops the
   // ProgressPhotoLog rows but never touches the files they pointed at, so
   // they'd otherwise leak forever with no user id left to ever clean them
-  // up by.
+  // up by. Deleted before the DB row (not after) so that if this request
+  // dies partway through, the failure mode is a User row that still exists
+  // with its files already gone — recoverable by just retrying delete-account
+  // — rather than files orphaned on disk with no surviving row to trace them
+  // back to. Both delete helpers already treat a missing file as success, so
+  // re-running this after a partial failure is safe.
   for (const log of progressPhotoLogs) {
     await deleteProgressPhotoFile(log.photoPath);
   }
   if (user?.avatarPath) await deleteAvatarFile(user.avatarPath);
+
+  await db.user.delete({ where: { id: userId } });
+  destroySession();
 
   return NextResponse.json({ ok: true });
 }

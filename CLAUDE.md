@@ -130,7 +130,13 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
   soft-delete ที่เหลือ) — ปุ่ม "รวมเมนูซ้ำทั้งหมด" อยู่ในหน้าคลังอาหาร (banner จะโชว์เองถ้าเจอของซ้ำ)
 - **แก้ค่าโภชนาการ** — แก้ได้แค่ที่คลังอาหารส่วนตัวเท่านั้น (มีผลย้อนหลังกับทุกวันที่เคยบันทึกเมนูนั้น
   เพราะ macro คำนวณสดจาก `Food` เสมอ) หน้าไดอารี่แก้ได้แค่ปริมาณ/มื้อของรายการนั้น ๆ — ปุ่มดินสอในไดอารี่
-  มีลิงก์ deep-link ไปเปิดฟอร์มแก้ที่คลังอาหาร (`/dashboard/food/library?edit=<foodId>`)
+  มีลิงก์ deep-link ไปเปิดฟอร์มแก้ที่คลังอาหาร (`/dashboard/food/library?edit=<foodId>`) — `PATCH
+  /api/food/log/[id]` (แก้ปริมาณ/มื้อ) ปฏิเสธ request ที่ไม่มีทั้ง `grams`/`mealType` เลย (`400
+  nothing_to_update`) กันยิง `db.foodLog.update({ data: {} })` เปล่า ๆ แบบ no-op เสีย DB roundtrip ฟรี
+- **"คัดลอกเมื่อวานทั้งหมด"** (`POST /api/food/log/copy-day`) ปฏิเสธถ้า `fromDate`/`toDate` เป็นวันเดียวกัน
+  (`400 same_date`) กันบันทึกอาหารวันนั้นซ้ำเป็น 2 เท่าโดยไม่ตั้งใจ — UI เองเรียกด้วย `fromDate =
+  prevDateKey(viewDate)` เสมอ (ชนกับ `toDate` ไม่ได้อยู่แล้วผ่านหน้าจริง) เช็คนี้เป็น defensive ที่ระดับ
+  API เผื่อมีจุดเรียกอื่นในอนาคตหรือยิง API ตรง ๆ
 - **คำแนะนำเมนู ("เมนูโปรด" + "เมนูที่กินบ่อย")** — ทั้งคู่อยู่ในแผงเพิ่มอาหาร (ไม่โชว์ก่อนกดเพิ่มอาหาร,
   แค่ตอนช่องค้นหายังว่างอยู่ — พิมพ์คำค้นแล้วจะเปลี่ยนไปโชว์ผลค้นหาแทน) เรียงเป็น 2 section แยกกัน
   "เมนูโปรด" ก่อนเสมอ (ถ้ามี) ตามด้วย "เมนูที่กินบ่อย":
@@ -266,6 +272,12 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
   `GET /api/progress-photo/[id]` ที่เช็ค ownership จาก `ProgressPhotoLog.userId` เท่านั้น (ไม่ใช่
   `/[angle]` แบบเดิมที่ผูกกับ field เดียวบน User) — ลบบัญชี (`/api/settings/delete-account`) ต้อง
   query `ProgressPhotoLog` ทั้งหมดของ user มาลบไฟล์ทีละอันเองก่อน (cascade ลบแค่แถว DB ไม่ลบไฟล์บนดิสก์)
+  — **ลบไฟล์ (progress photo + avatar) ก่อนลบแถว `User` เสมอ ไม่ใช่หลัง** (แก้บั๊กที่เจอจาก audit:
+  เดิมลบ `User` ก่อนแล้วค่อยวนลบไฟล์ทีหลัง ถ้า request ตายกลางทางระหว่างนั้นไฟล์จะรั่วค้างบนดิสก์ตลอดไป
+  เพราะไม่มี user id เหลือให้ trace กลับมาลบทีหลังได้อีกแล้ว) ทั้ง `deleteAvatarFile`/
+  `deleteProgressPhotoFile` (`src/lib/{avatar,progress-photo}-storage.ts`) ถือว่าไฟล์ที่ไม่มีอยู่แล้ว
+  เป็น "ลบสำเร็จ" เงียบ ๆ อยู่แล้ว เลย retry ได้ปลอดภัยถ้า request รอบก่อนตายกลางทาง (จะเหลือแค่ `User`
+  row ที่ยังไม่ถูกลบ ไม่ใช่ไฟล์ที่ลอยไม่มีใครอ้างถึง)
   — แต่ละมุมมีปุ่ม "ถ่ายรูปพร้อมไกด์" เปิดกล้องในแอพเอง (`getUserMedia`, component แยกที่
   `pose-guide-camera.tsx`) ทับด้วยเส้น silhouette โปร่งแสง (SVG, คนละแบบสำหรับ FRONT/BACK ที่หันหน้า
   เข้ากล้องเหมือนกันทั้งคู่ vs SIDE ที่เป็นมุมข้าง) ให้ยืนตำแหน่ง/ระยะห่างจากกล้องใกล้เคียงกันทุกครั้ง
@@ -690,7 +702,11 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     แบบลบแล้วสร้างใหม่ไม่ diff ทีละแถว) เพราะฟอร์มรู้จักแค่ field ชุด manual เท่านั้น กิจกรรมเก่าจาก
     Strava มี field เฉพาะ (เส้นทาง GPS, splits, kudos) ที่ฟอร์มนี้ไม่มีทางเก็บ/แก้ให้ถูกต้อง — **ลบได้
     ทุก provider** (ปุ่ม "ลบ" คู่กับปุ่มแก้ไข ใช้ `confirm()` ก่อนเหมือน `DeleteAccountButton`) เพราะ
-    เป็นแค่ลบแถวในเครื่อง Strava sync ตายไปแล้วทั้งหมด ไม่มีประเด็นเรื่อง sync กลับมาใหม่
+    เป็นแค่ลบแถวในเครื่อง Strava sync ตายไปแล้วทั้งหมด ไม่มีประเด็นเรื่อง sync กลับมาใหม่ — **`startedAt`
+    ห้ามเป็นวันอนาคต** (`isFutureDate()` ใน `activity-validation.ts`, เช็คทั้ง POST สร้างใหม่และ PATCH
+    แก้ไข คืน `400 future_date`) — เดิมเช็คแค่ว่า parse เป็นวันที่ได้ (`!Number.isNaN`) ไม่เคยเช็คว่าเป็น
+    วันที่สมเหตุสมผลเลย พิมพ์ปีผิด/เลือก AM-PM ผิดในฟอร์มจะบันทึกกิจกรรมล่วงหน้าไปได้เงียบ ๆ ทำให้ streak/
+    heatmap/monthly goal/activity bonus ของวันนี้เพี้ยนเพราะมีกิจกรรม "อนาคต" ปนอยู่
   - **ข้อมูลอ้างอิงท่าเวทจากประวัติ (progressive overload) + PR ต่อท่า** — ทั้งคู่มาจาก query เดียวกัน
     คือ `getExerciseStats(userId)` (`src/lib/exercise-stats.ts`) วนรอบเดียวผ่าน `Exercise` ทั้งหมดของ
     user (เรียงเก่า→ใหม่) พับตามชื่อท่า (trim+lowercase กันซ้ำเพราะตัวพิมพ์/เว้นวรรค) ได้ทั้ง "ครั้ง
@@ -873,8 +889,22 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     จาก Strava sync เก่า) ถ้ามีกิจกรรมบางอันไม่ได้กรอกแคลอรี่ไว้ แท็บแคลอรี่จะโชว์ข้อความบอกว่า
     "คำนวณจาก N ใน M กิจกรรม" แทนที่จะทำเหมือนข้อมูลครบ และถ้าเดือนนั้นไม่มีกิจกรรมไหนกรอกแคลอรี่ไว้
     เลยแท็บนี้จะกดไม่ได้ (disabled)
+- **CSV export กิจกรรม** (`GET /api/export/csv`, ปุ่มดาวน์โหลดที่หน้าแรก) — คืนไฟล์พร้อม UTF-8 BOM
+  (`"﻿" + csv`) นำหน้าเสมอ ไม่งั้น Excel บน Windows (deploy target จริง ดู `DEPLOY-WINDOWS.md`)
+  จะเดาว่าไฟล์เป็น Windows-1252 แล้วชื่อกิจกรรม/หมายเหตุภาษาไทยจะเพี้ยนเป็นตัวอักษรมั่ว — `csvEscape()`
+  quote ทั้ง `\r`/`\n`/`"` (เดิม regex เช็คแค่ `\n`/`"` ไม่ครอบ `\r` เดี่ยว ๆ ที่ไม่มี `\n` ตามหลัง ซึ่งยัง
+  ทำให้แถวแตกใน spreadsheet ได้เหมือนกัน)
 - Water/Weight logging: `src/app/api/water|weight/log*`, การ์ดอยู่ทั้งในไดอารี่ (น้ำ) และเชิงลึก
-  (น้ำหนัก)
+  (น้ำหนัก) — `POST /api/weight/log` (การ์ดน้ำหนักที่หน้าเชิงลึก) เขียนทั้ง `WeightLog` ใหม่ + อัปเดต
+  `User.weightKg` คู่กันเสมอ **`POST /api/settings/nutrition-profile` (ฟอร์มโปรไฟล์ที่หน้าตั้งค่า ซึ่งก็มี
+  ช่องน้ำหนักเป็น input บังคับสำหรับคำนวณ BMR เหมือนกัน) ก็ต้องเขียน `WeightLog` ด้วยถ้าค่าน้ำหนักเปลี่ยน
+  จริง ๆ ไม่ใช่แค่อัปเดต `User.weightKg` อย่างเดียวเงียบ ๆ แบบเดิม** (แก้บั๊กที่เจอจาก audit: เดิม field
+  นี้อัปเดตแค่ `User.weightKg` โดยไม่เคยสร้าง `WeightLog` เลย ทำให้กราฟน้ำหนักที่หน้าเชิงลึกขาดจุดข้อมูล
+  ทุกครั้งที่คนแก้น้ำหนักผ่านฟอร์มนี้แทนการ์ดน้ำหนักโดยตรง) — **สร้าง `WeightLog` เฉพาะตอนค่าน้ำหนักที่ส่งมา
+  ต่างจาก `User.weightKg` เดิมจริง ๆ เท่านั้น** (เทียบค่าก่อนแล้วค่อย `db.$transaction` สร้าง `WeightLog` +
+  update `User` พร้อมกัน) ไม่ใช่สร้างทุกครั้งที่กด "บันทึก" แบบไม่มีเงื่อนไข เพราะฟอร์มนี้เป็นฟอร์มโปรไฟล์
+  ทั่วไปที่คนอาจกดบันทึกแค่เพื่อแก้ field อื่น (เช่น activity level) โดยไม่ได้ตั้งใจ "log น้ำหนักวันนี้"
+  ถ้าสร้างทุกครั้งไม่มีเงื่อนไข กราฟจะเต็มไปด้วยจุดซ้ำ ๆ ค่าเดิมทุกครั้งที่แก้โปรไฟล์เรื่องอื่น
 - Supplements: `/dashboard/supplements`, checklist รายวันจาก `SupplementLog`
 - Push notifications: `src/lib/push.ts` + `src/app/api/cron/{water-reminder,whey-reminder}` —
   ต้องมี `PushSubscription` และ flag ที่เกี่ยวข้องเปิดอยู่ทั้งคู่ (ดู comment ใน schema)
@@ -891,6 +921,15 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     on_pace ก่อน (ยิง cron รอบแรกได้ reason `on_pace`, query ตรงจาก Prisma ยืนยันว่า
     `lastWaterReminderSentAt` ยังเป็น `null` อยู่) แล้วขยับ window ให้ตกเป้า (ยิงรอบสองได้ reason
     `no_active_subscription` ซึ่งแปลว่าโค้ดพยายามส่งจริงแล้ว ไม่ใช่ `too_soon` แบบที่บั๊กเดิมจะให้)
+  - **มี guard `if (endMinutes <= startMinutes)` คืน reason `invalid_window` ก่อนคำนวณ pacing formula
+    เสมอ** — กัน division-by-zero (`start === end`) และกันสูตร pacing เพี้ยนตอน overnight window
+    (`start > end` เช่น 22:00–06:00) ที่จะทำให้ user ดูเหมือน "อยู่นอกช่วงเวลา" ตลอดเวลาไม่มีวันได้แจ้งเตือน
+    — **เป็น defensive เท่านั้น ไม่ reachable ผ่านแอปจริงตอนนี้** เพราะ
+    `api/settings/water-reminder-schedule/route.ts` ปฏิเสธ `start >= end` อยู่แล้วเป็นจุดเขียนค่าเดียว
+    (กัน overnight window ไปในตัว) แต่ใส่ guard ซ้ำไว้ที่ cron เองด้วยเผื่อมีจุดเขียนค่าอื่นในอนาคตที่ข้าม
+    เช็คนั้นไป — ทดสอบยืนยันจริงด้วยการ set `waterReminderStart === waterReminderEnd` ตรงผ่าน Prisma
+    (ข้าม settings route ไปตรง ๆ) แล้วยิง cron ได้ reason `invalid_window` ไม่ crash/ไม่ค้าง แล้วรีเซ็ต
+    กลับเป็น window ปกติยืนยันว่า evaluation รอบถัดไปทำงานถูกต้องเหมือนเดิม
 - PWA: `manifest.webmanifest`, service worker — ติดตั้งเป็นแอพได้
 
 ## Workflow ตอนแก้โค้ด (ทำทุกครั้งก่อน commit)

@@ -14,7 +14,11 @@ const CSV_FORMULA_PREFIX = /^[=+\-@\t\r]/;
 
 function csvEscape(value: string): string {
   const safe = CSV_FORMULA_PREFIX.test(value) ? `'${value}` : value;
-  if (/[",\n]/.test(safe)) return `"${safe.replace(/"/g, '""')}"`;
+  // \r must trigger quoting too, not just \n and " — a bare carriage return
+  // left unquoted in the middle of a field (e.g. an activity name/note typed
+  // or pasted with old Mac-style line endings) still reads as a line break
+  // to spreadsheet software even without a following \n.
+  if (/[",\n\r]/.test(safe)) return `"${safe.replace(/"/g, '""')}"`;
   return safe;
 }
 
@@ -73,7 +77,11 @@ export async function GET() {
 
   const csv = [columns.join(","), ...rows].join("\n");
 
-  return new NextResponse(csv, {
+  // Without a leading UTF-8 BOM, Excel on Windows (the deploy target per
+  // DEPLOY-WINDOWS.md) guesses this file is Windows-1252 instead of UTF-8 —
+  // every Thai activity name/note then shows up as garbled characters
+  // instead of opening correctly.
+  return new NextResponse("﻿" + csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="moopata-activities.csv"`,

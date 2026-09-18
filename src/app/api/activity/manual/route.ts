@@ -5,6 +5,7 @@ import {
   INTENSITIES,
   MAX_DURATION_MIN,
   computeAvgSpeedMs,
+  isFutureDate,
   optionalNonNegative,
   optionalNotes,
   optionalRpe,
@@ -51,6 +52,9 @@ export async function POST(req: NextRequest) {
   }
   if (Number.isNaN(startedAt.getTime())) {
     return NextResponse.json({ error: "invalid_date" }, { status: 400 });
+  }
+  if (isFutureDate(startedAt)) {
+    return NextResponse.json({ error: "future_date" }, { status: 400 });
   }
   if ([distanceKm, avgHeartRate, maxHeartRate, calories, avgCadence, maxSpeedMs, rpe].some((n) => n !== null && Number.isNaN(n))) {
     return NextResponse.json({ error: "invalid_optional_field" }, { status: 400 });

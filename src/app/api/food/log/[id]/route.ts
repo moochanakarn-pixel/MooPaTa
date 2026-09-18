@@ -53,6 +53,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     data.mealType = body.mealType;
   }
 
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: "nothing_to_update" }, { status: 400 });
+  }
+
   await db.foodLog.update({ where: { id: params.id }, data });
   return NextResponse.json({ ok: true });
 }

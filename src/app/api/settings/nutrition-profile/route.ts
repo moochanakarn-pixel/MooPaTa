@@ -43,9 +43,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_goal_rate" }, { status: 400 });
   }
 
-  await db.user.update({
-    where: { id: userId },
-    data: { weightKg, heightCm, age, sex, activityLevel, nutritionGoal, goalRateKgPerWeek },
-  });
+  // This form's weightKg is a required BMR input, not a dedicated "log my
+  // weight today" action (that's POST /api/weight/log, which always creates
+  // a WeightLog) — someone re-saving their profile to fix, say, activity
+  // level shouldn't get a duplicate-looking entry in the weight history
+  // graph for a value that didn't actually change. Only write a WeightLog
+  // row when this submission's weight genuinely differs from what's on file,
+  // so a real change (previously silently dropped — User.weightKg updated
+  // but WeightLog never touched, leaving the graph missing that data point)
+  // still gets recorded.
+  const current = await db.user.findUnique({ where: { id: userId }, select: { weightKg: true } });
+  const weightChanged = current?.weightKg !== weightKg;
+
+  await db.$transaction([
+    ...(weightChanged ? [db.weightLog.create({ data: { userId, weightKg } })] : []),
+    db.user.update({
+      where: { id: userId },
+      data: { weightKg, heightCm, age, sex, activityLevel, nutritionGoal, goalRateKgPerWeek },
+    }),
+  ]);
   return NextResponse.json({ ok: true });
 }

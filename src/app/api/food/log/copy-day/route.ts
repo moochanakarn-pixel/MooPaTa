@@ -26,6 +26,13 @@ export async function POST(req: NextRequest) {
   if (!fromDate || !toDate) {
     return NextResponse.json({ error: "invalid_date" }, { status: 400 });
   }
+  // The UI itself never sends the same date for both (it always copies from
+  // the day before the one being viewed), but the API has no reason to trust
+  // that — copying a day onto itself would duplicate every entry logged that
+  // day and double its calorie total.
+  if (fromDate.toDateString() === toDate.toDateString()) {
+    return NextResponse.json({ error: "same_date" }, { status: 400 });
+  }
 
   const fromStart = new Date(fromDate);
   fromStart.setHours(0, 0, 0, 0);

@@ -56,6 +56,17 @@ export async function POST(req: NextRequest) {
 
     const startMinutes = toMinutesOfDay(user.waterReminderStart);
     const endMinutes = toMinutesOfDay(user.waterReminderEnd);
+    // Defensive only — api/settings/water-reminder-schedule already rejects
+    // start >= end (which also rules out an overnight window like 22:00-06:00),
+    // so this is currently unreachable through the app's own UI. Guarding it
+    // here too means a bad direct API call or a future write path that skips
+    // that check fails this one user cleanly instead of hitting the
+    // division-by-zero (start === end) or always-outside-window (start > end)
+    // the pacing formula below would otherwise produce.
+    if (endMinutes <= startMinutes) {
+      results.push({ userId, sent: false, reason: "invalid_window" });
+      continue;
+    }
     if (nowMinutes < startMinutes || nowMinutes > endMinutes) {
       results.push({ userId, sent: false, reason: "outside_window" });
       continue;
