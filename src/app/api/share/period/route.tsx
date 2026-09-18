@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { activityTypeLabel, formatDistanceParts, formatDuration, formatElevationM, formatSpeedKmh } from "@/lib/format";
 import { getSessionUserId } from "@/lib/session";
 import { loadShareFonts } from "@/lib/share-fonts";
+import { loadMascotLogoDataUri } from "@/lib/share-logo";
 import { cardStyle } from "@/lib/share-card-styles";
 import { parseShareLang, shareT } from "@/lib/share-card-i18n";
 
@@ -93,10 +94,11 @@ export async function GET(req: NextRequest) {
   const totalTypeCount = byType.reduce((sum, t) => sum + t._count._all, 0);
 
   let fonts;
+  let mascotLogo;
   try {
-    fonts = await loadShareFonts();
+    [fonts, mascotLogo] = await Promise.all([loadShareFonts(), loadMascotLogoDataUri()]);
   } catch (err) {
-    console.error("Share card: font load failed", err);
+    console.error("Share card: font/logo load failed", err);
     return new Response(
       `Share card unavailable: could not load fonts (${err instanceof Error ? err.message : String(err)})`,
       { status: 500 }
@@ -117,22 +119,8 @@ export async function GET(req: NextRequest) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 16,
-              background: "linear-gradient(135deg, #fc4c02, #ff8a3d)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 30,
-              fontWeight: 700,
-              color: "white",
-            }}
-          >
-            M
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={mascotLogo} width={56} height={56} style={{ borderRadius: 14 }} />
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{ fontSize: 30, fontWeight: 700, color: "white" }}>MooPaTa</span>
             <span style={{ fontSize: 20, color: "#a3a3a3" }}>{dateRangeLabel}</span>

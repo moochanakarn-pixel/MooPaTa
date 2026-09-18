@@ -310,6 +310,17 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
   ไม่ได้ไล่ rename ไฟล์/ตัวแปรทั้งหมด
 - สไตล์การ์ดร่วมกันอยู่ที่ `src/lib/share-card-styles.ts` (`cardStyle`, `rowCardStyle`, `titleStyle`,
   `iconCircleStyle`) — ใช้ทั้ง period/nutrition (โทนเข้มเดิม navy/green) และ daily-summary
+- **หัวการ์ด period/nutrition ใช้โลโก้ mascot แล้วเหมือน `[id]`/`daily-summary`** — เดิม 2 route นี้ยังเป็น
+  ไอคอนสี่เหลี่ยม "M" ตัวอักษรตายตัว (`linear-gradient` + ข้อความ "M") ค้างมาจากก่อนที่ `[id]/route.tsx`
+  จะเปลี่ยนไปใช้ mascot logo (ดูบล็อก "หัวการ์ด = โลโก้ mascot เดี่ยว ๆ" ด้านล่าง) — ตกหล่นไม่ได้ตามไปแก้
+  ตอนนั้น พบจาก audit ตรวจโค้ดหน้าดาวน์โหลดทั้งหมด (เทียบรูป render จริงของทั้ง 4 การ์ดแล้วเห็นชัดว่า
+  "M" ดูเหมือน placeholder ข้างโลโก้จริง) — แก้ด้วยการเรียก `loadMascotLogoDataUri()`
+  (`src/lib/share-logo.ts`) คู่กับ `loadShareFonts()` ใน `Promise.all` เดียวกัน (แพทเทิร์นเดียวกับ
+  `[id]/route.tsx`) แล้วแทนที่ `<div>M</div>` ด้วย `<img src={mascotLogo} width={56} height={56}
+  style={{ borderRadius: 14 }} />` — **คงขนาด 56×56 เดิม + คงข้อความ "MooPaTa"/วันที่ไว้ข้าง ๆ เหมือนเดิม
+  ทุกอย่าง ไม่ได้ redesign เป็นโลโก้เดี่ยว ๆ 96×96 แบบ `[id]`** เพราะ 2 route นี้ไม่มีระบบ `?pos` จัด
+  ตำแหน่งบล็อกรายละเอียดแบบ `[id]` การย้ายข้อความ/วันที่ออกจากแถวโลโก้จะเป็นการ redesign ใหญ่เกินขอบเขต
+  ของแค่ "เปลี่ยนไอคอนที่ดูล้าสมัย" ตามที่ตรวจพบ — เปลี่ยนแค่ไอคอนโดยไม่แตะ layout ที่เหลือเลย
 - **`Cache-Control: private, max-age=120`** ทั้ง 4 route (เดิมเป็น `no-cache, no-store`) — ผู้ใช้บ่นว่า
   พรีวิวในชีทดาวน์โหลดช้า เพราะทุกครั้งที่เปลี่ยนตัวเลือก (style/bg/lang/pos ฯลฯ) ต้อง query DB +
   render ผ่าน Satori ใหม่ทั้งหมดไม่มี cache เลยสักนิด แก้ด้วยการให้ browser cache ตาม URL เต็ม (ซึ่งมี
