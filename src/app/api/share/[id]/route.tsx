@@ -90,7 +90,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // distance/speed badges above at all, but they're exactly the kind of
   // "worth bragging about" moment this card exists for — only queried when
   // the activity actually logged exercises, since most activities won't.
-  if (activity.exercises.length > 0) {
+  // Skipped for cardStyle === "list" too: that layout never shows PR
+  // badges (see the comment on that div further down — it'd just repeat
+  // what the exercise list already shows in full), so this scan of the
+  // user's entire exercise history would be pure wasted DB work there.
+  if (activity.exercises.length > 0 && cardStyle !== "list") {
     const exerciseStats = await getExerciseStats(userId);
     for (const s of exerciseStats) {
       if (s.prActivityId === activity.id && s.prWeightKg !== null) {
@@ -243,13 +247,43 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const SET_ROW_HEIGHT = 50;
   const EXERCISE_CARD_PADDING = 50; // 24 top + 24 bottom + a few px slack
   const EXERCISE_CARD_GAP = 22;
+
+  // Satori's per-request render time doesn't scale linearly with the
+  // number of text nodes on the page — measured directly against this
+  // route (seed a MANUAL activity with N sets, curl ?style=list&bg=
+  // transparent, time it): 32 sets ≈ 33s, 90 sets ≈ 136s, and a 300-set
+  // session pegged one CPU core at ~100% for over 10 minutes without
+  // finishing. That's not just "slow for the person who asked for it" —
+  // ImageResponse's rendering is synchronous CPU work on Node's single
+  // event loop thread, so one oversized render like that stalls every
+  // other request the whole server is handling (dashboard loads, other
+  // API calls, everyone) for as long as it runs, not only other share-card
+  // requests. MAX_LIST_SETS caps the worst case to something that always
+  // finishes quickly regardless of how many sets a session actually has —
+  // truncating (with a note, never silently) rather than ever feeding an
+  // unbounded amount of content into this render path again.
+  const MAX_LIST_SETS = 80;
+  let listSetsRemaining = MAX_LIST_SETS;
+  let omittedSetCount = 0;
+  const visibleExercises: { id: string; name: string; sets: (typeof activity.exercises)[number]["sets"] }[] = [];
+  for (const ex of activity.exercises) {
+    if (listSetsRemaining <= 0) {
+      omittedSetCount += ex.sets.length;
+      continue;
+    }
+    const visibleSets = ex.sets.slice(0, listSetsRemaining);
+    omittedSetCount += ex.sets.length - visibleSets.length;
+    listSetsRemaining -= visibleSets.length;
+    if (visibleSets.length > 0) visibleExercises.push({ id: ex.id, name: ex.name, sets: visibleSets });
+  }
+
   const listExercisesHeight =
-    activity.exercises.length === 0
+    visibleExercises.length === 0
       ? 60
-      : activity.exercises.reduce(
+      : visibleExercises.reduce(
           (sum, ex) => sum + EXERCISE_TITLE_HEIGHT + ex.sets.length * SET_ROW_HEIGHT + EXERCISE_CARD_PADDING + EXERCISE_CARD_GAP,
           0
-        );
+        ) + (omittedSetCount > 0 ? 44 : 0); // truncation note line
 
   // Unlike grid/hero, the list card shows only the type badge, never the PR
   // badges (see the comment on that div further down) — always exactly one
@@ -323,11 +357,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
               {t.exercisesListTitle}
             </div>
 
-            {activity.exercises.length === 0 ? (
+            {visibleExercises.length === 0 ? (
               <span style={{ fontSize: 24, color: "#a3a3a3", textShadow }}>{t.noExercisesText}</span>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: EXERCISE_CARD_GAP }}>
-                {activity.exercises.map((ex) => (
+                {visibleExercises.map((ex) => (
                   <div
                     key={ex.id}
                     style={{
@@ -340,16 +374,22 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                     }}
                   >
                     <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>{ex.name}</span>
+                    {/* One combined span per set instead of a row div + two
+                        separate spans (label, detail) — three Satori text/
+                        layout nodes down to one. A long session's sheer set
+                        count is what made this render path slow (see the
+                        perf comment above MAX_LIST_SETS), so cutting nodes
+                        here matters more than for any other card style. */}
                     {ex.sets.map((s, i) => (
-                      <div key={s.id} style={{ display: "flex", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: 24, color: "#a3a3a3", textShadow }}>{t.setLabel(i + 1)}</span>
-                        <span style={{ fontSize: 26, fontWeight: 600, color: "white", textShadow }}>
-                          {t.setDetail(s.reps, s.weightKg, s.rpe)}
-                        </span>
-                      </div>
+                      <span key={s.id} style={{ fontSize: 26, fontWeight: 600, color: "white", textShadow }}>
+                        {t.setLine(i + 1, s.reps, s.weightKg, s.rpe)}
+                      </span>
                     ))}
                   </div>
                 ))}
+                {omittedSetCount > 0 && (
+                  <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{t.listTruncatedNote(omittedSetCount)}</span>
+                )}
               </div>
             )}
           </div>

@@ -84,14 +84,24 @@ const dict = {
 
     // ?style=list on the single-activity card (src/app/api/share/[id]) —
     // the full exercise/set breakdown, not the grid/hero cards' summary
-    // numbers. setDetail mirrors activity/[id]/page.tsx's own inline
-    // "{reps} ครั้ง × {weightKg} กก. (RPE {rpe})" rendering exactly, so the
-    // card reads the same as the page it was captured from.
+    // numbers. setLine mirrors activity/[id]/page.tsx's own inline
+    // "{reps} ครั้ง × {weightKg} กก. (RPE {rpe})" formatting, so the card
+    // reads the same as the page it was captured from — combined into one
+    // string (rather than a separate label span + detail span, which this
+    // used to be) because a session with many sets renders one Satori text
+    // node per span, and that per-node cost is what made list-style renders
+    // for a realistic multi-exercise session take tens of seconds (see the
+    // perf comment above `EXERCISE_TITLE_HEIGHT` in the route) — halving
+    // the text nodes per set directly cuts that cost.
     exercisesListTitle: "ท่าออกกำลังกาย",
-    setLabel: (n: number) => `เซ็ท ${n}`,
-    setDetail: (reps: number, weightKg: number | null, rpe: number | null) =>
-      `${reps} ครั้ง${weightKg !== null ? ` × ${weightKg} กก.` : ""}${rpe !== null ? ` (RPE ${rpe})` : ""}`,
+    setLine: (n: number, reps: number, weightKg: number | null, rpe: number | null) =>
+      `เซ็ท ${n}: ${reps} ครั้ง${weightKg !== null ? ` × ${weightKg} กก.` : ""}${rpe !== null ? ` (RPE ${rpe})` : ""}`,
     noExercisesText: "ยังไม่มีท่าออกกำลังกายบันทึกไว้",
+    // Shown when MAX_LIST_SETS truncated the exercise list (see the perf
+    // comment in the route) — always says so rather than silently dropping
+    // the rest, matching this project's "truncate visibly, never silently"
+    // convention (e.g. Activity.notes' 500-char cutoff).
+    listTruncatedNote: (n: number) => `+ อีก ${n} เซ็ทไม่แสดงในรูปนี้ (เซสชันยาวเกินไป)`,
   },
   en: {
     prBadge: (name: string, weightKg: number) => `PR ${name} ${weightKg} kg`,
@@ -154,10 +164,10 @@ const dict = {
     weightDeltaFromPrev: (signed: string) => `${signed} from last`,
 
     exercisesListTitle: "Exercises",
-    setLabel: (n: number) => `Set ${n}`,
-    setDetail: (reps: number, weightKg: number | null, rpe: number | null) =>
-      `${reps} reps${weightKg !== null ? ` × ${weightKg} kg` : ""}${rpe !== null ? ` (RPE ${rpe})` : ""}`,
+    setLine: (n: number, reps: number, weightKg: number | null, rpe: number | null) =>
+      `Set ${n}: ${reps} reps${weightKg !== null ? ` × ${weightKg} kg` : ""}${rpe !== null ? ` (RPE ${rpe})` : ""}`,
     noExercisesText: "No exercises logged",
+    listTruncatedNote: (n: number) => `+ ${n} more sets not shown (session too long for one image)`,
   },
 };
 
