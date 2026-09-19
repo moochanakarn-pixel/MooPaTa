@@ -45,10 +45,17 @@ type Lang = (typeof LANG_OPTIONS)[number]["value"];
 // to match what it actually does.
 export function ShareActivityButton({
   activityId,
+  activityType,
+  startedAtMs,
   defaultLang = "th",
   hasExercises = false,
 }: {
   activityId: string;
+  // Used only to build a meaningful download filename (e.g.
+  // "moopata-run-2026-09-19.png") — not shown anywhere in the sheet's UI,
+  // so no i18n/label mapping needed, just the raw `Activity.type` value.
+  activityType: string;
+  startedAtMs: number;
   defaultLang?: Lang;
   hasExercises?: boolean;
 }) {
@@ -86,7 +93,15 @@ export function ShareActivityButton({
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl;
-      a.download = "moopata-activity.png";
+      // e.g. "moopata-run-2026-09-19.png" instead of the same generic name
+      // every time — easier to tell saved cards apart once someone's
+      // downloaded a few. Slugified from the raw type (already an
+      // ASCII identifier like "Run"/"WeightTraining", no locale mapping
+      // needed) + the activity's own date, not "today" (matters most for
+      // an activity edited/re-downloaded well after it happened).
+      const dateSlug = new Date(startedAtMs).toISOString().slice(0, 10);
+      const typeSlug = activityType.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      a.download = `moopata-${typeSlug}-${dateSlug}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();

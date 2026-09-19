@@ -6,6 +6,18 @@ export interface ExerciseSetSummary {
   rpe: number | null;
 }
 
+// Epley formula — the most commonly used estimated-1RM formula, and the
+// only one that needs no extra input beyond what a PR set already records
+// (weight × reps). Note it does *not* collapse to the input weight at
+// reps=1 (it returns weight × 31/30, slightly over) — callers should still
+// only show it once `reps > 1`, because at exactly 1 rep the PR weight is
+// already a *measured* 1RM, and showing this formula's estimate right next
+// to it would misleadingly suggest a higher number than what was actually
+// lifted.
+export function estimateOneRepMaxKg(weightKg: number, reps: number): number {
+  return weightKg * (1 + reps / 30);
+}
+
 export interface ExerciseStat {
   name: string;
   // Full set-by-set breakdown of the most recently logged session for this

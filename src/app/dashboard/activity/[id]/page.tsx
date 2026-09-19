@@ -114,7 +114,13 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
             </Link>
           )}
           <DeleteActivityButton activityId={activity.id} />
-          <ShareActivityButton activityId={activity.id} defaultLang={locale} hasExercises={activity.exercises.length > 0} />
+          <ShareActivityButton
+            activityId={activity.id}
+            activityType={activity.type}
+            startedAtMs={activity.startedAt.getTime()}
+            defaultLang={locale}
+            hasExercises={activity.exercises.length > 0}
+          />
         </div>
       </div>
 

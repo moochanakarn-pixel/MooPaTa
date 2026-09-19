@@ -16,7 +16,7 @@ vi.mock("./db", () => ({
   },
 }));
 
-const { getExerciseStats, getTotalLiftVolumeKg, getLastWorkoutSession } = await import("./exercise-stats");
+const { getExerciseStats, getTotalLiftVolumeKg, getLastWorkoutSession, estimateOneRepMaxKg } = await import("./exercise-stats");
 
 // One ExerciseSet row, as the query's `select` shape returns it. Sets that
 // belong to the same logged session (Exercise row) share `exerciseId` — a
@@ -222,5 +222,24 @@ describe("getTotalLiftVolumeKg", () => {
   it("returns 0 for a user with no weighted sets logged", async () => {
     findManyMock.mockResolvedValue([]);
     expect(await getTotalLiftVolumeKg("u1")).toBe(0);
+  });
+});
+
+describe("estimateOneRepMaxKg", () => {
+  it("applies the Epley formula, including at 1 rep (doesn't clamp to the input weight)", () => {
+    // 100 * (1 + 1/30) = 103.33... — callers gate display on reps > 1
+    // themselves since the PR weight is already a measured 1RM there.
+    expect(estimateOneRepMaxKg(100, 1)).toBeCloseTo(103.33, 1);
+  });
+
+  it("applies the Epley formula for multiple reps", () => {
+    // 100 * (1 + 5/30) = 116.666...
+    expect(estimateOneRepMaxKg(100, 5)).toBeCloseTo(116.67, 1);
+  });
+
+  it("increases monotonically with reps for a fixed weight", () => {
+    const at5 = estimateOneRepMaxKg(60, 5);
+    const at10 = estimateOneRepMaxKg(60, 10);
+    expect(at10).toBeGreaterThan(at5);
   });
 });

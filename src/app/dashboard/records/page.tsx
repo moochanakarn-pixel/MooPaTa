@@ -11,7 +11,7 @@ import {
   formatDuration,
   type UnitSystem,
 } from "@/lib/format";
-import { getExerciseStats } from "@/lib/exercise-stats";
+import { estimateOneRepMaxKg, getExerciseStats } from "@/lib/exercise-stats";
 import { computePrProgression } from "@/lib/pr-progression";
 import { ActivityIcon } from "../activity-icon";
 import { PrProgressionChart } from "./pr-progression-chart";
@@ -278,9 +278,22 @@ export default async function RecordsPage() {
                       <p className="text-sm font-medium text-neutral-200">{s.name}</p>
                       <p className="text-xs text-neutral-500">{formatActivityDate(new Date(s.prAtMs))}</p>
                     </div>
-                    <p className="text-sm font-bold tabular-nums text-neutral-100">
-                      {s.prWeightKg} กก. × {s.prReps}
-                    </p>
+                    <div className="text-right">
+                      <p className="text-sm font-bold tabular-nums text-neutral-100">
+                        {s.prWeightKg} กก. × {s.prReps}
+                      </p>
+                      {/* At exactly 1 rep the PR set already is the 1RM — an
+                          "estimate" line would just repeat the number above.
+                          prWeightKg is only possibly null before the filter
+                          above (bodyweight-only exercises, excluded from
+                          this list already) — re-checked here because that
+                          filter doesn't narrow the array's element type. */}
+                      {s.prWeightKg !== null && s.prReps > 1 && (
+                        <p className="text-xs tabular-nums text-neutral-500">
+                          ~{Math.round(estimateOneRepMaxKg(s.prWeightKg, s.prReps))} กก. (1RM ประมาณ)
+                        </p>
+                      )}
+                    </div>
                   </Link>
                 ))}
               </div>

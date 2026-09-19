@@ -463,6 +463,17 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     trigger ("ดาวน์โหลด") ตอนกด**เปิด** sheet ทั้งสองจุด (ไม่ใช่ตอนปิด เพราะปิดได้หลายทาง เช็คจุดเดียวที่
     เปิดง่ายกว่า) — `SummaryConfigurator` ไม่โดนบั๊กนี้เพราะเป็นหน้าเต็มที่ `/dashboard/summary` ไม่ใช่
     sheet ที่ปิด-เปิดซ้ำได้ ออกจากหน้าแล้วกลับมาใหม่คือ mount รอบใหม่ state เริ่มจาก default เสมออยู่แล้ว
+  - **`ShareActivityButton` ไม่ hardcode `"moopata-activity.png"` แล้ว** — เปลี่ยนเป็น
+    `moopata-${typeSlug}-${dateSlug}.png` (เช่น `moopata-weighttraining-2026-09-19.png`) ตอนกด
+    "บันทึกไฟล์" ในโค้ด `handleDownload()`, `typeSlug` มาจาก `Activity.type` ดิบ (เป็น ASCII identifier
+    อยู่แล้ว เช่น `"Run"`/`"WeightTraining"` ไม่ต้อง map เป็นภาษาแสดงผล) lowercase แล้ว replace อักขระที่
+    ไม่ใช่ `a-z0-9` เป็น `-`, `dateSlug` มาจาก `activity.startedAt` (วันที่ของกิจกรรมเอง ไม่ใช่ "วันนี้"
+    ที่กดดาวน์โหลด — สำคัญตอนกลับมาโหลดซ้ำกิจกรรมเก่าหลังผ่านไปนาน) — component รับ prop ใหม่
+    `activityType`/`startedAtMs` เพิ่มจากเดิม (`activityId`/`defaultLang`/`hasExercises`), caller เดียว
+    (`activity/[id]/page.tsx`) ส่ง `activity.type`/`activity.startedAt.getTime()` เข้าไป — แค่เปลี่ยน
+    ชื่อไฟล์ที่เซฟ ไม่กระทบ route/`Content-Disposition` ของ `/api/share/[id]` เอง (route ไม่เคยตั้งชื่อไฟล์
+    มาก่อน ฝั่ง client hardcode เองมาตลอด) ทดสอบจริงด้วย Playwright: กดดาวน์โหลดกิจกรรม WeightTraining ที่
+    บันทึกวันที่ 2026-09-19 ได้ `download.suggestedFilename()` เป็น `"moopata-weighttraining-2026-09-19.png"`
   - **หน้ารายละเอียดกิจกรรม (`ActivityDetailPage`) ยังไม่อยู่ในขอบเขตแปล UI (`### 5.`)** แต่ต้องรู้ภาษา
     UI ปัจจุบันอยู่ดีเพื่อตั้งค่า default ให้ตัวเลือกภาษาของการ์ด — เรียก `resolveLocale()`
     (`src/lib/locale.ts`) ตรง ๆ แทนที่จะพึ่ง `next-intl`'s `getLocale()` (ซึ่งก็เรียก `resolveLocale()`
@@ -901,7 +912,13 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
       per-type เดิม (การ์ด per-type ของ `WeightTraining` ไม่มีระยะทาง/ความเร็วให้โชว์อยู่แล้วโดยธรรมชาติ
       ส่วนนี้เลยเป็นสถิติที่ actionable จริงสำหรับสายเวทแทน) รายการเรียงตามชื่อท่า (`localeCompare`
       แบบไทย) แต่ละแถวลิงก์ไปหน้ารายละเอียดกิจกรรมที่ทำ PR นั้นได้ (`prActivityId`) — กรองท่าที่ไม่เคย
-      ใส่น้ำหนักออกไปแล้ว (ดูด้านบน)
+      ใส่น้ำหนักออกไปแล้ว (ดูด้านบน) — **แต่ละแถวมีเลข "1RM ประมาณ" ต่อท้ายด้วย** (`estimateOneRepMaxKg`,
+      `src/lib/exercise-stats.ts`, สูตร Epley: `weight × (1 + reps/30)`) ไม่ต้องเพิ่ม field/query ใหม่เลย
+      เพราะ `prReps` มีอยู่แล้วใน `ExerciseStat` (แค่ไม่เคยเอามาใช้) — **ซ่อนบรรทัดนี้ถ้า `prReps === 1`**
+      เพราะตอนนั้น PR ที่บันทึกไว้คือ 1RM ที่ยกได้จริงอยู่แล้ว ไม่ใช่แค่ตัวเลขซ้ำ: สูตร Epley ไม่ลดรูปเป็น
+      น้ำหนักเดิมพอดีที่ reps=1 (ให้ weight × 31/30 สูงกว่าความจริงเล็กน้อย) โชว์คู่กันจะทำให้เข้าใจผิดว่า
+      ยกได้หนักกว่าที่ยกจริง — ทดสอบยืนยันจริงด้วยการ seed ท่าเบนช์เพรสที่ทำ PR 90 กก. × 3 ครั้ง แล้วเปิด
+      หน้าสถิติสูงสุดจริง เห็น "90 กก. × 3" คู่กับ "~99 กก. (1RM ประมาณ)" ต่อท้ายตามสูตร (90 × 1.1 = 99)
     - **ที่หน้า "ความสำเร็จ"** (`/dashboard/achievements`) — เพิ่มหมุดหมาย "น้ำหนักสะสมที่ยกได้"
       (`getTotalLiftVolumeKg(userId)` ใน `src/lib/exercise-stats.ts`, thresholds
       `LIFT_VOLUME_MILESTONES_KG` ใน `src/lib/achievements.ts`) ต่อจาก 3 หมุดหมายเดิม
