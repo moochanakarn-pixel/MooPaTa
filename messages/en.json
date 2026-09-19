@@ -9,7 +9,8 @@
     "close": "Close",
     "background": "Background",
     "opaque": "Opaque",
-    "transparent": "Transparent"
+    "transparent": "Transparent",
+    "share": "Share"
   },
   "bottomNav": {
     "addData": "Add data",

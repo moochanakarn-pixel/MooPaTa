@@ -32,6 +32,8 @@ const LANG_OPTIONS = [
 ] as const;
 type Lang = (typeof LANG_OPTIONS)[number]["value"];
 
+const STORAGE_KEY = "moopata_activity_share_config_v1";
+
 // A small sheet in front of the plain "download the PNG" link this replaced
 // — lets the user preview & pick a card style + transparent background (see
 // src/app/api/share/[id]/route.tsx's ?style/?bg) before saving, so a
@@ -67,9 +69,78 @@ export function ShareActivityButton({
   const [pos, setPos] = useState<Pos>("center");
   const [lang, setLang] = useState<Lang>(defaultLang);
   const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
+  const [canWebShare, setCanWebShare] = useState(false);
+
+  // Restores the last style/bg/pos chosen for *any* activity (same idea as
+  // SummaryConfigurator's moopata_summary_config_v1 — one set of choices
+  // people reuse every time, not something worth re-picking per activity).
+  // `lang` is deliberately excluded, matching every other share surface's
+  // documented behavior: it always defaults to the current UI language and
+  // is a one-off choice per download, never persisted.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      const restoredStyle: Style =
+        typeof parsed.style === "string" && ALL_STYLE_OPTIONS.some((o) => o.value === parsed.style) ? parsed.style : "grid";
+      // "list" only makes sense when this activity actually has exercises —
+      // a stored preference from a different (weight-training) activity
+      // shouldn't silently request a pointless empty list card here.
+      setStyle(restoredStyle === "list" && !hasExercises ? "grid" : restoredStyle);
+      if (typeof parsed.bg === "string" && BG_OPTIONS.some((o) => o.value === parsed.bg)) setBg(parsed.bg);
+      if (typeof parsed.pos === "string" && POSITION_OPTIONS.some((o) => o.value === parsed.pos)) setPos(parsed.pos);
+    } catch {
+      // Private browsing / blocked storage / corrupt JSON — just keep the
+      // defaults, same as SummaryConfigurator's own silent fallback.
+    }
+    // Only ever restore once on mount — after that, user choices below
+    // should win, not a stale read racing a later write.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ style, bg, pos }));
+    } catch {
+      // Same "just a convenience" tolerance as the read above.
+    }
+  }, [style, bg, pos]);
+
+  useEffect(() => {
+    setCanWebShare(typeof navigator !== "undefined" && "share" in navigator && "canShare" in navigator);
+  }, []);
 
   const href = `/api/share/${activityId}?bg=${bg}&style=${style}&pos=${pos}&lang=${lang}`;
+
+  function buildFilename() {
+    // e.g. "moopata-run-2026-09-19.png" instead of the same generic name
+    // every time — easier to tell saved cards apart once someone's
+    // downloaded a few. Slugified from the raw type (already an ASCII
+    // identifier like "Run"/"WeightTraining", no locale mapping needed) +
+    // the activity's own date, not "today" (matters most for an activity
+    // edited/re-downloaded well after it happened). Uses localDateKey
+    // (local calendar day), not toISOString() (UTC day) — an activity
+    // logged just after local midnight would otherwise date itself a day
+    // early in the filename, the same class of bug localDateKey's own
+    // comment warns about.
+    const dateSlug = localDateKey(new Date(startedAtMs));
+    const typeSlug = activityType.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    return `moopata-${typeSlug}-${dateSlug}.png`;
+  }
+
+  function saveBlob(blob: Blob, filename: string) {
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(blobUrl);
+  }
 
   // A plain `<a href download>` gives no way to know the download actually
   // started — for this route that can matter: rendering the card is real
@@ -84,39 +155,58 @@ export function ShareActivityButton({
   // click during that time is a no-op instead of a second request) before
   // handing the bytes to a synthetic anchor to actually save.
   async function handleDownload() {
-    if (downloading) return;
+    if (downloading || sharing) return;
     setDownloading(true);
     setDownloadFailed(false);
     try {
       const res = await fetch(href);
       if (!res.ok) throw new Error(`share card request failed: ${res.status}`);
       const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      // e.g. "moopata-run-2026-09-19.png" instead of the same generic name
-      // every time — easier to tell saved cards apart once someone's
-      // downloaded a few. Slugified from the raw type (already an
-      // ASCII identifier like "Run"/"WeightTraining", no locale mapping
-      // needed) + the activity's own date, not "today" (matters most for
-      // an activity edited/re-downloaded well after it happened). Uses
-      // localDateKey (local calendar day), not toISOString() (UTC day) —
-      // an activity logged just after local midnight would otherwise date
-      // itself a day early in the filename, the same class of bug
-      // localDateKey's own comment warns about.
-      const dateSlug = localDateKey(new Date(startedAtMs));
-      const typeSlug = activityType.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-      a.download = `moopata-${typeSlug}-${dateSlug}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(blobUrl);
+      saveBlob(blob, buildFilename());
       setOpen(false);
     } catch (err) {
       console.error("Share card download failed", err);
       setDownloadFailed(true);
     } finally {
       setDownloading(false);
+    }
+  }
+
+  // Web Share API — lets the OS share sheet hand the PNG straight to IG
+  // Story/Line/etc. instead of the "download, then switch apps and attach
+  // it yourself" round trip every other button in this file does (see the
+  // module comment above: everything else really is just a download, this
+  // is the one genuine exception). Feature-detected (`canWebShare`) since
+  // it's desktop-Chrome-unsupported and iOS/Android-only in practice — the
+  // button only renders when both `navigator.share`/`navigator.canShare`
+  // exist. Still re-checks `canShare({ files: [file] })` at share time
+  // because *existing* doesn't guarantee *this browser can share files*
+  // (some only support sharing text/URLs) — falls back to the same
+  // save-to-disk path as the download button when it can't.
+  async function handleShare() {
+    if (downloading || sharing) return;
+    setSharing(true);
+    setDownloadFailed(false);
+    try {
+      const res = await fetch(href);
+      if (!res.ok) throw new Error(`share card request failed: ${res.status}`);
+      const blob = await res.blob();
+      const filename = buildFilename();
+      const file = new File([blob], filename, { type: blob.type || "image/png" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+      } else {
+        saveBlob(blob, filename);
+      }
+      setOpen(false);
+    } catch (err) {
+      // The user backing out of the native share sheet throws AbortError —
+      // that's a cancel, not a failure, so it shouldn't show an error.
+      if (err instanceof Error && err.name === "AbortError") return;
+      console.error("Web Share failed", err);
+      setDownloadFailed(true);
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -293,36 +383,79 @@ export function ShareActivityButton({
               />
             </div>
 
-            <button
-              type="button"
-              onClick={handleDownload}
-              disabled={downloading}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#fc4c02] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {downloading ? (
-                <>
-                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 animate-spin">
-                    <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
-                    <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                  </svg>
-                  กำลังสร้างรูป...
-                </>
-              ) : (
-                <>
-                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-                    <path
-                      d="M10 3v10m0 0-3.5-3.5M10 13l3.5-3.5"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path d="M4 15.5v.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                  </svg>
-                  ดาวน์โหลดรูปภาพ (PNG)
-                </>
+            <div className="flex gap-2">
+              {canWebShare && (
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  disabled={downloading || sharing}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#fc4c02] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {sharing ? (
+                    <>
+                      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 animate-spin">
+                        <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
+                        <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                      </svg>
+                      กำลังสร้างรูป...
+                    </>
+                  ) : (
+                    <>
+                      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                        <path
+                          d="M10 3v9M6.5 6.5 10 3l3.5 3.5"
+                          stroke="currentColor"
+                          strokeWidth="1.7"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="M5 10v5.5A1.5 1.5 0 0 0 6.5 17h7a1.5 1.5 0 0 0 1.5-1.5V10"
+                          stroke="currentColor"
+                          strokeWidth="1.7"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      แชร์
+                    </>
+                  )}
+                </button>
               )}
-            </button>
+              <button
+                type="button"
+                onClick={handleDownload}
+                disabled={downloading || sharing}
+                className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  canWebShare
+                    ? "flex-none border border-neutral-700 text-neutral-300 hover:bg-neutral-800"
+                    : "flex-1 bg-[#fc4c02] text-white hover:bg-[#e04402]"
+                }`}
+              >
+                {downloading ? (
+                  <>
+                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 animate-spin">
+                      <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
+                      <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                    กำลังสร้างรูป...
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                      <path
+                        d="M10 3v10m0 0-3.5-3.5M10 13l3.5-3.5"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path d="M4 15.5v.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                    {canWebShare ? "ดาวน์โหลด" : "ดาวน์โหลดรูปภาพ (PNG)"}
+                  </>
+                )}
+              </button>
+            </div>
             {downloadFailed && (
               <p className="mt-2 text-center text-xs text-red-400">สร้างรูปไม่สำเร็จ ลองใหม่อีกครั้ง</p>
             )}

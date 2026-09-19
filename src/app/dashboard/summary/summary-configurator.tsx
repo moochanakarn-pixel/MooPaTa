@@ -86,7 +86,13 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
   const [transparent, setTransparent] = useState(false);
   const [lang, setLang] = useState<Lang>(defaultLang);
   const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
+  const [canWebShare, setCanWebShare] = useState(false);
+
+  useEffect(() => {
+    setCanWebShare(typeof navigator !== "undefined" && "share" in navigator && "canShare" in navigator);
+  }, []);
 
   const date = dateMode === "today" ? todayKey() : dateMode === "yesterday" ? yesterdayKey() : customDate;
 
@@ -104,29 +110,60 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
   // waiting fired a second independent request (two files saved once both
   // finally finished). Fetching it ourselves gives a real in-flight state
   // to disable the button on.
+  function saveBlob(blob: Blob, filename: string) {
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(blobUrl);
+  }
+
+  async function fetchImage(): Promise<{ blob: Blob; filename: string }> {
+    const res = await fetch(href);
+    if (!res.ok) throw new Error(`share card request failed: ${res.status}`);
+    const blob = await res.blob();
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? "moopata-summary.png";
+    return { blob, filename };
+  }
+
   async function handleDownload() {
-    if (downloading) return;
+    if (downloading || sharing) return;
     setDownloading(true);
     setDownloadFailed(false);
     try {
-      const res = await fetch(href);
-      if (!res.ok) throw new Error(`share card request failed: ${res.status}`);
-      const blob = await res.blob();
-      const disposition = res.headers.get("Content-Disposition") ?? "";
-      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? "moopata-summary.png";
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(blobUrl);
+      const { blob, filename } = await fetchImage();
+      saveBlob(blob, filename);
     } catch (err) {
       console.error("Share card download failed", err);
       setDownloadFailed(true);
     } finally {
       setDownloading(false);
+    }
+  }
+
+  // Same Web Share API pattern as ShareActivityButton/QuickDownloadSheet.
+  async function handleShare() {
+    if (downloading || sharing) return;
+    setSharing(true);
+    setDownloadFailed(false);
+    try {
+      const { blob, filename } = await fetchImage();
+      const file = new File([blob], filename, { type: blob.type || "image/png" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+      } else {
+        saveBlob(blob, filename);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      console.error("Web Share failed", err);
+      setDownloadFailed(true);
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -363,36 +400,68 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
 
       {anyEnabled ? (
         <>
-          <button
-            type="button"
-            onClick={handleDownload}
-            disabled={downloading}
-            className="flex items-center justify-center gap-2 rounded-xl bg-[#fc4c02] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {downloading ? (
-              <>
-                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 animate-spin">
-                  <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
-                  <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                </svg>
-                กำลังสร้างรูป...
-              </>
-            ) : (
-              <>
-                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-                  <path
-                    d="M10 3v10m0 0-3.5-3.5M10 13l3.5-3.5"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path d="M4 15.5v.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                </svg>
-                ดาวน์โหลดรูปภาพ (PNG)
-              </>
+          <div className="flex gap-2">
+            {canWebShare && (
+              <button
+                type="button"
+                onClick={handleShare}
+                disabled={downloading || sharing}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#fc4c02] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {sharing ? (
+                  <>
+                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 animate-spin">
+                      <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
+                      <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                    กำลังสร้างรูป...
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                      <path d="M10 3v9M6.5 6.5 10 3l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M5 10v5.5A1.5 1.5 0 0 0 6.5 17h7a1.5 1.5 0 0 0 1.5-1.5V10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                    แชร์
+                  </>
+                )}
+              </button>
             )}
-          </button>
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={downloading || sharing}
+              className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                canWebShare
+                  ? "flex-none border border-neutral-700 text-neutral-300 hover:bg-neutral-800"
+                  : "flex-1 bg-[#fc4c02] text-white hover:bg-[#e04402]"
+              }`}
+            >
+              {downloading ? (
+                <>
+                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 animate-spin">
+                    <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
+                    <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                  </svg>
+                  กำลังสร้างรูป...
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                    <path
+                      d="M10 3v10m0 0-3.5-3.5M10 13l3.5-3.5"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path d="M4 15.5v.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                  </svg>
+                  {canWebShare ? "ดาวน์โหลด" : "ดาวน์โหลดรูปภาพ (PNG)"}
+                </>
+              )}
+            </button>
+          </div>
           {downloadFailed && <p className="mt-2 text-center text-xs text-red-400">สร้างรูปไม่สำเร็จ ลองใหม่อีกครั้ง</p>}
         </>
       ) : (

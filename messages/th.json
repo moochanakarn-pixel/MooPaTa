@@ -9,7 +9,8 @@
     "close": "ปิด",
     "background": "พื้นหลัง",
     "opaque": "ทึบ",
-    "transparent": "โปร่งใส"
+    "transparent": "โปร่งใส",
+    "share": "แชร์"
   },
   "bottomNav": {
     "addData": "เพิ่มข้อมูล",

@@ -44,7 +44,7 @@ export default async function AchievementsPage() {
   const prExercises = exerciseStats
     .filter((s): s is typeof s & { prWeightKg: number } => s.prWeightKg !== null)
     .sort((a, b) => b.prAtMs - a.prAtMs)
-    .map((s) => ({ name: s.name, weightKg: s.prWeightKg, activityId: s.prActivityId }));
+    .map((s) => ({ name: s.name, weightKg: s.prWeightKg, reps: s.prReps, activityId: s.prActivityId }));
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">

@@ -111,6 +111,39 @@ describe("getExerciseStats", () => {
     expect(stat.prWeightKg).toBeNull();
   });
 
+  it("builds one history point per session, oldest to newest, reflecting real ups and downs (not just new records)", async () => {
+    findManyMock.mockResolvedValue([
+      set("ex1", "สควอท", 8, 60, "2026-01-01", "a1"), // session 1: max 60
+      set("ex2", "สควอท", 5, 40, "2026-01-08", "a2"), // session 2: a deload, max 40 (lower than session 1)
+      set("ex3", "สควอท", 6, 70, "2026-01-15", "a3"), // session 3, set 1: max so far 70
+      set("ex3", "สควอท", 6, 65, "2026-01-15", "a3"), // session 3, set 2: still same session
+    ]);
+    const [stat] = await getExerciseStats("u1");
+    expect(stat.history).toEqual([
+      { atMs: new Date("2026-01-01").getTime(), maxWeightKg: 60, totalVolumeKg: 60 * 8 },
+      { atMs: new Date("2026-01-08").getTime(), maxWeightKg: 40, totalVolumeKg: 40 * 5 },
+      { atMs: new Date("2026-01-15").getTime(), maxWeightKg: 70, totalVolumeKg: 70 * 6 + 65 * 6 },
+    ]);
+  });
+
+  it("gives a history point maxWeightKg: null for a bodyweight-only session, without breaking later sessions", async () => {
+    findManyMock.mockResolvedValue([
+      set("ex1", "ดึงข้อ", 8, null, "2026-01-01", "a1"),
+      set("ex2", "ดึงข้อ", 6, 5, "2026-01-08", "a2"), // added weight later
+    ]);
+    const [stat] = await getExerciseStats("u1");
+    expect(stat.history).toEqual([
+      { atMs: new Date("2026-01-01").getTime(), maxWeightKg: null, totalVolumeKg: 0 },
+      { atMs: new Date("2026-01-08").getTime(), maxWeightKg: 5, totalVolumeKg: 30 },
+    ]);
+  });
+
+  it("flushes the still-open latest session into history too, not just earlier ones", async () => {
+    findManyMock.mockResolvedValue([set("ex1", "เบนช์เพรส", 8, 40, "2026-01-01", "a1")]);
+    const [stat] = await getExerciseStats("u1");
+    expect(stat.history).toEqual([{ atMs: new Date("2026-01-01").getTime(), maxWeightKg: 40, totalVolumeKg: 320 }]);
+  });
+
   it("keeps two genuinely different exercise names as separate entries", async () => {
     findManyMock.mockResolvedValue([
       set("ex1", "สควอท", 8, 60, "2026-01-01", "a1"),

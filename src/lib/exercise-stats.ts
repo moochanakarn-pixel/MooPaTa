@@ -18,6 +18,21 @@ export function estimateOneRepMaxKg(weightKg: number, reps: number): number {
   return weightKg * (1 + reps / 30);
 }
 
+// One point per distinct session (Exercise row) an exercise name was ever
+// logged in — the actual progressive-overload trend, which can go up AND
+// down between sessions (a deload, a missed rep, a lighter warm-up-heavy
+// day). Deliberately not the same shape as PrProgressionChart's "only ever
+// increases" staircase (src/lib/pr-progression.ts) — that one only cares
+// about lifetime records, this one is meant to show the honest session-to-
+// session picture, dips included.
+export interface ExerciseSessionPoint {
+  atMs: number;
+  // null when that session's sets for this exercise were all bodyweight
+  // (no weightKg ever given) — nothing numeric to plot for that point.
+  maxWeightKg: number | null;
+  totalVolumeKg: number;
+}
+
 export interface ExerciseStat {
   name: string;
   // Full set-by-set breakdown of the most recently logged session for this
@@ -33,14 +48,23 @@ export interface ExerciseStat {
   prReps: number;
   prAtMs: number;
   prActivityId: string;
+  // Oldest → newest, one entry per session — see ExerciseSessionPoint.
+  history: ExerciseSessionPoint[];
 }
 
 interface StatAccumulator extends ExerciseStat {
-  // Tracks which Exercise db row `latestSets` is currently being built
+  // Tracks which Exercise db row `latestSets` (and the in-progress
+  // _sessionMaxWeightKg/_sessionVolumeKg below) is currently being built
   // from — an ExerciseSet row belongs to the same *session* as the
   // previous one only while this id doesn't change. Not part of the
   // public ExerciseStat shape.
   _latestExerciseId: string;
+  // Running max/volume for whichever session is currently "open" (the one
+  // `_latestExerciseId` points at) — flushed into `history` the moment a
+  // row belonging to a *different* session is seen, and once more after
+  // the loop ends for whichever session was still open at the end.
+  _sessionMaxWeightKg: number | null;
+  _sessionVolumeKg: number;
 }
 
 // One pass over every set the user has ever logged, folding each distinct
@@ -99,7 +123,10 @@ export async function getExerciseStats(userId: string, excludeActivityId?: strin
         prReps: 0,
         prAtMs: atMs,
         prActivityId: activityId,
+        history: [],
         _latestExerciseId: row.exercise.id,
+        _sessionMaxWeightKg: null,
+        _sessionVolumeKg: 0,
       };
       stats.set(key, stat);
     }
@@ -107,14 +134,23 @@ export async function getExerciseStats(userId: string, excludeActivityId?: strin
     // Rows arrive oldest-first — a new Exercise row id means we've moved to
     // a later logged session for this name, so the latest-sets breakdown
     // resets to just that session's sets instead of accumulating across
-    // sessions.
+    // sessions. The session that was open until now is done — flush its
+    // summary into `history` (using the still-stale latestAtMs/_session*
+    // values below, before they get overwritten) so it isn't lost.
     if (stat._latestExerciseId !== row.exercise.id) {
+      stat.history.push({ atMs: stat.latestAtMs, maxWeightKg: stat._sessionMaxWeightKg, totalVolumeKg: stat._sessionVolumeKg });
       stat.latestSets = [];
       stat.latestAtMs = atMs;
       stat.name = row.exercise.name;
       stat._latestExerciseId = row.exercise.id;
+      stat._sessionMaxWeightKg = null;
+      stat._sessionVolumeKg = 0;
     }
     stat.latestSets.push({ reps: row.reps, weightKg: row.weightKg, rpe: row.rpe });
+    if (row.weightKg !== null) {
+      stat._sessionMaxWeightKg = stat._sessionMaxWeightKg === null ? row.weightKg : Math.max(stat._sessionMaxWeightKg, row.weightKg);
+      stat._sessionVolumeKg += row.weightKg * row.reps;
+    }
 
     if (row.weightKg !== null && (stat.prWeightKg === null || row.weightKg > stat.prWeightKg)) {
       stat.prWeightKg = row.weightKg;
@@ -123,7 +159,15 @@ export async function getExerciseStats(userId: string, excludeActivityId?: strin
       stat.prActivityId = activityId;
     }
   }
-  return Array.from(stats.values()).map(({ _latestExerciseId, ...rest }) => rest);
+
+  // Flush whichever session was still "open" (the most recent one for each
+  // name) when the loop ended — it never hit the boundary-crossing flush
+  // above since there was no later row to trigger it.
+  for (const stat of stats.values()) {
+    stat.history.push({ atMs: stat.latestAtMs, maxWeightKg: stat._sessionMaxWeightKg, totalVolumeKg: stat._sessionVolumeKg });
+  }
+
+  return Array.from(stats.values()).map(({ _latestExerciseId, _sessionMaxWeightKg, _sessionVolumeKg, ...rest }) => rest);
 }
 
 export interface LastWorkoutSession {

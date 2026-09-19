@@ -15,6 +15,7 @@ import { estimateOneRepMaxKg, getExerciseStats } from "@/lib/exercise-stats";
 import { computePrProgression } from "@/lib/pr-progression";
 import { ActivityIcon } from "../activity-icon";
 import { PrProgressionChart } from "./pr-progression-chart";
+import { ExerciseProgressionChart } from "./exercise-progression-chart";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -268,34 +269,49 @@ export default async function RecordsPage() {
             <div className="mt-8">
               <h2 className="mb-4 font-medium">PR ท่าออกกำลังกาย</h2>
               <div className="space-y-2">
-                {prList.map((s) => (
-                  <Link
-                    key={s.name}
-                    href={`/dashboard/activity/${s.prActivityId}`}
-                    className="flex items-center justify-between rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-4 py-3 transition hover:border-neutral-700 hover:bg-neutral-900/70"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-neutral-200">{s.name}</p>
-                      <p className="text-xs text-neutral-500">{formatActivityDate(new Date(s.prAtMs))}</p>
+                {prList.map((s) => {
+                  // Session-over-session trend — only weighted sessions
+                  // have a numeric point to plot (a bodyweight-only session
+                  // for this name in between two weighted ones just isn't
+                  // part of the weight trend at all).
+                  const progressionPoints = s.history
+                    .filter((h): h is typeof h & { maxWeightKg: number } => h.maxWeightKg !== null)
+                    .map((h) => ({ ms: h.atMs, value: h.maxWeightKg }));
+                  return (
+                    <div
+                      key={s.name}
+                      className="rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-4 py-3 transition hover:border-neutral-700 hover:bg-neutral-900/70"
+                    >
+                      <Link href={`/dashboard/activity/${s.prActivityId}`} className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-neutral-200">{s.name}</p>
+                          <p className="text-xs text-neutral-500">{formatActivityDate(new Date(s.prAtMs))}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold tabular-nums text-neutral-100">
+                            {s.prWeightKg} กก. × {s.prReps}
+                          </p>
+                          {/* At exactly 1 rep the PR set already is the 1RM — an
+                              "estimate" line would just repeat the number above.
+                              prWeightKg is only possibly null before the filter
+                              above (bodyweight-only exercises, excluded from
+                              this list already) — re-checked here because that
+                              filter doesn't narrow the array's element type. */}
+                          {s.prWeightKg !== null && s.prReps > 1 && (
+                            <p className="text-xs tabular-nums text-neutral-500">
+                              ~{Math.round(estimateOneRepMaxKg(s.prWeightKg, s.prReps))} กก. (1RM ประมาณ)
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                      <ExerciseProgressionChart
+                        points={progressionPoints}
+                        color="#8b5cf6"
+                        formatValue={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} กก.`}
+                      />
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold tabular-nums text-neutral-100">
-                        {s.prWeightKg} กก. × {s.prReps}
-                      </p>
-                      {/* At exactly 1 rep the PR set already is the 1RM — an
-                          "estimate" line would just repeat the number above.
-                          prWeightKg is only possibly null before the filter
-                          above (bodyweight-only exercises, excluded from
-                          this list already) — re-checked here because that
-                          filter doesn't narrow the array's element type. */}
-                      {s.prWeightKg !== null && s.prReps > 1 && (
-                        <p className="text-xs tabular-nums text-neutral-500">
-                          ~{Math.round(estimateOneRepMaxKg(s.prWeightKg, s.prReps))} กก. (1RM ประมาณ)
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

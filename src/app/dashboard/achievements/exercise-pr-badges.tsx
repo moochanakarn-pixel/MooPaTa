@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { estimateOneRepMaxKg } from "@/lib/exercise-stats";
 import { BadgeChip } from "./achievement-section";
 
 // The per-exercise counterpart to the numeric milestone ladders above —
@@ -13,7 +14,7 @@ import { BadgeChip } from "./achievement-section";
 export function ExercisePrBadges({
   exercises,
 }: {
-  exercises: { name: string; weightKg: number; activityId: string }[];
+  exercises: { name: string; weightKg: number; reps: number; activityId: string }[];
 }) {
   if (exercises.length === 0) return null;
 
@@ -30,11 +31,19 @@ export function ExercisePrBadges({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {exercises.map((e) => (
-          <Link key={e.name} href={`/dashboard/activity/${e.activityId}`}>
-            <BadgeChip label={`${e.name} ${e.weightKg} กก.`} unlocked />
-          </Link>
-        ))}
+        {exercises.map((e) => {
+          // Same reps===1 guard as records page's "PR ท่าออกกำลังกาย" list —
+          // at 1 rep the PR weight already *is* a measured 1RM, so Epley's
+          // estimate (which doesn't collapse to the input weight there)
+          // would misleadingly suggest a higher number than actually lifted.
+          const oneRm = e.reps > 1 ? Math.round(estimateOneRepMaxKg(e.weightKg, e.reps)) : null;
+          const label = oneRm !== null ? `${e.name} ${e.weightKg} กก. (~${oneRm} กก. 1RM)` : `${e.name} ${e.weightKg} กก.`;
+          return (
+            <Link key={e.name} href={`/dashboard/activity/${e.activityId}`}>
+              <BadgeChip label={label} unlocked />
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

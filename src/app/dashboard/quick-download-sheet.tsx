@@ -25,6 +25,7 @@ export function QuickDownloadSheet({
   sheetTitle,
   languageLabel,
   downloadLabel,
+  shareLabel,
   generatingLabel,
   downloadFailedLabel,
   previewLoadingLabel,
@@ -41,6 +42,7 @@ export function QuickDownloadSheet({
   sheetTitle: string;
   languageLabel: string;
   downloadLabel: string;
+  shareLabel: string;
   generatingLabel: string;
   downloadFailedLabel: string;
   previewLoadingLabel: string;
@@ -55,7 +57,13 @@ export function QuickDownloadSheet({
   const [open, setOpen] = useState(false);
   const [lang, setLang] = useState<ShareLang>(defaultLang);
   const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
+  const [canWebShare, setCanWebShare] = useState(false);
+
+  useEffect(() => {
+    setCanWebShare(typeof navigator !== "undefined" && "share" in navigator && "canShare" in navigator);
+  }, []);
   // Same ?bg=transparent option ShareActivityButton/SummaryConfigurator
   // already offer for their own cards — period/nutrition (the routes this
   // sheet fronts) gained the same backend support alongside this toggle.
@@ -79,30 +87,67 @@ export function QuickDownloadSheet({
   // route's own Content-Disposition header rather than being duplicated
   // here, since this component fronts more than one route (period range=
   // week/month, nutrition) with different names.
+  function saveBlob(blob: Blob, filename: string) {
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(blobUrl);
+  }
+
+  async function fetchImage(): Promise<{ blob: Blob; filename: string }> {
+    const res = await fetch(href);
+    if (!res.ok) throw new Error(`share card request failed: ${res.status}`);
+    const blob = await res.blob();
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? "moopata-share.png";
+    return { blob, filename };
+  }
+
   async function handleDownload() {
-    if (downloading) return;
+    if (downloading || sharing) return;
     setDownloading(true);
     setDownloadFailed(false);
     try {
-      const res = await fetch(href);
-      if (!res.ok) throw new Error(`share card request failed: ${res.status}`);
-      const blob = await res.blob();
-      const disposition = res.headers.get("Content-Disposition") ?? "";
-      const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? "moopata-share.png";
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(blobUrl);
+      const { blob, filename } = await fetchImage();
+      saveBlob(blob, filename);
       setOpen(false);
     } catch (err) {
       console.error("Share card download failed", err);
       setDownloadFailed(true);
     } finally {
       setDownloading(false);
+    }
+  }
+
+  // Same Web Share API pattern as ShareActivityButton — lets the OS share
+  // sheet hand the PNG straight to IG Story/Line/etc. Feature-detected
+  // (`canWebShare`), re-checks `canShare({ files })` at share time since
+  // support for the API existing doesn't guarantee this browser can share
+  // files specifically, and falls back to the same save-to-disk path as
+  // the download button when it can't.
+  async function handleShare() {
+    if (downloading || sharing) return;
+    setSharing(true);
+    setDownloadFailed(false);
+    try {
+      const { blob, filename } = await fetchImage();
+      const file = new File([blob], filename, { type: blob.type || "image/png" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+      } else {
+        saveBlob(blob, filename);
+      }
+      setOpen(false);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      console.error("Web Share failed", err);
+      setDownloadFailed(true);
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -218,36 +263,68 @@ export function QuickDownloadSheet({
               />
             </div>
 
-            <button
-              type="button"
-              onClick={handleDownload}
-              disabled={downloading}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#fc4c02] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {downloading ? (
-                <>
-                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 animate-spin">
-                    <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
-                    <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                  </svg>
-                  {generatingLabel}
-                </>
-              ) : (
-                <>
-                  <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-                    <path
-                      d="M10 3v10m0 0-3.5-3.5M10 13l3.5-3.5"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path d="M4 15.5v.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-                  </svg>
-                  {downloadLabel}
-                </>
+            <div className="flex gap-2">
+              {canWebShare && (
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  disabled={downloading || sharing}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#fc4c02] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {sharing ? (
+                    <>
+                      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 animate-spin">
+                        <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
+                        <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                      </svg>
+                      {generatingLabel}
+                    </>
+                  ) : (
+                    <>
+                      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                        <path d="M10 3v9M6.5 6.5 10 3l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M5 10v5.5A1.5 1.5 0 0 0 6.5 17h7a1.5 1.5 0 0 0 1.5-1.5V10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                      </svg>
+                      {shareLabel}
+                    </>
+                  )}
+                </button>
               )}
-            </button>
+              <button
+                type="button"
+                onClick={handleDownload}
+                disabled={downloading || sharing}
+                className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  canWebShare
+                    ? "flex-none border border-neutral-700 text-neutral-300 hover:bg-neutral-800"
+                    : "flex-1 bg-[#fc4c02] text-white hover:bg-[#e04402]"
+                }`}
+              >
+                {downloading ? (
+                  <>
+                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 animate-spin">
+                      <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
+                      <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                    {generatingLabel}
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+                      <path
+                        d="M10 3v10m0 0-3.5-3.5M10 13l3.5-3.5"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path d="M4 15.5v.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                    </svg>
+                    {downloadLabel}
+                  </>
+                )}
+              </button>
+            </div>
             {downloadFailed && <p className="mt-2 text-center text-xs text-red-400">{downloadFailedLabel}</p>}
           </div>
         </div>

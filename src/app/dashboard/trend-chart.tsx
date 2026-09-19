@@ -36,6 +36,7 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
             sheetTitle={t("downloadThisWeek")}
             languageLabel={tc("language")}
             downloadLabel={tc("downloadImage")}
+            shareLabel={tc("share")}
             generatingLabel={tc("generatingImage")}
             downloadFailedLabel={tc("downloadFailed")}
             previewLoadingLabel={tc("loadingPreview")}
