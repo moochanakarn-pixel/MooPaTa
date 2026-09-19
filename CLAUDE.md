@@ -1091,7 +1091,7 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
   ทั่วไปที่คนอาจกดบันทึกแค่เพื่อแก้ field อื่น (เช่น activity level) โดยไม่ได้ตั้งใจ "log น้ำหนักวันนี้"
   ถ้าสร้างทุกครั้งไม่มีเงื่อนไข กราฟจะเต็มไปด้วยจุดซ้ำ ๆ ค่าเดิมทุกครั้งที่แก้โปรไฟล์เรื่องอื่น
 - Supplements: `/dashboard/supplements`, checklist รายวันจาก `SupplementLog`
-- Push notifications: `src/lib/push.ts` + `src/app/api/cron/{water-reminder,whey-reminder}` —
+- Push notifications: `src/lib/push.ts` + `src/app/api/cron/{water-reminder,whey-reminder,weekly-summary}` —
   ต้องมี `PushSubscription` และ flag ที่เกี่ยวข้องเปิดอยู่ทั้งคู่ (ดู comment ใน schema)
   - **`cron/water-reminder`'s atomic claim (`lastWaterReminderSentAt = now`) ต้องอยู่หลังเช็ค `on_pace`
     เท่านั้น ห้ามย้ายกลับไปก่อน** — เคยมีบั๊กจริง (เจอจากการตรวจโค้ดแบบ audit ไม่ใช่จาก user report):
@@ -1115,6 +1115,59 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     เช็คนั้นไป — ทดสอบยืนยันจริงด้วยการ set `waterReminderStart === waterReminderEnd` ตรงผ่าน Prisma
     (ข้าม settings route ไปตรง ๆ) แล้วยิง cron ได้ reason `invalid_window` ไม่ crash/ไม่ค้าง แล้วรีเซ็ต
     กลับเป็น window ปกติยืนยันว่า evaluation รอบถัดไปทำงานถูกต้องเหมือนเดิม
+  - **`cron/weekly-summary`** — แจ้งเตือนสรุปกิจกรรม/บันทึกอาหาร/น้ำหนักของสัปดาห์ที่ผ่านมา ทุกเช้า
+    วันจันทร์ เพิ่มเข้ามาเพราะโค้ดที่ต้องใช้มีอยู่แล้ว 90% (ระบบ push, pattern cron-secret + atomic-claim,
+    ข้อมูลครบใน DB) เป็น engagement ฟีเจอร์ตัวแรกที่ดึงคนกลับเข้าแอพจริง ๆ ไม่ใช่แค่ปรับให้คนที่เปิดแอพอยู่
+    แล้วสะดวกขึ้นแบบฟีเจอร์อื่น — ผู้ใช้เปิดเองที่หน้าตั้งค่า (`User.weeklySummaryEnabled`, default
+    `false`, off เหมือน whey reminder เพราะเป็น engagement เสริมไม่ใช่ safety-critical) ยังต้องมี
+    `PushSubscription` อย่างน้อย 1 อุปกรณ์เหมือนกันทั้งคู่
+    - **ต่างจาก water/whey-reminder ตรงที่ไม่ต้อง poll ถี่** — สองอันนั้นต้องดักจังหวะที่คาดเดาไม่ได้ล่วงหน้า
+      (ผู้ใช้ตั้ง window เอง / กิจกรรมจบเมื่อไหร่ก็ไม่รู้) เลย poll ทุก 15 นาที ส่วน weekly summary เป้าหมาย
+      เวลาส่งแน่นอนอยู่แล้ว (สัปดาห์ละครั้ง) เลยแค่ตั้ง Windows Scheduled Task แบบ `-Weekly -DaysOfWeek
+      Monday -At 8am` ตรง ๆ (ดู `DEPLOY-WINDOWS.md`'s "9d.") ไม่ต้อง poll เลย — `lastWeeklySummarySentAt`
+      (`User`, nullable `DateTime`) ยังกันการยิงซ้ำถ้า trigger ถูกเรียกซ้ำ/retry โดยไม่ตั้งใจอยู่ดี
+      (atomic `updateMany` claim ก่อนทำงานจริง, staleness threshold 6 วัน — pattern เดียวกับ
+      `wheyReminderSentAt` แค่ระดับ user ไม่ใช่ระดับ activity)
+    - **"สัปดาห์ที่ผ่านมา" = 7 วันย้อนหลังนับถึงเที่ยงคืนของวันนี้ (ไม่รวมวันนี้)** ไม่ใช่ ISO week
+      (จันทร์-อาทิตย์ตามปฏิทิน) เพราะไม่ต้องพึ่งว่า cron รันตรงเวลาเป๊ะทุกครั้ง — รันวันไหนก็ได้ในสัปดาห์
+      ยังได้ค่าที่สมเหตุสมผล (7 วันล่าสุดที่จบแล้วจริง ๆ)
+    - **Logic คำนวณสรุป (`src/lib/weekly-summary.ts`) แยกจาก query DB เหมือน `nutrition.ts`/
+      `exercise-stats.ts`** — `buildWeeklySummary()` รับ array ดิบ (activities/foodLogDates/weightLogs
+      ของสัปดาห์นั้น) คืนตัวเลขรวม (จำนวนกิจกรรม, เวลารวม, ระยะทางรวม, จำนวนวันที่บันทึกอาหาร — นับวัน
+      ปฏิทินที่ไม่ซ้ำผ่าน `localDateKey` จาก `streak.ts` ไม่ใช่จำนวนแถว `FoodLog` ดิบ เพราะกิน 3 มื้อในวัน
+      เดียวไม่ควรนับเป็น "3 วัน", ส่วนต่างน้ำหนัก — ล่าสุดลบเก่าสุดในสัปดาห์นั้น เรียงตาม `loggedAt` เอง
+      ก่อนคำนวณเพราะ query ไม่ได้ sort มาให้) — เทสอยู่ที่ `weekly-summary.test.ts` รันเร็วไม่ต้องพึ่ง DB
+    - **ไม่ส่ง push ถ้าสัปดาห์นั้นไม่มีอะไรจะบอกเลย** (`hasWeeklySummaryContent`, `activityCount === 0 &&
+      foodLoggedDays === 0`) — ตรงกับธรรมเนียมเดียวกับ activity bonus ที่ซ่อนแถบ "+0 kcal" ที่ไม่มี
+      ความหมาย ผู้ใช้ที่หายไปทั้งสัปดาห์ได้แจ้งเตือนว่าง ๆ จะยิ่งรู้สึกว่าแอพน่ารำคาญ ไม่ใช่ดึงกลับมา —
+      claim ของ user คนนั้นยังคงเซ็ตไว้เหมือนเดิม (ไม่ปล่อยคืนให้ลองใหม่) เพราะ cron รันสัปดาห์ละครั้ง
+      อยู่แล้ว ไม่มี "ลองใหม่เร็ว ๆ นี้" ที่มีความหมายเหมือน push ส่งไม่สำเร็จจริง ๆ แบบ whey-reminder
+    - **ข้อความในการ์ด Thai-only เหมือน push อื่นทุกตัว** ไม่ผ่าน `?lang=`/`resolveLocale()` เพราะเป็น
+      backend-generated text ที่ไม่อยู่ใน scope 5 หน้าหลักที่แปลแล้ว (ดู "### 5. ภาษา (i18n)") — แต่ยัง
+      เคารพ `User.unitSystem` สำหรับ format ระยะทาง (กม./ไมล์) เพราะเป็นคนละการตัดสินใจกับภาษา (ตัวเลข/
+      หน่วยข้อมูล vs ข้อความ UI)
+    - **แต่ละ segment ในข้อความ (กิจกรรม/ระยะทาง/น้ำหนัก) โผล่เฉพาะที่มีความหมายเท่านั้น** ยกเว้นจำนวนวัน
+      บันทึกอาหารที่โชว์เสมอแม้เป็น 0/7 (เป็นตัวเลขหลักที่อยากให้เห็นตลอด ไม่ใช่ตัวเลข "ไม่มีอะไรเกิดขึ้น"
+      แบบระยะทาง/น้ำหนักที่เป็น 0 จริง ๆ ไม่มีอะไรให้พูดถึง) — ส่วนต่างน้ำหนักปัดทศนิยม 1 ตำแหน่งก่อนเช็คว่า
+      เป็น 0 มั้ย (กัน noise จากการชั่งที่คลาดเคลื่อนเล็กน้อยระหว่างสองครั้งโผล่เป็น "+0.04 กก." ที่ไม่มี
+      ความหมาย)
+    - **หน้าตั้งค่า** — เพิ่ม section ใหม่ (`settings/page.tsx` + `weekly-summary-toggle.tsx`) ก่อนหัวข้อ
+      "ผลตรวจสุขภาพ" ใช้ pattern เดียวกับ `WheyReminderToggle` เป๊ะ (เช็คสถานะ browser push subscription
+      ก่อน โชว์ปุ่มเปิด/ปิดถ้ามี subscription จริงแล้ว ไม่งั้นโชว์ลิงก์ให้ไปเปิดที่หน้าไดอารี่ก่อน) ต่างจาก
+      `WheyReminderToggle` แค่ตรงที่**แปลผ่าน `next-intl`** (`settings.weeklySummary` namespace ใน
+      `messages/th.json`/`en.json`) เพราะหน้าตั้งค่าอยู่ใน scope 5 หน้าหลักที่แปลแล้ว ต่างจากหน้า
+      `/dashboard/supplements` ที่ `WheyReminderToggle` อยู่ (นอกขอบเขต i18n) — วางไว้ที่หน้าตั้งค่าแทนที่
+      จะผูกกับหน้าฟีเจอร์เดียวแบบ water/whey (`/dashboard/food`/`/dashboard/supplements`) เพราะสรุปนี้
+      ครอบคลุมทั้งแอพ (กิจกรรม+อาหาร+น้ำหนัก) ไม่ได้ผูกกับ domain เดียว
+    - ทดสอบจริงด้วยการ seed user 2 คน (คนแรกมีกิจกรรม 2 ครั้ง/บันทึกอาหาร 3 วัน/น้ำหนักลด 0.7 กก. ในสัปดาห์,
+      คนที่สองไม่มีอะไรเลย) + `PushSubscription` ปลอม (endpoint ปลอมส่ง push จริงไม่ได้ แต่พอทดสอบ query/
+      claim/summary logic ได้ครบ ไม่ใช่ปลายทาง delivery จริง) ยิง cron ยืนยัน: คนแรกได้ reason
+      `no_active_subscription` (แปลว่าพยายามส่งจริงแล้ว ไม่ใช่ `no_content`/`too_soon`), คนที่สองได้
+      `no_content` ถูกต้อง, ยิงซ้ำทันทีคนแรกไม่โดนเลือกอีก (`usersConsidered: 0`, claim กันซ้ำทำงาน),
+      `lastWeeklySummarySentAt` อัปเดตจริงใน DB, PATCH `/api/settings/weekly-summary` persist ค่าถูกต้อง,
+      และเปิดหน้าตั้งค่าจริงผ่าน Playwright เห็น section ใหม่ขึ้น + ข้อความ "ต้องเปิดการแจ้งเตือนที่หน้า
+      บันทึกอาหารก่อน" พร้อมลิงก์ทำงานถูกต้อง (เพราะ browser ทดสอบไม่มี push subscription จริง แค่แถวปลอม
+      ใน DB สำหรับทดสอบ cron)
 - PWA: `manifest.webmanifest`, service worker — ติดตั้งเป็นแอพได้
 
 ## Workflow ตอนแก้โค้ด (ทำทุกครั้งก่อน commit)

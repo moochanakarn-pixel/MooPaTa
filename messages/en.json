@@ -477,6 +477,15 @@
     "macroPreferences": {
       "heading": "Adjust macro split"
     },
+    "weeklySummary": {
+      "heading": "Weekly summary",
+      "desc": "A recap of last week's activity and food logging, every Monday morning",
+      "enable": "Turn on",
+      "disable": "Turn off",
+      "saving": "Saving...",
+      "needsPush": "You need to turn on notifications on the <link>food diary page</link> first before you can get this one",
+      "saveError": "Save failed, try again"
+    },
     "healthFlags": {
       "heading": "Health flags",
       "desc": "Check these based on your blood test results, so the app can warn you when logging foods to watch out for"

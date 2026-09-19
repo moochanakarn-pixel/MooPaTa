@@ -94,6 +94,16 @@ model User {
   // this flag, same two-part opt-in as the water reminder.
   wheyReminderEnabled Boolean @default(false)
 
+  // Weekly recap push notification (src/app/api/cron/weekly-summary) — off
+  // by default, same two-part opt-in as the whey reminder (this flag +
+  // at least one PushSubscription row). Unlike water/whey-reminder, the
+  // target send time is fully predictable (once a week, see
+  // DEPLOY-WINDOWS.md's weekly Scheduled Task trigger) so this doesn't need
+  // a tight pacing window — lastWeeklySummarySentAt just guards against a
+  // duplicate/retried trigger re-sending within the same week.
+  weeklySummaryEnabled    Boolean   @default(false)
+  lastWeeklySummarySentAt DateTime?
+
   connections         ProviderConnection[]
   activities          Activity[]
   foods               Food[]

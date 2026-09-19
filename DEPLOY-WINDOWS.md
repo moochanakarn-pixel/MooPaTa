@@ -208,6 +208,24 @@ $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (Ne
 Register-ScheduledTask -TaskName "MooPaTaWheyReminder" -Action $action -Trigger $trigger -RunLevel Highest
 ```
 
+## 9d. Weekly summary — one scheduled task, once a week (not polled)
+
+Unlike the two reminders above, `/api/cron/weekly-summary`'s target time is
+fully predictable (once a week, for users who've turned it on in Settings)
+rather than an unpredictable per-user window — so this doesn't need
+frequent polling, just a single weekly trigger (Monday morning, server
+local time). The route itself is still safe to call more than once (it
+tracks `lastWeeklySummarySentAt` and won't re-send within the same week),
+so an occasional manual re-run or a missed/retried trigger isn't a problem:
+
+```powershell
+$secret = "YOUR_CRON_SECRET"
+
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-Command `"Invoke-RestMethod -Method Post -Uri 'https://moopata.mcnkth.com/api/cron/weekly-summary' -Headers @{Authorization='Bearer $secret'}`""
+$trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 8am
+Register-ScheduledTask -TaskName "MooPaTaWeeklySummary" -Action $action -Trigger $trigger -RunLevel Highest
+```
+
 ## 10. Deploying updates later
 
 ```powershell
