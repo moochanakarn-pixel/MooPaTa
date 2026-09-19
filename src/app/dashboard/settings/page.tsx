@@ -191,26 +191,7 @@ export default async function SettingsPage({
         </section>
       )}
 
-      <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-        <div className="mb-3 flex items-center gap-3">
-          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-lime-500/10 text-lime-400">
-            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4">
-              <path
-                d="M12 4a5 5 0 0 0-5 5v3.5L5 16h14l-2-3.5V9a5 5 0 0 0-5-5ZM9.5 19a2.5 2.5 0 0 0 5 0"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <h2 className="font-medium">{t("weeklySummary.heading")}</h2>
-            <p className="mt-0.5 text-xs text-neutral-500">{t("weeklySummary.desc")}</p>
-          </div>
-        </div>
-        <WeeklySummaryToggle initialEnabled={user?.weeklySummaryEnabled ?? false} />
-      </section>
+      <WeeklySummaryToggle initialEnabled={user?.weeklySummaryEnabled ?? false} />
 
       <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <div className="mb-3 flex items-center gap-3">

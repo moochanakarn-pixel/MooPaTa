@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { localDateKey } from "@/lib/streak";
 
 const BG_OPTIONS = [
   { value: "card", label: "การ์ด" },
@@ -98,8 +99,12 @@ export function ShareActivityButton({
       // downloaded a few. Slugified from the raw type (already an
       // ASCII identifier like "Run"/"WeightTraining", no locale mapping
       // needed) + the activity's own date, not "today" (matters most for
-      // an activity edited/re-downloaded well after it happened).
-      const dateSlug = new Date(startedAtMs).toISOString().slice(0, 10);
+      // an activity edited/re-downloaded well after it happened). Uses
+      // localDateKey (local calendar day), not toISOString() (UTC day) —
+      // an activity logged just after local midnight would otherwise date
+      // itself a day early in the filename, the same class of bug
+      // localDateKey's own comment warns about.
+      const dateSlug = localDateKey(new Date(startedAtMs));
       const typeSlug = activityType.toLowerCase().replace(/[^a-z0-9]+/g, "-");
       a.download = `moopata-${typeSlug}-${dateSlug}.png`;
       document.body.appendChild(a);

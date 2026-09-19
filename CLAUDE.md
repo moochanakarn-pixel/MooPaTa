@@ -474,6 +474,15 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     ชื่อไฟล์ที่เซฟ ไม่กระทบ route/`Content-Disposition` ของ `/api/share/[id]` เอง (route ไม่เคยตั้งชื่อไฟล์
     มาก่อน ฝั่ง client hardcode เองมาตลอด) ทดสอบจริงด้วย Playwright: กดดาวน์โหลดกิจกรรม WeightTraining ที่
     บันทึกวันที่ 2026-09-19 ได้ `download.suggestedFilename()` เป็น `"moopata-weighttraining-2026-09-19.png"`
+    — **`dateSlug` ต้องมาจาก `localDateKey()` (`src/lib/streak.ts`, วันปฏิทินท้องถิ่น) ไม่ใช่
+    `toISOString().slice(0, 10)` (วันแบบ UTC)** — บั๊กที่พบจาก code-review รอบตรวจของฟีเจอร์นี้เอง
+    (ไม่ใช่ user report): เดิมใช้ `toISOString()` ตรง ๆ ซึ่งเป็นบั๊กคลาสเดียวกับที่ `localDateKey()`'s
+    comment เตือนไว้อยู่แล้ว (ดู "### 1." ด้านบน) — กิจกรรมที่เริ่มไม่นานหลังเที่ยงคืนตามเวลาท้องถิ่น
+    (เช่น ไทย UTC+7) จะยังเป็น "เมื่อวาน" ในโซนเวลา UTC ทำให้ชื่อไฟล์ลงวันที่ผิดไปหนึ่งวันจากวันที่ที่
+    แสดงผลจริงทุกจุดอื่นในแอพ (`formatActivityDate()` ใช้ `toLocaleDateString()` ตามเวลาท้องถิ่นเสมอ) —
+    ยืนยันจริงด้วยการ seed กิจกรรมที่ `startedAt` = 2026-09-18 18:00 UTC (= 2026-09-19 01:00 เวลาไทย)
+    แล้วเปิดด้วย Playwright context ที่ตั้ง `timezoneId: "Asia/Bangkok"` — ก่อนแก้ได้ชื่อไฟล์ลงท้าย
+    `-2026-09-18` (ผิด) หลังแก้ได้ `-2026-09-19` (ถูก ตรงกับวันที่แสดงผลบนหน้า)
   - **หน้ารายละเอียดกิจกรรม (`ActivityDetailPage`) ยังไม่อยู่ในขอบเขตแปล UI (`### 5.`)** แต่ต้องรู้ภาษา
     UI ปัจจุบันอยู่ดีเพื่อตั้งค่า default ให้ตัวเลือกภาษาของการ์ด — เรียก `resolveLocale()`
     (`src/lib/locale.ts`) ตรง ๆ แทนที่จะพึ่ง `next-intl`'s `getLocale()` (ซึ่งก็เรียก `resolveLocale()`
@@ -1158,7 +1167,21 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
       `messages/th.json`/`en.json`) เพราะหน้าตั้งค่าอยู่ใน scope 5 หน้าหลักที่แปลแล้ว ต่างจากหน้า
       `/dashboard/supplements` ที่ `WheyReminderToggle` อยู่ (นอกขอบเขต i18n) — วางไว้ที่หน้าตั้งค่าแทนที่
       จะผูกกับหน้าฟีเจอร์เดียวแบบ water/whey (`/dashboard/food`/`/dashboard/supplements`) เพราะสรุปนี้
-      ครอบคลุมทั้งแอพ (กิจกรรม+อาหาร+น้ำหนัก) ไม่ได้ผูกกับ domain เดียว
+      ครอบคลุมทั้งแอพ (กิจกรรม+อาหาร+น้ำหนัก) ไม่ได้ผูกกับ domain เดียว — **`WeeklySummaryToggle` ต้อง
+      เรียกทั้งการ์ด (ไอคอน+หัวข้อ+คำอธิบาย+ปุ่ม) เองทั้งหมดเหมือน `WheyReminderToggle` เป๊ะ ไม่ใช่แค่
+      ปุ่ม** — บั๊กที่พบจาก code-review รอบตรวจของฟีเจอร์นี้เอง (ไม่ใช่ user report): ตอนแรกวางหัวข้อ/
+      คำอธิบายไว้ที่ `settings/page.tsx` (server component, render เสมอ) แล้วให้ `WeeklySummaryToggle`
+      คืนแค่ตัวปุ่ม/hint พร้อม `return null` ตอน `pushStatus` เป็น `"checking"`/`"unsupported"` — ทำให้
+      ใครก็ตามที่เบราว์เซอร์ไม่รองรับ Push API เห็น section ที่มีแค่หัวข้อ+คำอธิบายค้างอยู่ตลอด ไม่มีปุ่ม
+      ไม่มีคำอธิบายว่าทำไม (component อื่นในแอพ, `WheyReminderToggle`, ไม่โดนบั๊กนี้เพราะเรียกทั้งการ์ด
+      รวมหัวข้อเองอยู่แล้ว `return null` เลยซ่อนทั้งการ์ดไปด้วยกัน) — แก้โดยย้ายไอคอน+หัวข้อ+คำอธิบายเข้าไป
+      อยู่ใน `WeeklySummaryToggle` เอง (`settings/page.tsx` เหลือแค่เรียก `<WeeklySummaryToggle
+      initialEnabled={...} />` ตัวเดียว ไม่มี `<section>` ห่อเอง) ทดสอบจริงด้วย Playwright:
+      `page.addInitScript(() => delete window.navigator.serviceWorker)` ก่อนโหลดหน้าตั้งค่า จำลอง
+      เบราว์เซอร์ที่ไม่รองรับ Push API — ก่อนแก้ยังเห็นหัวข้อ "สรุปผลประจำสัปดาห์" ค้างอยู่ หลังแก้
+      หายไปทั้ง section (นับด้วย `page.getByText(...).count()` ได้ 0) พร้อม regression-check เคสปกติ
+      (เบราว์เซอร์รองรับแต่ยังไม่มี subscription) ว่ายังเห็นหัวข้อ+ลิงก์ "ต้องเปิดการแจ้งเตือนที่..."
+      เหมือนเดิมไม่กระทบ
     - ทดสอบจริงด้วยการ seed user 2 คน (คนแรกมีกิจกรรม 2 ครั้ง/บันทึกอาหาร 3 วัน/น้ำหนักลด 0.7 กก. ในสัปดาห์,
       คนที่สองไม่มีอะไรเลย) + `PushSubscription` ปลอม (endpoint ปลอมส่ง push จริงไม่ได้ แต่พอทดสอบ query/
       claim/summary logic ได้ครบ ไม่ใช่ปลายทาง delivery จริง) ยิง cron ยืนยัน: คนแรกได้ reason
