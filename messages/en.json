@@ -597,5 +597,103 @@
       "saving": "Saving...",
       "save": "Save"
     }
+  },
+  "activityDetail": {
+    "editButton": "Edit",
+    "notesTitle": "Notes",
+    "exercisesTitle": "Exercises",
+    "setLabel": "Set {n}",
+    "reps": "{count} reps",
+    "kg": "kg",
+    "moreDetailsTitle": "More details",
+    "rawDataSummary": "Raw data from Strava",
+    "longestDistanceBadge": "Longest distance ({type})",
+    "fastestPaceBadge": "Fastest pace ({type})",
+    "fastestSpeedBadge": "Fastest speed ({type})",
+    "comparedToPrevious": "Compared to last time ({type} · {date})",
+    "stats": {
+      "distance": "Distance",
+      "time": "Time",
+      "avgPace": "Avg pace",
+      "avgSpeed": "Avg speed",
+      "maxPace": "Max pace",
+      "maxSpeed": "Max speed",
+      "elevationGain": "Elevation gain",
+      "elevationHigh": "Highest point",
+      "elevationLow": "Lowest point",
+      "avgHr": "Avg heart rate",
+      "maxHr": "Max heart rate",
+      "calories": "Calories",
+      "rpe": "Perceived exertion (RPE)",
+      "avgCadence": "Avg cadence",
+      "avgWatts": "Avg power",
+      "kilojoules": "Energy",
+      "sufferScore": "Suffer Score",
+      "kudos": "Kudos",
+      "achievements": "Achievements",
+      "pr": "PR",
+      "comments": "Comments",
+      "timezone": "Timezone",
+      "gear": "Gear ID",
+      "startCoords": "Start coordinates"
+    },
+    "delete": {
+      "confirm": "Permanently delete this activity? This can't be undone.",
+      "deleting": "Deleting...",
+      "button": "Delete"
+    },
+    "detailPanel": {
+      "windLabel": "Wind {speed} km/h",
+      "elevationProfile": "Elevation over distance",
+      "paceProfile": "Pace over distance",
+      "speedProfile": "Speed over distance",
+      "hrProfile": "Heart rate over distance",
+      "cadenceProfile": "Cadence over distance",
+      "splitsPerKm": "Splits per km",
+      "splitsPerMile": "Splits per mile",
+      "laps": "Laps",
+      "allTimeBests": "All-time bests (from Strava)",
+      "recordedWith": "Recorded with {device}",
+      "unitKm": "km",
+      "unitMile": "mi",
+      "meters": "m"
+    },
+    "hrZones": {
+      "title": "Heart rate zones",
+      "referenceHr": "Based on max heart rate {hr} bpm",
+      "zone1": "Recovery",
+      "zone2": "Light",
+      "zone3": "Moderate",
+      "zone4": "Hard",
+      "zone5": "Max"
+    },
+    "profileChart": {
+      "avg": "Avg",
+      "fastest": "Fastest",
+      "peak": "Peak",
+      "unitKm": "km",
+      "unitMile": "mi"
+    },
+    "routeSketch": {
+      "start": "Start",
+      "end": "End",
+      "kmPassed": "km passed",
+      "miPassed": "mi passed"
+    },
+    "share": {
+      "title": "Download activity image",
+      "cardStyle": "Card style",
+      "styleGrid": "Stats grid",
+      "styleHero": "Hero number",
+      "styleList": "Exercise list",
+      "bgCard": "Card",
+      "bgTransparent": "Transparent (overlay on another photo)",
+      "detailPosition": "Detail position",
+      "posTop": "Top",
+      "posCenter": "Center",
+      "posBottom": "Bottom",
+      "previewAlt": "Download preview",
+      "downloadShort": "Download"
+    }
   }
 }

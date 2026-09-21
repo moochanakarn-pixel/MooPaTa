@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { formatElevationM, formatPace, formatSpeedKmh, type UnitSystem } from "@/lib/format";
+import { useLocale, useTranslations } from "next-intl";
+import { formatElevationM, formatPace, formatSpeedKmh, type FormatLang, type UnitSystem } from "@/lib/format";
 
 interface Point {
   x: number;
@@ -34,20 +35,23 @@ export function ProfileChart({
   unit: UnitSystem;
   valueKind: ChartValueKind;
 }) {
+  const t = useTranslations("activityDetail.profileChart");
+  const locale = useLocale();
+  const lang: FormatLang = locale === "en" ? "en" : "th";
   const gradientId = useId();
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   // x is always distance, in whichever unit the user prefers.
-  const formatX = (x: number) => `${x.toFixed(1)} ${unit === "IMPERIAL" ? "ไมล์" : "กม."}`;
+  const formatX = (x: number) => `${x.toFixed(1)} ${unit === "IMPERIAL" ? t("unitMile") : t("unitKm")}`;
   const formatY = (y: number) => {
     switch (valueKind) {
       case "elevation":
-        return formatElevationM(y, unit);
+        return formatElevationM(y, unit, lang);
       case "pace":
-        return formatPace(y, unit);
+        return formatPace(y, unit, lang);
       case "speed":
-        return formatSpeedKmh(y, unit);
+        return formatSpeedKmh(y, unit, lang);
       case "heartrate":
         return `${Math.round(y)} bpm`;
       case "cadence":
@@ -77,7 +81,7 @@ export function ProfileChart({
   // fastest point on the chart even though it displays via formatPace.
   const peakPoint = points.reduce((best, p) => (p.y > best.y ? p : best));
   const peakXY = toXY(peakPoint);
-  const peakLabel = valueKind === "pace" || valueKind === "speed" ? "เร็วที่สุด" : "สูงสุด";
+  const peakLabel = valueKind === "pace" || valueKind === "speed" ? t("fastest") : t("peak");
   const avgLineY = toXY({ x: minX, y: avgY })[1];
 
   const linePath = points
@@ -147,7 +151,7 @@ export function ProfileChart({
           strokeDasharray="4 3"
         />
         <text x={WIDTH - PADDING - 2} y={avgLineY - 4} fontSize="9" fill="rgba(42,36,32,0.55)" textAnchor="end">
-          เฉลี่ย {formatY(avgY)}
+          {t("avg")} {formatY(avgY)}
         </text>
 
         {/* Only the min label goes on the axis — the max is always the peak

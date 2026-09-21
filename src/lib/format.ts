@@ -103,17 +103,19 @@ export function formatElevationM(meters?: number | null, unit: UnitSystem = "MET
 
 // --- Signed deltas, for comparing one activity against another ---
 
-export function formatSignedDistance(diffMeters: number, unit: UnitSystem = "METRIC"): string {
+export function formatSignedDistance(diffMeters: number, unit: UnitSystem = "METRIC", lang: FormatLang = "th"): string {
   const sign = diffMeters > 0 ? "+" : diffMeters < 0 ? "-" : "";
   const value = unit === "IMPERIAL" ? Math.abs(diffMeters) / METERS_PER_MILE : Math.abs(diffMeters) / 1000;
-  return `${sign}${value.toFixed(2)} ${unit === "IMPERIAL" ? "ไมล์" : "กม."}`;
+  const unitLabel = unit === "IMPERIAL" ? (lang === "en" ? "mi" : "ไมล์") : lang === "en" ? "km" : "กม.";
+  return `${sign}${value.toFixed(2)} ${unitLabel}`;
 }
 
-export function formatSignedDuration(diffSec: number): string {
+export function formatSignedDuration(diffSec: number, lang: FormatLang = "th"): string {
   const sign = diffSec > 0 ? "+" : diffSec < 0 ? "-" : "";
   const abs = Math.round(Math.abs(diffSec));
   const m = Math.floor(abs / 60);
   const s = abs % 60;
+  if (lang === "en") return `${sign}${m > 0 ? `${m}m ${s}s` : `${s}s`}`;
   return `${sign}${m > 0 ? `${m} นาที ${s} วิ` : `${s} วิ`}`;
 }
 
@@ -129,12 +131,13 @@ export function paceSecondsPerUnit(metersPerSec: number, unit: UnitSystem = "MET
   return perUnitMeters / metersPerSec;
 }
 
-export function formatSignedPace(diffSecPerUnit: number, unit: UnitSystem = "METRIC"): string {
+export function formatSignedPace(diffSecPerUnit: number, unit: UnitSystem = "METRIC", lang: FormatLang = "th"): string {
   const sign = diffSecPerUnit > 0 ? "+" : diffSecPerUnit < 0 ? "-" : "";
   const abs = Math.round(Math.abs(diffSecPerUnit));
   const m = Math.floor(abs / 60);
   const s = abs % 60;
-  return `${sign}${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? "ไมล์" : "กม."}`;
+  const unitLabel = unit === "IMPERIAL" ? (lang === "en" ? "mi" : "ไมล์") : lang === "en" ? "km" : "กม.";
+  return `${sign}${m}:${s.toString().padStart(2, "0")} /${unitLabel}`;
 }
 
 // Swimming counterparts of paceSecondsPerUnit/formatSignedPace above — per
@@ -147,12 +150,13 @@ export function swimPaceSecondsPerUnit(metersPerSec: number, unit: UnitSystem = 
   return perUnitMeters / metersPerSec;
 }
 
-export function formatSignedSwimPace(diffSecPerUnit: number, unit: UnitSystem = "METRIC"): string {
+export function formatSignedSwimPace(diffSecPerUnit: number, unit: UnitSystem = "METRIC", lang: FormatLang = "th"): string {
   const sign = diffSecPerUnit > 0 ? "+" : diffSecPerUnit < 0 ? "-" : "";
   const abs = Math.round(Math.abs(diffSecPerUnit));
   const m = Math.floor(abs / 60);
   const s = abs % 60;
-  return `${sign}${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? "100 หลา" : "100 ม."}`;
+  const unitLabel = unit === "IMPERIAL" ? (lang === "en" ? "100yd" : "100 หลา") : lang === "en" ? "100m" : "100 ม.";
+  return `${sign}${m}:${s.toString().padStart(2, "0")} /${unitLabel}`;
 }
 
 export function formatSignedCount(diff: number): string {

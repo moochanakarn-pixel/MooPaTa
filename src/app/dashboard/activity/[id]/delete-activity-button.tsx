@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 // Same confirm()-then-fetch pattern as settings' DeleteAccountButton — the
 // only way to remove a logged activity at all until this button existed
@@ -11,11 +12,12 @@ import { useRouter } from "next/navigation";
 // Strava-era activity is unambiguous (it's just a local row, Strava sync
 // is gone entirely) so there's no reason to withhold it there.
 export function DeleteActivityButton({ activityId }: { activityId: string }) {
+  const t = useTranslations("activityDetail.delete");
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
   async function handleClick() {
-    if (!confirm("ลบกิจกรรมนี้ถาวร? กู้คืนไม่ได้")) return;
+    if (!confirm(t("confirm"))) return;
     setPending(true);
     const res = await fetch(`/api/activity/${activityId}`, { method: "DELETE" });
     if (res.ok) {
@@ -41,7 +43,7 @@ export function DeleteActivityButton({ activityId }: { activityId: string }) {
           strokeLinejoin="round"
         />
       </svg>
-      {pending ? "กำลังลบ..." : "ลบ"}
+      {pending ? t("deleting") : t("button")}
     </button>
   );
 }

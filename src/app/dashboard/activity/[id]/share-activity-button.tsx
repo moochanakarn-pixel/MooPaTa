@@ -1,31 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { localDateKey } from "@/lib/streak";
 
-const BG_OPTIONS = [
-  { value: "card", label: "การ์ด" },
-  { value: "transparent", label: "โปร่งใส (วางทับรูปอื่นได้)" },
-] as const;
-type Bg = (typeof BG_OPTIONS)[number]["value"];
+const BG_VALUES = ["card", "transparent"] as const;
+type Bg = (typeof BG_VALUES)[number];
 
 // "list" only makes sense for an activity that actually logged exercises —
 // filtered out of the options shown otherwise (see `hasExercises` below)
 // rather than left selectable to produce an empty/pointless card.
-const ALL_STYLE_OPTIONS = [
-  { value: "grid", label: "กริดสถิติ" },
-  { value: "hero", label: "ตัวเลขเด่น" },
-  { value: "list", label: "รายการท่า" },
-] as const;
-type Style = (typeof ALL_STYLE_OPTIONS)[number]["value"];
+const ALL_STYLE_VALUES = ["grid", "hero", "list"] as const;
+type Style = (typeof ALL_STYLE_VALUES)[number];
 
-const POSITION_OPTIONS = [
-  { value: "top", label: "บน" },
-  { value: "center", label: "กลาง" },
-  { value: "bottom", label: "ล่าง" },
-] as const;
-type Pos = (typeof POSITION_OPTIONS)[number]["value"];
+const POSITION_VALUES = ["top", "center", "bottom"] as const;
+type Pos = (typeof POSITION_VALUES)[number];
 
+// Language names are shown in their own language, not translated — same
+// convention as every other language switcher in the app (see LocaleToggle).
 const LANG_OPTIONS = [
   { value: "th", label: "ไทย" },
   { value: "en", label: "English" },
@@ -62,7 +54,12 @@ export function ShareActivityButton({
   defaultLang?: Lang;
   hasExercises?: boolean;
 }) {
-  const styleOptions = hasExercises ? ALL_STYLE_OPTIONS : ALL_STYLE_OPTIONS.filter((o) => o.value !== "list");
+  const t = useTranslations("activityDetail.share");
+  const tc = useTranslations("common");
+  const STYLE_LABEL: Record<Style, string> = { grid: t("styleGrid"), hero: t("styleHero"), list: t("styleList") };
+  const BG_LABEL: Record<Bg, string> = { card: t("bgCard"), transparent: t("bgTransparent") };
+  const POSITION_LABEL: Record<Pos, string> = { top: t("posTop"), center: t("posCenter"), bottom: t("posBottom") };
+  const styleValues = hasExercises ? ALL_STYLE_VALUES : ALL_STYLE_VALUES.filter((v) => v !== "list");
   const [open, setOpen] = useState(false);
   const [bg, setBg] = useState<Bg>("card");
   const [style, setStyle] = useState<Style>("grid");
@@ -85,13 +82,13 @@ export function ShareActivityButton({
       if (!raw) return;
       const parsed = JSON.parse(raw);
       const restoredStyle: Style =
-        typeof parsed.style === "string" && ALL_STYLE_OPTIONS.some((o) => o.value === parsed.style) ? parsed.style : "grid";
+        typeof parsed.style === "string" && ALL_STYLE_VALUES.includes(parsed.style) ? parsed.style : "grid";
       // "list" only makes sense when this activity actually has exercises —
       // a stored preference from a different (weight-training) activity
       // shouldn't silently request a pointless empty list card here.
       setStyle(restoredStyle === "list" && !hasExercises ? "grid" : restoredStyle);
-      if (typeof parsed.bg === "string" && BG_OPTIONS.some((o) => o.value === parsed.bg)) setBg(parsed.bg);
-      if (typeof parsed.pos === "string" && POSITION_OPTIONS.some((o) => o.value === parsed.pos)) setPos(parsed.pos);
+      if (typeof parsed.bg === "string" && BG_VALUES.includes(parsed.bg)) setBg(parsed.bg);
+      if (typeof parsed.pos === "string" && POSITION_VALUES.includes(parsed.pos)) setPos(parsed.pos);
     } catch {
       // Private browsing / blocked storage / corrupt JSON — just keep the
       // defaults, same as SummaryConfigurator's own silent fallback.
@@ -259,7 +256,7 @@ export function ShareActivityButton({
           />
           <path d="M4 15.5v.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
         </svg>
-        ดาวน์โหลด
+        {tc("downloadImage")}
       </button>
 
       {open && (
@@ -270,10 +267,10 @@ export function ShareActivityButton({
           >
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-neutral-700" />
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-medium text-neutral-200">ดาวน์โหลดรูปกิจกรรม</h2>
+              <h2 className="text-sm font-medium text-neutral-200">{t("title")}</h2>
               <button
                 onClick={() => setOpen(false)}
-                aria-label="ปิด"
+                aria-label={tc("close")}
                 className="-m-1 rounded-lg p-1 text-neutral-500 transition hover:bg-neutral-800 hover:text-neutral-300"
               >
                 <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5">
@@ -282,7 +279,7 @@ export function ShareActivityButton({
               </button>
             </div>
 
-            <p className="mb-1.5 text-xs text-neutral-500">ภาษา</p>
+            <p className="mb-1.5 text-xs text-neutral-500">{tc("language")}</p>
             <div className="mb-3 flex gap-2 rounded-xl bg-neutral-950 p-1">
               {LANG_OPTIONS.map((o) => (
                 <button
@@ -297,32 +294,32 @@ export function ShareActivityButton({
               ))}
             </div>
 
-            <p className="mb-1.5 text-xs text-neutral-500">สไตล์การ์ด</p>
+            <p className="mb-1.5 text-xs text-neutral-500">{t("cardStyle")}</p>
             <div className="mb-3 flex gap-2 rounded-xl bg-neutral-950 p-1">
-              {styleOptions.map((o) => (
+              {styleValues.map((v) => (
                 <button
-                  key={o.value}
-                  onClick={() => setStyle(o.value)}
+                  key={v}
+                  onClick={() => setStyle(v)}
                   className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition ${
-                    style === o.value ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
+                    style === v ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
                   }`}
                 >
-                  {o.label}
+                  {STYLE_LABEL[v]}
                 </button>
               ))}
             </div>
 
-            <p className="mb-1.5 text-xs text-neutral-500">พื้นหลัง</p>
+            <p className="mb-1.5 text-xs text-neutral-500">{tc("background")}</p>
             <div className="mb-3 flex gap-2 rounded-xl bg-neutral-950 p-1">
-              {BG_OPTIONS.map((o) => (
+              {BG_VALUES.map((v) => (
                 <button
-                  key={o.value}
-                  onClick={() => setBg(o.value)}
+                  key={v}
+                  onClick={() => setBg(v)}
                   className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition ${
-                    bg === o.value ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
+                    bg === v ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
                   }`}
                 >
-                  {o.label}
+                  {BG_LABEL[v]}
                 </button>
               ))}
             </div>
@@ -333,17 +330,17 @@ export function ShareActivityButton({
                 rather than left selectable with no visible effect. */}
             {style !== "list" && (
               <>
-                <p className="mb-1.5 text-xs text-neutral-500">ตำแหน่งรายละเอียด</p>
+                <p className="mb-1.5 text-xs text-neutral-500">{t("detailPosition")}</p>
                 <div className="mb-4 flex gap-2 rounded-xl bg-neutral-950 p-1">
-                  {POSITION_OPTIONS.map((o) => (
+                  {POSITION_VALUES.map((v) => (
                     <button
-                      key={o.value}
-                      onClick={() => setPos(o.value)}
+                      key={v}
+                      onClick={() => setPos(v)}
                       className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition ${
-                        pos === o.value ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
+                        pos === v ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
                       }`}
                     >
-                      {o.label}
+                      {POSITION_LABEL[v]}
                     </button>
                   ))}
                 </div>
@@ -364,14 +361,14 @@ export function ShareActivityButton({
             >
               {previewLoading && (
                 <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500">
-                  กำลังโหลดตัวอย่าง...
+                  {tc("loadingPreview")}
                 </div>
               )}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 key={previewHref}
                 src={previewHref}
-                alt="ตัวอย่างรูปดาวน์โหลด"
+                alt={t("previewAlt")}
                 className={`w-full transition-opacity ${
                   style === "list" ? "h-auto object-contain" : "h-full object-cover"
                 } ${previewLoading ? "opacity-0" : "opacity-100"}`}
@@ -397,7 +394,7 @@ export function ShareActivityButton({
                         <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
                         <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                       </svg>
-                      กำลังสร้างรูป...
+                      {tc("generatingImage")}
                     </>
                   ) : (
                     <>
@@ -416,7 +413,7 @@ export function ShareActivityButton({
                           strokeLinecap="round"
                         />
                       </svg>
-                      แชร์
+                      {tc("share")}
                     </>
                   )}
                 </button>
@@ -437,7 +434,7 @@ export function ShareActivityButton({
                       <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
                       <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                     </svg>
-                    กำลังสร้างรูป...
+                    {tc("generatingImage")}
                   </>
                 ) : (
                   <>
@@ -451,13 +448,13 @@ export function ShareActivityButton({
                       />
                       <path d="M4 15.5v.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                     </svg>
-                    {canWebShare ? "ดาวน์โหลด" : "ดาวน์โหลดรูปภาพ (PNG)"}
+                    {canWebShare ? t("downloadShort") : tc("downloadImage")}
                   </>
                 )}
               </button>
             </div>
             {downloadFailed && (
-              <p className="mt-2 text-center text-xs text-red-400">สร้างรูปไม่สำเร็จ ลองใหม่อีกครั้ง</p>
+              <p className="mt-2 text-center text-xs text-red-400">{tc("downloadFailed")}</p>
             )}
           </div>
         </div>

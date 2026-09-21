@@ -1,3 +1,4 @@
+import { useLocale, useTranslations } from "next-intl";
 import {
   activitySpeedValue,
   formatDistanceKm,
@@ -9,6 +10,7 @@ import {
   formatSignedSwimPace,
   paceSecondsPerUnit,
   swimPaceSecondsPerUnit,
+  type FormatLang,
   type UnitSystem,
 } from "@/lib/format";
 
@@ -48,6 +50,9 @@ export function ComparisonCard({
   compare: ComparableActivity;
   unit: UnitSystem;
 }) {
+  const t = useTranslations("activityDetail.stats");
+  const locale = useLocale();
+  const lang: FormatLang = locale === "en" ? "en" : "th";
   const distanceDiff = (current.distanceMeters ?? 0) - (compare.distanceMeters ?? 0);
   const durationDiff = current.durationSec - compare.durationSec;
 
@@ -71,33 +76,33 @@ export function ComparisonCard({
     <div className="rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
       <h3 className="mb-1 text-sm font-medium text-neutral-300">{title}</h3>
       <Row
-        label="ระยะทาง"
-        value={formatDistanceKm(current.distanceMeters, unit)}
+        label={t("distance")}
+        value={formatDistanceKm(current.distanceMeters, unit, lang)}
         delta={
           current.distanceMeters
-            ? { text: formatSignedDistance(distanceDiff, unit), tone: distanceDiff > 0 ? "up" : distanceDiff < 0 ? "down" : "neutral" }
+            ? { text: formatSignedDistance(distanceDiff, unit, lang), tone: distanceDiff > 0 ? "up" : distanceDiff < 0 ? "down" : "neutral" }
             : undefined
         }
       />
       <Row
-        label="เวลา"
-        value={formatDuration(current.durationSec)}
-        delta={{ text: formatSignedDuration(durationDiff), tone: "neutral" }}
+        label={t("time")}
+        value={formatDuration(current.durationSec, lang)}
+        delta={{ text: formatSignedDuration(durationDiff, lang), tone: "neutral" }}
       />
       <Row
-        label={usesPace ? "เพซเฉลี่ย" : "ความเร็วเฉลี่ย"}
-        value={activitySpeedValue(current.type, current.avgSpeedMs, unit)}
+        label={usesPace ? t("avgPace") : t("avgSpeed")}
+        value={activitySpeedValue(current.type, current.avgSpeedMs, unit, lang)}
         delta={
           paceDiff !== null
             ? {
-                text: isSwim ? formatSignedSwimPace(paceDiff, unit) : formatSignedPace(paceDiff, unit),
+                text: isSwim ? formatSignedSwimPace(paceDiff, unit, lang) : formatSignedPace(paceDiff, unit, lang),
                 tone: paceDiff < 0 ? "up" : paceDiff > 0 ? "down" : "neutral",
               }
             : undefined
         }
       />
       <Row
-        label="หัวใจเฉลี่ย"
+        label={t("avgHr")}
         value={current.avgHeartRate ? `${Math.round(current.avgHeartRate)} bpm` : "-"}
         delta={hrDiff !== null ? { text: formatSignedHeartRate(hrDiff), tone: "neutral" } : undefined}
       />

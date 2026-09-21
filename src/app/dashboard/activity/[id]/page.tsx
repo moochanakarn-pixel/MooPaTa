@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations, getLocale } from "next-intl/server";
 import { activityColor } from "@/lib/activity-colors";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
-import { resolveLocale } from "@/lib/locale";
 import {
   activitySpeedValue,
   activityTypeLabel,
@@ -12,6 +12,7 @@ import {
   formatDistanceKm,
   formatDuration,
   formatElevationM,
+  type FormatLang,
 } from "@/lib/format";
 import { extractStravaPolyline } from "@/lib/polyline";
 import type { StravaBestEffort, StravaLap, StravaSplit } from "@/lib/activity-detail-types";
@@ -38,15 +39,23 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
-  const [user, activity, locale] = await Promise.all([
+  const [user, activity, locale, t, tc] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.activity.findUnique({
       where: { id: params.id },
       include: { exercises: { orderBy: { order: "asc" }, include: { sets: { orderBy: { order: "asc" } } } } },
     }),
-    resolveLocale(),
+    getLocale(),
+    getTranslations("activityDetail"),
+    getTranslations("common"),
   ]);
   if (!activity || activity.userId !== userId) notFound();
+
+  // next-intl's getLocale() is typed as a plain string — narrowed here so
+  // it can be passed straight to format.ts's FormatLang-typed params
+  // (`resolveLocale()` under the hood only ever produces "th"/"en" — see
+  // src/i18n/request.ts) without a cast at every call site below.
+  const lang: FormatLang = locale === "en" ? "en" : "th";
 
   const unit = user?.unitSystem ?? "METRIC";
   const isRun = activity.type === "Run";
@@ -76,11 +85,11 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
 
   const badges: string[] = [];
   if (activity.distanceMeters && activity.distanceMeters === bests._max.distanceMeters) {
-    badges.push(`ระยะทางไกลที่สุด (${activityTypeLabel(activity.type)})`);
+    badges.push(t("longestDistanceBadge", { type: activityTypeLabel(activity.type, lang) }));
   }
   if (activity.avgSpeedMs && activity.avgSpeedMs === bests._max.avgSpeedMs) {
-    const label = activity.type === "Run" || activity.type === "Swim" ? "เพซเร็วที่สุด" : "ความเร็วสูงสุด";
-    badges.push(`${label} (${activityTypeLabel(activity.type)})`);
+    const key = activity.type === "Run" || activity.type === "Swim" ? "fastestPaceBadge" : "fastestSpeedBadge";
+    badges.push(t(key, { type: activityTypeLabel(activity.type, lang) }));
   }
 
   return (
@@ -93,7 +102,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
           <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
             <path d="M13 4 7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          กลับไปหน้ารวม
+          {tc("backToOverview")}
         </Link>
         <div className="flex items-center gap-2">
           {activity.provider === "MANUAL" && (
@@ -110,7 +119,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
                   strokeLinejoin="round"
                 />
               </svg>
-              แก้ไข
+              {t("editButton")}
             </Link>
           )}
           <DeleteActivityButton activityId={activity.id} />
@@ -118,7 +127,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
             activityId={activity.id}
             activityType={activity.type}
             startedAtMs={activity.startedAt.getTime()}
-            defaultLang={locale}
+            defaultLang={lang}
             hasExercises={activity.exercises.length > 0}
           />
         </div>
@@ -131,7 +140,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
         <div>
           <h1 className="text-xl font-bold leading-tight">{activity.name ?? activity.type}</h1>
           <p className="text-sm text-neutral-500">
-            {activityTypeLabel(activity.type)} · {formatActivityDate(activity.startedAt)}
+            {activityTypeLabel(activity.type, lang)} · {formatActivityDate(activity.startedAt, lang)}
           </p>
         </div>
       </div>
@@ -151,7 +160,10 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
       {previous && (
         <div className="mb-6">
           <ComparisonCard
-            title={`เทียบกับครั้งก่อน (${activityTypeLabel(activity.type)} · ${formatActivityDate(previous.startedAt)})`}
+            title={t("comparedToPrevious", {
+              type: activityTypeLabel(activity.type, lang),
+              date: formatActivityDate(previous.startedAt, lang),
+            })}
             current={activity}
             compare={previous}
             unit={unit}
@@ -160,47 +172,47 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Stat label="ระยะทาง" value={formatDistanceKm(activity.distanceMeters, unit)} />
-        <Stat label="เวลา" value={formatDuration(activity.durationSec)} />
+        <Stat label={t("stats.distance")} value={formatDistanceKm(activity.distanceMeters, unit, lang)} />
+        <Stat label={t("stats.time")} value={formatDuration(activity.durationSec, lang)} />
         <Stat
-          label={usesPace ? "เพซเฉลี่ย" : "ความเร็วเฉลี่ย"}
-          value={activitySpeedValue(activity.type, activity.avgSpeedMs, unit)}
+          label={usesPace ? t("stats.avgPace") : t("stats.avgSpeed")}
+          value={activitySpeedValue(activity.type, activity.avgSpeedMs, unit, lang)}
         />
         <Stat
-          label={usesPace ? "เพซสูงสุด" : "ความเร็วสูงสุด"}
-          value={activitySpeedValue(activity.type, activity.maxSpeedMs, unit)}
+          label={usesPace ? t("stats.maxPace") : t("stats.maxSpeed")}
+          value={activitySpeedValue(activity.type, activity.maxSpeedMs, unit, lang)}
         />
-        <Stat label="ระยะไต่ระดับ" value={formatElevationM(activity.elevationGainM, unit)} />
-        <Stat label="จุดสูงสุด" value={formatElevationM(activity.elevHighM, unit)} />
-        <Stat label="จุดต่ำสุด" value={formatElevationM(activity.elevLowM, unit)} />
+        <Stat label={t("stats.elevationGain")} value={formatElevationM(activity.elevationGainM, unit, lang)} />
+        <Stat label={t("stats.elevationHigh")} value={formatElevationM(activity.elevHighM, unit, lang)} />
+        <Stat label={t("stats.elevationLow")} value={formatElevationM(activity.elevLowM, unit, lang)} />
         <Stat
-          label="หัวใจเฉลี่ย"
+          label={t("stats.avgHr")}
           value={activity.avgHeartRate ? `${Math.round(activity.avgHeartRate)} bpm` : "-"}
         />
         <Stat
-          label="หัวใจสูงสุด"
+          label={t("stats.maxHr")}
           value={activity.maxHeartRate ? `${Math.round(activity.maxHeartRate)} bpm` : "-"}
         />
-        <Stat label="แคลอรี่" value={activity.calories ? `${Math.round(activity.calories)} kcal` : "-"} />
-        <Stat label="ระดับความเหนื่อย (RPE)" value={activity.rpe !== null ? `${activity.rpe}/10` : "-"} />
+        <Stat label={t("stats.calories")} value={activity.calories ? `${Math.round(activity.calories)} kcal` : "-"} />
+        <Stat label={t("stats.rpe")} value={activity.rpe !== null ? `${activity.rpe}/10` : "-"} />
         <Stat
-          label="เคเดนซ์เฉลี่ย"
+          label={t("stats.avgCadence")}
           value={activity.avgCadence ? `${Math.round(activity.avgCadence)} ${cadenceUnitLabel(activity.type)}` : "-"}
         />
-        <Stat label="กำลังเฉลี่ย" value={activity.avgWatts ? `${Math.round(activity.avgWatts)} W` : "-"} />
-        <Stat label="พลังงาน" value={activity.kilojoules ? `${Math.round(activity.kilojoules)} kJ` : "-"} />
-        <Stat label="Suffer Score" value={activity.sufferScore ? String(activity.sufferScore) : "-"} />
-        <Stat label="Kudos" value={activity.kudosCount ? String(activity.kudosCount) : "-"} />
+        <Stat label={t("stats.avgWatts")} value={activity.avgWatts ? `${Math.round(activity.avgWatts)} W` : "-"} />
+        <Stat label={t("stats.kilojoules")} value={activity.kilojoules ? `${Math.round(activity.kilojoules)} kJ` : "-"} />
+        <Stat label={t("stats.sufferScore")} value={activity.sufferScore ? String(activity.sufferScore) : "-"} />
+        <Stat label={t("stats.kudos")} value={activity.kudosCount ? String(activity.kudosCount) : "-"} />
         <Stat
-          label="สถิติที่ทำได้"
+          label={t("stats.achievements")}
           value={activity.achievementCount ? String(activity.achievementCount) : "-"}
         />
-        <Stat label="PR" value={activity.prCount ? String(activity.prCount) : "-"} />
-        <Stat label="คอมเมนต์" value={activity.commentCount ? String(activity.commentCount) : "-"} />
-        <Stat label="โซนเวลา" value={activity.timezone ?? "-"} />
-        <Stat label="อุปกรณ์ (Gear ID)" value={activity.gearId ?? "-"} />
+        <Stat label={t("stats.pr")} value={activity.prCount ? String(activity.prCount) : "-"} />
+        <Stat label={t("stats.comments")} value={activity.commentCount ? String(activity.commentCount) : "-"} />
+        <Stat label={t("stats.timezone")} value={activity.timezone ?? "-"} />
+        <Stat label={t("stats.gear")} value={activity.gearId ?? "-"} />
         <Stat
-          label="พิกัดเริ่มต้น"
+          label={t("stats.startCoords")}
           value={
             activity.startLat && activity.startLng
               ? `${activity.startLat.toFixed(4)}, ${activity.startLng.toFixed(4)}`
@@ -211,14 +223,14 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
 
       {activity.notes && (
         <div className="mt-6 rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
-          <h2 className="mb-2 font-medium">หมายเหตุ</h2>
+          <h2 className="mb-2 font-medium">{t("notesTitle")}</h2>
           <p className="whitespace-pre-wrap text-sm text-neutral-300">{activity.notes}</p>
         </div>
       )}
 
       {activity.exercises.length > 0 && (
         <div className="mt-8">
-          <h2 className="mb-4 font-medium">ท่าออกกำลังกาย</h2>
+          <h2 className="mb-4 font-medium">{t("exercisesTitle")}</h2>
           {/* One card per exercise (rather than the old fixed sets/reps/
               weight table columns) since each set can now carry its own
               reps/weight — a pyramid/drop set has a different number for
@@ -230,9 +242,10 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
                 <div className="space-y-1">
                   {ex.sets.map((s, i) => (
                     <div key={s.id} className="flex items-center justify-between text-sm">
-                      <span className="text-neutral-500">เซ็ท {i + 1}</span>
+                      <span className="text-neutral-500">{t("setLabel", { n: i + 1 })}</span>
                       <span className="tabular-nums text-neutral-300">
-                        {s.reps} ครั้ง{s.weightKg !== null ? ` × ${s.weightKg} กก.` : ""}
+                        {t("reps", { count: s.reps })}
+                        {s.weightKg !== null ? ` × ${s.weightKg} ${t("kg")}` : ""}
                         {s.rpe !== null ? ` (RPE ${s.rpe})` : ""}
                       </span>
                     </div>
@@ -246,7 +259,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
 
       {detail && (
         <div className="mt-8">
-          <h2 className="mb-4 font-medium">รายละเอียดเพิ่มเติม</h2>
+          <h2 className="mb-4 font-medium">{t("moreDetailsTitle")}</h2>
           <DetailPanel
             streams={(detail.streams as unknown as StreamPoint[]) ?? []}
             splits={(detail.splits as unknown as StravaSplit[]) ?? []}
@@ -264,7 +277,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
       {activity.provider === "STRAVA" && (
         <details className="mt-8 rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
           <summary className="cursor-pointer text-sm font-medium text-neutral-400">
-            ข้อมูลดิบทั้งหมดจาก Strava
+            {t("rawDataSummary")}
           </summary>
           <pre className="mt-3 max-h-[32rem] overflow-auto whitespace-pre-wrap break-all text-xs text-neutral-400">
             {JSON.stringify(activity.raw, null, 2)}

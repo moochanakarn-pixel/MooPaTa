@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { buildRoutePath } from "@/lib/polyline";
 import type { UnitSystem } from "@/lib/format";
 
@@ -6,6 +7,7 @@ import type { UnitSystem } from "@/lib/format";
 // triangle at the midpoint shows which direction the route was run in —
 // both come free from buildRoutePath's real-world distance calculation.
 export function RouteSketch({ polyline, unit = "METRIC" }: { polyline: string; unit?: UnitSystem }) {
+  const t = useTranslations("activityDetail.routeSketch");
   const geo = buildRoutePath(polyline, 200, 14, unit);
   if (!geo) return null;
 
@@ -33,17 +35,17 @@ export function RouteSketch({ polyline, unit = "METRIC" }: { polyline: string; u
       </svg>
       <div className="mt-2 flex justify-center gap-4 text-xs text-neutral-500">
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" /> เริ่มต้น
+          <span className="h-2 w-2 rounded-full bg-emerald-500" /> {t("start")}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-red-500" /> สิ้นสุด
+          <span className="h-2 w-2 rounded-full bg-red-500" /> {t("end")}
         </span>
         {geo.markers.length > 0 && (
           <span className="flex items-center gap-1.5">
             <span className="flex h-2.5 w-2.5 items-center justify-center rounded-full border border-[#fc4c02] text-[6px] font-bold text-[#fc4c02]">
               #
             </span>
-            {unit === "IMPERIAL" ? "ไมล์ที่ผ่าน" : "กม.ที่ผ่าน"}
+            {unit === "IMPERIAL" ? t("miPassed") : t("kmPassed")}
           </span>
         )}
       </div>

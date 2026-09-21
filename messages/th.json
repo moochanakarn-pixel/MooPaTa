@@ -597,5 +597,103 @@
       "saving": "กำลังบันทึก...",
       "save": "บันทึก"
     }
+  },
+  "activityDetail": {
+    "editButton": "แก้ไข",
+    "notesTitle": "หมายเหตุ",
+    "exercisesTitle": "ท่าออกกำลังกาย",
+    "setLabel": "เซ็ท {n}",
+    "reps": "{count} ครั้ง",
+    "kg": "กก.",
+    "moreDetailsTitle": "รายละเอียดเพิ่มเติม",
+    "rawDataSummary": "ข้อมูลดิบทั้งหมดจาก Strava",
+    "longestDistanceBadge": "ระยะทางไกลที่สุด ({type})",
+    "fastestPaceBadge": "เพซเร็วที่สุด ({type})",
+    "fastestSpeedBadge": "ความเร็วสูงสุด ({type})",
+    "comparedToPrevious": "เทียบกับครั้งก่อน ({type} · {date})",
+    "stats": {
+      "distance": "ระยะทาง",
+      "time": "เวลา",
+      "avgPace": "เพซเฉลี่ย",
+      "avgSpeed": "ความเร็วเฉลี่ย",
+      "maxPace": "เพซสูงสุด",
+      "maxSpeed": "ความเร็วสูงสุด",
+      "elevationGain": "ระยะไต่ระดับ",
+      "elevationHigh": "จุดสูงสุด",
+      "elevationLow": "จุดต่ำสุด",
+      "avgHr": "หัวใจเฉลี่ย",
+      "maxHr": "หัวใจสูงสุด",
+      "calories": "แคลอรี่",
+      "rpe": "ระดับความเหนื่อย (RPE)",
+      "avgCadence": "เคเดนซ์เฉลี่ย",
+      "avgWatts": "กำลังเฉลี่ย",
+      "kilojoules": "พลังงาน",
+      "sufferScore": "Suffer Score",
+      "kudos": "Kudos",
+      "achievements": "สถิติที่ทำได้",
+      "pr": "PR",
+      "comments": "คอมเมนต์",
+      "timezone": "โซนเวลา",
+      "gear": "อุปกรณ์ (Gear ID)",
+      "startCoords": "พิกัดเริ่มต้น"
+    },
+    "delete": {
+      "confirm": "ลบกิจกรรมนี้ถาวร? กู้คืนไม่ได้",
+      "deleting": "กำลังลบ...",
+      "button": "ลบ"
+    },
+    "detailPanel": {
+      "windLabel": "ลม {speed} กม./ชม.",
+      "elevationProfile": "ระดับความสูงตลอดระยะทาง",
+      "paceProfile": "เพซตลอดระยะทาง",
+      "speedProfile": "ความเร็วตลอดระยะทาง",
+      "hrProfile": "อัตราการเต้นหัวใจตลอดระยะทาง",
+      "cadenceProfile": "เคเดนซ์ตลอดระยะทาง",
+      "splitsPerKm": "Splits ต่อกิโล",
+      "splitsPerMile": "Splits ต่อไมล์",
+      "laps": "Laps",
+      "allTimeBests": "สถิติที่ดีที่สุดตลอดกาล (จาก Strava)",
+      "recordedWith": "บันทึกด้วย {device}",
+      "unitKm": "กม.",
+      "unitMile": "ไมล์",
+      "meters": "ม."
+    },
+    "hrZones": {
+      "title": "โซนหัวใจ",
+      "referenceHr": "อ้างอิงหัวใจสูงสุด {hr} bpm",
+      "zone1": "ฟื้นตัว",
+      "zone2": "เบา",
+      "zone3": "ปานกลาง",
+      "zone4": "หนัก",
+      "zone5": "สูงสุด"
+    },
+    "profileChart": {
+      "avg": "เฉลี่ย",
+      "fastest": "เร็วที่สุด",
+      "peak": "สูงสุด",
+      "unitKm": "กม.",
+      "unitMile": "ไมล์"
+    },
+    "routeSketch": {
+      "start": "เริ่มต้น",
+      "end": "สิ้นสุด",
+      "kmPassed": "กม.ที่ผ่าน",
+      "miPassed": "ไมล์ที่ผ่าน"
+    },
+    "share": {
+      "title": "ดาวน์โหลดรูปกิจกรรม",
+      "cardStyle": "สไตล์การ์ด",
+      "styleGrid": "กริดสถิติ",
+      "styleHero": "ตัวเลขเด่น",
+      "styleList": "รายการท่า",
+      "bgCard": "การ์ด",
+      "bgTransparent": "โปร่งใส (วางทับรูปอื่นได้)",
+      "detailPosition": "ตำแหน่งรายละเอียด",
+      "posTop": "บน",
+      "posCenter": "กลาง",
+      "posBottom": "ล่าง",
+      "previewAlt": "ตัวอย่างรูปดาวน์โหลด",
+      "downloadShort": "ดาวน์โหลด"
+    }
   }
 }

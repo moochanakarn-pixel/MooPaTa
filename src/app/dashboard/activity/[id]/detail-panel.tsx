@@ -1,4 +1,5 @@
-import { formatDistanceKm, formatDuration, formatPace, type UnitSystem } from "@/lib/format";
+import { useLocale, useTranslations } from "next-intl";
+import { formatDistanceKm, formatDuration, formatPace, type FormatLang, type UnitSystem } from "@/lib/format";
 import type { StravaBestEffort, StravaLap, StravaSplit } from "@/lib/activity-detail-types";
 import type { StreamPoint } from "@/lib/streams";
 import type { ActivityWeather } from "@/lib/weather";
@@ -27,8 +28,16 @@ export function DetailPanel({
   isRun: boolean;
   hrMax: number | null;
 }) {
+  const t = useTranslations("activityDetail.detailPanel");
+  const locale = useLocale();
+  const lang: FormatLang = locale === "en" ? "en" : "th";
   const distDivisor = unit === "IMPERIAL" ? 1609.344 : 1000;
-  const distUnitLabel = unit === "IMPERIAL" ? "ไมล์" : "กม.";
+  // weatherLabel() (src/lib/weather.ts) stays Thai-only, not part of this
+  // translation pass — weather data only exists on old Strava-synced
+  // activities (Strava sync is gone, no new data will ever populate this),
+  // the same "frozen legacy data, low impact" reasoning as this file's
+  // isRun/DetailPanel handling documented in CLAUDE.md.
+  const distUnitLabel = unit === "IMPERIAL" ? t("unitMile") : t("unitKm");
 
   const elevationPoints = streams
     .filter((p) => p.altitude !== undefined)
@@ -57,7 +66,7 @@ export function DetailPanel({
             <p className="text-sm font-medium text-neutral-200">
               {Math.round(weather.temperatureC)}°C · {weatherLabel(weather.weatherCode)}
             </p>
-            <p className="text-xs text-neutral-500">ลม {Math.round(weather.windKmh)} กม./ชม.</p>
+            <p className="text-xs text-neutral-500">{t("windLabel", { speed: Math.round(weather.windKmh) })}</p>
           </div>
         </div>
       )}
@@ -65,7 +74,7 @@ export function DetailPanel({
       {elevationPoints.length > 1 && (
         <ProfileChart
           points={elevationPoints}
-          label="ระดับความสูงตลอดระยะทาง"
+          label={t("elevationProfile")}
           color="#38bdf8"
           unit={unit}
           valueKind="elevation"
@@ -75,7 +84,7 @@ export function DetailPanel({
       {pacePoints.length > 1 && (
         <ProfileChart
           points={pacePoints}
-          label={isRun ? "เพซตลอดระยะทาง" : "ความเร็วตลอดระยะทาง"}
+          label={isRun ? t("paceProfile") : t("speedProfile")}
           color="#fc4c02"
           unit={unit}
           valueKind={isRun ? "pace" : "speed"}
@@ -85,7 +94,7 @@ export function DetailPanel({
       {heartratePoints.length > 1 && (
         <ProfileChart
           points={heartratePoints}
-          label="อัตราการเต้นหัวใจตลอดระยะทาง"
+          label={t("hrProfile")}
           color="#f43f5e"
           unit={unit}
           valueKind="heartrate"
@@ -95,7 +104,7 @@ export function DetailPanel({
       {cadencePoints.length > 1 && (
         <ProfileChart
           points={cadencePoints}
-          label="เคเดนซ์ตลอดระยะทาง"
+          label={t("cadenceProfile")}
           color="#a855f7"
           unit={unit}
           valueKind="cadence"
@@ -106,16 +115,16 @@ export function DetailPanel({
 
       {splits.length > 0 && (
         <div className="rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
-          <h3 className="mb-3 text-sm font-medium text-neutral-300">Splits ต่อ{unit === "IMPERIAL" ? "ไมล์" : "กิโล"}</h3>
+          <h3 className="mb-3 text-sm font-medium text-neutral-300">{unit === "IMPERIAL" ? t("splitsPerMile") : t("splitsPerKm")}</h3>
           <div className="divide-y divide-neutral-800/60">
             {splits.map((s) => (
               <div key={s.split} className="flex items-center justify-between py-2 text-sm">
                 <span className="text-neutral-500">{distUnitLabel} {s.split}</span>
                 <span className="flex items-center gap-3">
-                  <span className="font-medium text-neutral-200">{formatPace(s.average_speed, unit)}</span>
+                  <span className="font-medium text-neutral-200">{formatPace(s.average_speed, unit, lang)}</span>
                   <span className="text-xs text-neutral-500">
                     {s.elevation_difference > 0 ? "+" : ""}
-                    {Math.round(s.elevation_difference)} ม.
+                    {Math.round(s.elevation_difference)} {t("meters")}
                   </span>
                 </span>
               </div>
@@ -126,18 +135,18 @@ export function DetailPanel({
 
       {laps.length > 1 && (
         <div className="rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
-          <h3 className="mb-3 text-sm font-medium text-neutral-300">Laps</h3>
+          <h3 className="mb-3 text-sm font-medium text-neutral-300">{t("laps")}</h3>
           <div className="divide-y divide-neutral-800/60">
             {laps.map((lap) => (
               <div key={lap.lap_index} className="flex items-center justify-between py-2 text-sm">
                 <span className="text-neutral-500">#{lap.lap_index}</span>
-                <span className="text-neutral-400">{formatDistanceKm(lap.distance, unit)}</span>
-                <span className="text-neutral-400">{formatDuration(lap.moving_time)}</span>
+                <span className="text-neutral-400">{formatDistanceKm(lap.distance, unit, lang)}</span>
+                <span className="text-neutral-400">{formatDuration(lap.moving_time, lang)}</span>
                 <span className="flex items-center gap-3">
-                  <span className="font-medium text-neutral-200">{formatPace(lap.average_speed, unit)}</span>
+                  <span className="font-medium text-neutral-200">{formatPace(lap.average_speed, unit, lang)}</span>
                   <span className="text-xs text-neutral-500">
                     {lap.total_elevation_gain > 0 ? "+" : ""}
-                    {Math.round(lap.total_elevation_gain)} ม.
+                    {Math.round(lap.total_elevation_gain)} {t("meters")}
                   </span>
                 </span>
               </div>
@@ -148,19 +157,19 @@ export function DetailPanel({
 
       {prEfforts.length > 0 && (
         <div className="rounded-xl border border-amber-800/40 bg-amber-950/10 p-4">
-          <h3 className="mb-3 text-sm font-medium text-amber-300">สถิติที่ดีที่สุดตลอดกาล (จาก Strava)</h3>
+          <h3 className="mb-3 text-sm font-medium text-amber-300">{t("allTimeBests")}</h3>
           <div className="divide-y divide-amber-900/30">
             {prEfforts.map((e) => (
               <div key={e.name} className="flex items-center justify-between py-2 text-sm">
                 <span className="text-neutral-300">🏆 {e.name}</span>
-                <span className="font-medium text-neutral-100">{formatDuration(e.elapsed_time)}</span>
+                <span className="font-medium text-neutral-100">{formatDuration(e.elapsed_time, lang)}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {deviceName && <p className="text-center text-xs text-neutral-600">บันทึกด้วย {deviceName}</p>}
+      {deviceName && <p className="text-center text-xs text-neutral-600">{t("recordedWith", { device: deviceName })}</p>}
     </div>
   );
 }

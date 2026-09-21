@@ -501,12 +501,12 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     ยืนยันจริงด้วยการ seed กิจกรรมที่ `startedAt` = 2026-09-18 18:00 UTC (= 2026-09-19 01:00 เวลาไทย)
     แล้วเปิดด้วย Playwright context ที่ตั้ง `timezoneId: "Asia/Bangkok"` — ก่อนแก้ได้ชื่อไฟล์ลงท้าย
     `-2026-09-18` (ผิด) หลังแก้ได้ `-2026-09-19` (ถูก ตรงกับวันที่แสดงผลบนหน้า)
-  - **หน้ารายละเอียดกิจกรรม (`ActivityDetailPage`) ยังไม่อยู่ในขอบเขตแปล UI (`### 5.`)** แต่ต้องรู้ภาษา
-    UI ปัจจุบันอยู่ดีเพื่อตั้งค่า default ให้ตัวเลือกภาษาของการ์ด — เรียก `resolveLocale()`
-    (`src/lib/locale.ts`) ตรง ๆ แทนที่จะพึ่ง `next-intl`'s `getLocale()` (ซึ่งก็เรียก `resolveLocale()`
-    เหมือนกันอยู่ดี แต่ import จาก `next-intl/server` จะดูเหมือนหน้านี้เข้าร่วมระบบ i18n ทั้งที่ยังไม่ได้
-    แปลข้อความ UI ของตัวเองเลยสักจุด — เรียก lib ตรง ๆ ชัดเจนกว่าว่าแค่ต้องการ locale ไปใช้อย่างเดียว
-    ไม่ได้ตั้งใจให้หน้านี้เข้าเกณฑ์ "แปลแล้ว")
+  - **หน้ารายละเอียดกิจกรรม (`ActivityDetailPage`) เข้าขอบเขตแปล UI แล้ว (ดูหัวข้อ "### 5." ด้านบน)**
+    — เดิมตั้งใจปล่อยไว้นอกขอบเขต เรียก `resolveLocale()` ตรง ๆ แทน `next-intl`'s `getLocale()` เพราะ
+    ตอนนั้นยังไม่ได้แปลข้อความ UI ของหน้านี้เลยสักจุด ตอนนี้หน้านี้แปลครบแล้วจึงเปลี่ยนมาเรียก `getLocale()`/
+    `getTranslations()` จาก `next-intl/server` ตรง ๆ เหมือนหน้าหลักอื่น ๆ (ผลลัพธ์ locale ที่ได้เหมือนเดิม
+    ทุกอย่าง เพราะ `getLocale()` ก็เรียก `resolveLocale()` อยู่ข้างใน แค่เปลี่ยนจุดที่ import มาให้ตรงกับ
+    การใช้งานจริงของหน้านี้)
 - **ปุ่ม "แชร์" (Web Share API) คู่กับปุ่มดาวน์โหลดเดิม** — ทั้ง 3 จุด (`ShareActivityButton`,
   `QuickDownloadSheet`, `SummaryConfigurator`) ตรวจ `"share" in navigator && "canShare" in navigator`
   ผ่าน `useEffect` (client-only, กัน SSR mismatch) เก็บเป็น state `canWebShare` — ถ้าเบราว์เซอร์รองรับ
@@ -789,7 +789,8 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
   — มีเทส `messages/messages.test.ts` เทียบ key set สองไฟล์ต้องตรงกันเป๊ะ (เพิ่ม `messages/**/*.test.ts`
   เข้า `vitest.config.mts`'s `include` เพราะปกติจะสแกนแค่ `src/**`) กัน key หายไปฝั่งใดฝั่งหนึ่งเงียบ ๆ
   แบบเดียวกับที่เทส comma-thousands กันบั๊กคล้ายกันในพาร์เซอร์ AI-import
-- **แปลครบแล้วทั้ง 5 หน้าหลัก + component ลูกที่จำเป็น** ทดสอบจริงผ่าน MariaDB ทุกหน้า: login แล้วสลับ EN
+- **แปลครบแล้วทั้ง 5 หน้าหลัก + component ลูกที่จำเป็น + หน้ารายละเอียดกิจกรรม (เพิ่มรอบถัดมา)**
+  ทดสอบจริงผ่าน MariaDB ทุกหน้า: login แล้วสลับ EN
   ที่หน้าตั้งค่า → เนื้อหาเปลี่ยนภาษาทันที, ลบ cookie ทดสอบใหม่ (เหลือแค่ session cookie) → ยังคงโชว์
   อังกฤษ (พิสูจน์ว่า `User.locale` เป็นตัวตัดสิน ไม่ใช่ cookie), grep หาอักษรไทยในหน้าที่ตั้งเป็น EN แล้ว
   ไม่เจอเลยสักตัว (ยกเว้นจุดที่ตั้งใจเว้นไว้ ดูด้านล่าง) — รายชื่อหน้า/ไฟล์ที่แปลแล้ว:
@@ -813,6 +814,48 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     `export const metadata`/`export default function manifest()` แบบ static เป็น
     `generateMetadata()`/async `manifest()` ที่เรียก `getTranslations("landing")` แทน เพราะ metadata
     เดิม hardcode ข้อความไทยไว้ตรง ๆ ไม่ขึ้นกับ locale เลย
+  - **หน้ารายละเอียดกิจกรรม (`/dashboard/activity/[id]`, เพิ่มรอบถัดมาจากที่ตกลงขอบเขต 5 หน้าหลักไว้
+    ตอนแรก — ผู้ใช้เลือกหน้านี้เป็นหน้าถัดไปที่จะแปลผ่าน `AskUserQuestion`)** — `page.tsx` (namespace
+    `activityDetail`) + `comparison.tsx`/`delete-activity-button.tsx`/`detail-panel.tsx`/
+    `hr-zones.tsx`/`profile-chart.tsx`/`route-sketch.tsx`/`share-activity-button.tsx` ทั้ง 7 ไฟล์ลูก —
+    **ยืนยันว่า `useTranslations()`/`useLocale()` จาก `"next-intl"` (ไม่ใช่ `/server`) ใช้ได้ตรง ๆ ใน
+    component ลูกที่ซ้อนลึกโดยไม่ต้อง prop-drill `t`/`lang` ผ่านทุกชั้น** แม้ component นั้นจะไม่มี
+    `"use client"` เอง (ตราบใดที่ root layout ห่อด้วย `NextIntlClientProvider` ไว้แล้ว — ดูตัวอย่างเดิม
+    ที่มีอยู่ก่อนแล้วที่ `goal-progress.tsx`) หน้า `page.tsx` เองยังเป็น async Server Component เรียก
+    `getTranslations`/`getLocale` จาก `next-intl/server` ตามปกติ แล้ว narrow `getLocale()`'s
+    `string` เป็น `FormatLang` (`"th"|"en"`) ด้วย `locale === "en" ? "en" : "th"` ก่อนส่งต่อให้ทุกฟังก์ชัน
+    ใน `format.ts` ที่รับ `lang` — component ลูกที่เป็น client (`profile-chart.tsx`,
+    `share-activity-button.tsx`, `delete-activity-button.tsx`) กับที่ไม่ใช่ client (`detail-panel.tsx`,
+    `hr-zones.tsx`, `route-sketch.tsx`, `comparison.tsx`) เรียก hook เดียวกันได้เหมือนกันหมด ไม่ต้องแยก
+    วิธี
+    - **`src/lib/format.ts` เพิ่ม `lang: FormatLang = "th"` ให้อีก 4 ฟังก์ชันที่เดิม hardcode หน่วย/ข้อความ
+      ไทยไว้ตรง ๆ**: `formatSignedDistance`, `formatSignedDuration`, `formatSignedPace`,
+      `formatSignedSwimPace` (ใช้ใน `comparison.tsx`'s ส่วนต่างเทียบกับครั้งก่อน) — ค่า default `"th"`
+      กันไม่ให้ call site เดิมที่ยังไม่ส่ง `lang` พัง (เทสเดิม `format.test.ts` ผ่านหมดไม่ต้องแก้)
+    - **Key ซ้ำข้ามหน้าใช้ namespace ร่วมกันแทนสร้างใหม่ซ้ำ** — `activityDetail.stats.*` (24 key) ใช้ทั้ง
+      ใน `page.tsx`'s Stat grid และ `comparison.tsx`'s Row label เพราะข้อความไทยเหมือนกันเป๊ะ (เช่น
+      "ระยะทาง"), `common.backToOverview` reuse "กลับไปหน้ารวม" เดิมที่มีอยู่แล้ว, ปุ่ม/ป้ายของ
+      `share-activity-button.tsx` reuse `common.close`/`common.language`/`common.background`/
+      `common.downloadImage`/`common.generatingImage`/`common.downloadFailed`/`common.loadingPreview`/
+      `common.share` (key เหล่านี้มีอยู่แล้วจากตอนแปล `QuickDownloadSheet`/`SummaryConfigurator`
+      ก่อนหน้า) ส่วนตัวเลือกที่ข้อความไม่ตรงกับ `common.opaque`/`common.transparent` เป๊ะ (BG_OPTIONS ใช้
+      "การ์ด" ไม่ใช่ "ทึบ") แยกเป็น key ใหม่ใน `activityDetail.share.*` แทน — ชื่อภาษา ("ไทย"/"English")
+      ใน `LANG_OPTIONS` ยังคง hardcode ไม่ผ่าน `t()` เหมือนทุกตัวสลับภาษาอื่นในแอพ (แสดงชื่อภาษาเป็นภาษา
+      ของมันเอง)
+    - **`weatherLabel()` (`src/lib/weather.ts`) ตั้งใจไม่แปล** — ข้อมูลอากาศมีแค่ใน activity เก่าที่เคย
+      sync จาก Strava เท่านั้น (Strava sync ถูกลบไปแล้ว ไม่มีทางมีข้อมูลใหม่เข้ามาอีก) เหตุผลเดียวกับที่
+      `DetailPanel`/`ProfileChart`'s `isRun`-only handling (Run-only legacy จาก Strava streams) ไม่ถูก
+      แตะเช่นกัน — ทั้งคู่เป็น "ข้อมูลเก่าที่แช่แข็งแล้ว ผลกระทบต่ำ" ตามที่ CLAUDE.md เอกสารไว้อยู่แล้วใน
+      หัวข้อ "เพซ/ความเร็วต่อประเภทกิจกรรม" ด้านล่าง (### 6.)
+    - ทดสอบจริงผ่าน MariaDB: seed กิจกรรม MANUAL (วิ่ง 5 กม./30 นาที มีท่าเวท Bench Press 2 เซ็ท) +
+      `ActivityDetail` ปลอม (streams/splits/laps/bestEfforts/weather) ตรงผ่าน Prisma, มินต์ session JWT,
+      `npm run build && npm run start`, curl หน้าเดียวกันทั้ง TH (default) และ EN (ตั้ง `User.locale =
+      "EN"` ตรงผ่าน Prisma — สำคัญ: cookie `moopata_locale` เฉย ๆ ไม่พอเพราะ login แล้ว `User.locale`
+      เป็นตัวตัดสิน ไม่ใช่ cookie ตามที่ resolveLocale() ออกแบบไว้) ยืนยัน HTML ที่ได้มีข้อความแปลถูกต้อง
+      พร้อม interpolation จริง (เช่น "อ้างอิงหัวใจสูงสุด 172 bpm"/"Based on max heart rate 172 bpm",
+      "บันทึกด้วย Garmin Forerunner 965"/"Recorded with Garmin Forerunner 965", "เซ็ท 1"/"Set 1",
+      หน่วยระยะทาง/เวลาเปลี่ยนตาม locale ด้วย) — `npx tsc --noEmit`, `npm run build`,
+      `npm run test` (197 เทสผ่านหมด รวม `messages.test.ts`'s key-parity check) ผ่านทั้งหมดก่อน commit
 - **ยังไม่แปล (ตั้งใจ, นอกขอบเขตรอบนี้)**:
   - `ACTIVITY_LEVEL_LABEL`/`GOAL_LABEL` (`src/lib/nutrition.ts`) — shared label map ที่ยังใช้ร่วมกับ
     หน้านอกขอบเขต (activity detail ฯลฯ) เปลี่ยนแค่ในหน้าที่แปลแล้วจะทำให้ไม่ตรงกันข้ามหน้า —
@@ -829,9 +872,9 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     parser ด้วย ซึ่งอยู่นอกขอบเขตรอบนี้
   - Grandchild ที่ไม่ใช่ core flow ของหน้าไดอารี่: `food-label-scanner.tsx`, `import-meal-panel.tsx`,
     `water-reminder-toggle.tsx` — เปิดจากปุ่มรองในแผงเพิ่มอาหาร ไม่ใช่ส่วนที่เห็นทันทีเมื่อเข้าหน้า
-  - ทุกหน้านอกเหนือจาก 5 หน้าหลักด้านบน (activity detail/records/compare/achievements/log-activity/
-    portion-guide/knowledge) ข้อความ error จาก API, อีเมล, ข้อความในรูปการ์ดแชร์ Satori — Thai-only
-    ถาวรจนกว่าจะมีคนขอเพิ่ม
+  - ทุกหน้านอกเหนือจาก 5 หน้าหลัก + หน้ารายละเอียดกิจกรรมด้านบน (records/compare/achievements/
+    log-activity/portion-guide/knowledge) ข้อความ error จาก API, อีเมล, ข้อความในรูปการ์ดแชร์ Satori —
+    Thai-only ถาวรจนกว่าจะมีคนขอเพิ่ม
 - **ข้อมูลที่ผู้ใช้พิมพ์เอง (ชื่อเมนู/ชื่อกิจกรรม/ชื่อท่า/หมายเหตุ/ชื่อโปรไฟล์ ฯลฯ) ไม่ผ่านระบบแปลภาษา
   เลยไม่ว่ากรณีใด** — เก็บ/แสดงตามที่พิมพ์ไว้เป๊ะเสมอ ระบบ i18n ครอบคลุมแค่ข้อความ UI ของแอพเอง
   (label/ปุ่ม/หัวข้อ) เท่านั้น
