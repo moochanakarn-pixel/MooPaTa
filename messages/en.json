@@ -342,6 +342,8 @@
       "bodyFatPercent": "Body fat %",
       "muscleMass": "Muscle mass",
       "visceralFat": "Visceral fat",
+      "bodyFatTrend": "Body fat % trend",
+      "muscleMassTrend": "Muscle mass trend",
       "noData": "No data yet — if you've never had an InBody scan, skip this section entirely and the app will calculate BMR from the standard formula (weight/height/age) instead.",
       "katchMcArdleNotice": "✓ Now calculating BMR with Katch-McArdle (based on your actual muscle mass) and protein from lean body mass instead of the standard formula — more accurate.",
       "seeHowItsCalculated": "See how it's calculated",

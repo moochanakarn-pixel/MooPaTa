@@ -281,6 +281,24 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
   เข้าไปในแชทเอง) แล้ววางคำตอบ 5 บรรทัด "label: value" กลับมาให้ `parseBodyCompositionText`
   (`src/lib/body-composition-import-parse.ts`) อ่านแทนเข้าไปเติมฟิลด์ฟอร์มเดิม (ไม่ได้บันทึกตรง —
   ผู้ใช้ยังต้องกดกด "บันทึกผลตรวจ" อีกทีหลังตรวจดูค่าที่เติมมาให้)
+- **กราฟเทรนด์ %ไขมัน/มวลกล้ามเนื้อ** — `BodyCompositionCard` มีกราฟเส้นเล็ก ๆ ต่อจากบล็อก "ตัวเลข
+  ล่าสุด"/ก่อนถึงฟอร์มเพิ่มรายการ ใช้ `BodyMetricTrendChart`
+  (`src/app/dashboard/nutrition/body-composition-trend-chart.tsx`) — component ทั่วไปดัดแปลงจาก
+  `WeightTrendChart` (`weight-trend-chart.tsx`, ภาษาภาพเดียวกัน: gradient fill, hover crosshair,
+  delta ต้น-ท้าย) แค่รับ field ไหนก็ได้แทนที่จะผูกกับ `weightKg` ตายตัว — **ตั้งใจแยกเป็น 2 กราฟ ไม่ทำ
+  dual-axis กราฟเดียว** เพราะ %ไขมันกับมวลกล้ามเนื้อ(กก.) คนละสเกลกัน ยัดแกน Y เดียวกัน (หรือปลอมแกนที่
+  สอง) จะทำให้เส้นใดเส้นหนึ่งอ่านไม่ออกเลย ขัดกับจุดประสงค์ของกราฟเล็ก ๆ แบบนี้ — แต่ละกราฟกรอง entries
+  เฉพาะที่มีค่านั้นจริง (`bodyFatPercent`/`skeletalMuscleMassKg` เป็น optional ต่อครั้งตรวจ ไม่ใช่ทุกครั้ง
+  จะมีครบ) และโชว์แค่ตอนมี ≥2 จุดข้อมูล — `entries` ที่ page.tsx ส่งมาเป็น newest-first (ใช้กับบล็อก
+  ล่าสุด/แถวชิป-ลบด้วย) เลย reverse เป็น oldest-first ก่อนป้อนกราฟ (pattern เดียวกับ `WeightLogCard`) —
+  **`higherIsBetter` prop กลับทิศสี delta**: ค่า default (false, ใช้กับ %ไขมัน) ให้ลดลง=เขียว(lime)/
+  เพิ่มขึ้น=เหลือง(amber) เหมือน `WeightTrendChart` เดิม แต่มวลกล้ามเนื้อความหมายกลับกัน (เพิ่มขึ้นคือ
+  ดี) เลยส่ง `higherIsBetter` ให้กราฟมวลกล้ามเนื้อโดยเฉพาะ — **พบบั๊กนี้เองตอนเทสจริง** (ไม่ใช่ user
+  report): ตอนแรกก็อปสีจาก `WeightTrendChart` มาตรง ๆ ทั้งสองกราฟ พอ seed ข้อมูลมวลกล้ามเนื้อเพิ่มขึ้น
+  จริง (30→31→32 กก.) แล้วเปิดหน้าเชิงลึกจริง เห็น delta "+2.0 กก." ขึ้นเป็นสีเหลือง (amber) ทั้งที่ควร
+  เป็นเรื่องดี แก้เป็น prop นี้แล้วทดสอบซ้ำเห็นเปลี่ยนเป็นเขียวถูกต้อง — ทดสอบจริงด้วยการ seed สแกน 3
+  ครั้ง (%ไขมัน 22→20→18, มวลกล้ามเนื้อ 30→31→32 กก.) เปิดหน้าเชิงลึกจริง ตรวจ SVG path ตรง ๆ ยืนยันเส้น
+  ทั้งสองกราฟเรียงถูกทิศทาง (ลง/ขึ้นตามข้อมูลจริง) และสี delta ถูกทั้งคู่
 - **รูปติดตามรูปร่าง (front/side/back)** — `ProgressPhotosCard`
   (`src/app/dashboard/nutrition/progress-photos-card.tsx`) เก็บเป็นประวัติแบบมีวันที่
   (`ProgressPhotoLog`, ตารางแยก ไม่ใช่ field เดียวบน `User` แบบเดิม) อัปโหลดใหม่แต่ละครั้งคือแถวใหม่
@@ -1254,6 +1272,34 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
       แบบระยะทาง/น้ำหนักที่เป็น 0 จริง ๆ ไม่มีอะไรให้พูดถึง) — ส่วนต่างน้ำหนักปัดทศนิยม 1 ตำแหน่งก่อนเช็คว่า
       เป็น 0 มั้ย (กัน noise จากการชั่งที่คลาดเคลื่อนเล็กน้อยระหว่างสองครั้งโผล่เป็น "+0.04 กก." ที่ไม่มี
       ความหมาย)
+    - **แคลอรี่/แมโครเฉลี่ยเทียบเป้าหมาย** — เพิ่ม 2 segment ต่อจาก "บันทึกอาหารครบ N/7 วัน" ในข้อความ
+      push: "แคลอรี่เฉลี่ย X/Y kcal" กับ "แมโครเฉลี่ย: โปรตีน.../คาร์บ.../ไขมัน... ก." — `buildWeeklySummary`
+      (`src/lib/weekly-summary.ts`) พับ `FoodLog` ของสัปดาห์นั้นเป็นยอดรวมต่อวันปฏิทินก่อน (กัน 3 มื้อ/วัน
+      นับซ้ำเหมือนที่ `foodLoggedDays` ทำอยู่แล้ว) แล้ว**เฉลี่ยด้วยจำนวนวันที่มี log จริงเท่านั้น
+      (`foodLoggedDays`) ไม่ใช่หาร 7 เสมอ** — วันที่ไม่ได้ log ไม่ใช่ "กิน 0 kcal" แค่ไม่มีข้อมูล หารด้วย 7
+      จะทำให้ค่าเฉลี่ยต่ำกว่าที่กินจริงในวันที่ log ไว้ — ฟิลด์ใหม่ 4 ตัว (`avgCaloriesPerLoggedDay`/
+      `avgProteinGPerLoggedDay`/`avgCarbGPerLoggedDay`/`avgFatGPerLoggedDay`, ทั้งหมด `null` ถ้า
+      `foodLoggedDays === 0`) — **`WeeklySummaryInput.foodLogDates: Date[]` เปลี่ยนเป็น
+      `foodLogs: WeeklyFoodLogInput[]`** (`{ loggedAt, calories, proteinG, carbG, fatG }`, breaking
+      change ของ input shape) เพราะต้องการแมโครต่อแถวมาด้วย ไม่ใช่แค่วันที่ — cron route
+      (`src/app/api/cron/weekly-summary/route.ts`) เปลี่ยน query `foodLog.findMany` จาก
+      `select: { loggedAt: true }` เป็น `include: { food: true }` แล้ว map ผ่าน `macrosForGrams(f.food,
+      f.grams)` (`src/lib/food.ts`, ตัวเดียวกับที่ทุกหน้าคำนวณแมโครจาก log ใช้อยู่แล้ว) ก่อนส่งเข้า
+      `buildWeeklySummary` — **เป้าหมายที่เอามาเทียบมาจาก `computeTargets` ตัวเดียวกับทุกหน้าในแอพ**
+      (ไม่ใช่สูตรแยกใหม่) route ประกอบ `nutritionProfile` จาก `User` fields แบบเดียวกับที่
+      `dashboard/page.tsx` ทำ (`isProfileComplete` เช็คก่อน, ถ้าครบค่อยดึง
+      `getLatestBodyComposition(userId)` + macro prefs (`proteinGPerKg`/`fatPercentOfCalories`) มาคำนวณ) —
+      **ถ้าโปรไฟล์โภชนาการยังกรอกไม่ครบ ไม่มีเป้าให้เทียบ เลยไม่โชว์ทั้ง 2 segment นี้เลย** (`targets` เป็น
+      `null`, `formatWeeklySummaryBody`'s `targets` param optional เช็คคู่กับ `avgCaloriesPerLoggedDay
+      !== null` ก่อนต่อท้าย — ทั้งสองเงื่อนไขต้องผ่านคือมีทั้งข้อมูลจริงและเป้าหมายให้เทียบ) ไม่ใช่โชว์
+      ตัวเลขเฉลี่ยเดี่ยว ๆ ไม่มีเป้ากำกับ เพราะจุดประสงค์ทั้งฟีเจอร์คือ "เทียบเป้า" ไม่ใช่แค่รายงานตัวเลข —
+      เทสอยู่ที่ `weekly-summary.test.ts`: ยืนยันเฉลี่ยพับต่อวันถูก (ไม่ใช่เฉลี่ยต่อแถว), เฉลี่ยด้วยจำนวน
+      วันที่ log จริงไม่ใช่ 7 เสมอ, ข้อความมี/ไม่มี segment ตามเงื่อนไข targets+ข้อมูลจริงถูกต้อง — ทดสอบ
+      จริงด้วยการ seed user ที่มีโปรไฟล์ครบ+สแกน InBody (มี %ไขมัน ทำให้ใช้สูตร Katch-McArdle) กับอาหาร
+      500g × 2 วันที่รู้ค่าแมโครต่อ 100g แน่นอน คำนวณเป้าหมายด้วยมือเทียบกับ Katch-McArdle+PROTEIN_G_PER_KG_LBM
+      ได้ 2495 kcal/138P/330C/69F ตรงกับที่ cron คำนวณจริงเป๊ะทุกตัว (ยืนยันผ่าน debug log ชั่วคราวที่ลบ
+      ออกหลังตรวจเสร็จ) — reason `no_active_subscription` (ไม่ใช่ `no_content`) ยืนยันว่า route พยายาม
+      ส่งจริงด้วยเนื้อหาที่คำนวณครบแล้ว
     - **หน้าตั้งค่า** — เพิ่ม section ใหม่ (`settings/page.tsx` + `weekly-summary-toggle.tsx`) ก่อนหัวข้อ
       "ผลตรวจสุขภาพ" ใช้ pattern เดียวกับ `WheyReminderToggle` เป๊ะ (เช็คสถานะ browser push subscription
       ก่อน โชว์ปุ่มเปิด/ปิดถ้ามี subscription จริงแล้ว ไม่งั้นโชว์ลิงก์ให้ไปเปิดที่หน้าไดอารี่ก่อน) ต่างจาก

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendPushToUser } from "@/lib/push";
-import { buildWeeklySummary, formatWeeklySummaryBody, hasWeeklySummaryContent } from "@/lib/weekly-summary";
+import { buildWeeklySummary, formatWeeklySummaryBody, hasWeeklySummaryContent, type WeeklyMacroTargets } from "@/lib/weekly-summary";
+import { computeTargets, isProfileComplete } from "@/lib/nutrition";
+import { getLatestBodyComposition } from "@/lib/body-composition";
+import { macrosForGrams } from "@/lib/food";
 
 // How stale lastWeeklySummarySentAt must be before a run is allowed to send
 // again — guards a duplicate/retried Scheduled Task trigger from re-sending
@@ -41,7 +44,22 @@ export async function POST(req: NextRequest) {
   const staleFilter = { OR: [{ lastWeeklySummarySentAt: null }, { lastWeeklySummarySentAt: { lt: staleBefore } }] };
   const eligibleUsers = await db.user.findMany({
     where: { weeklySummaryEnabled: true, pushSubscriptions: { some: {} }, ...staleFilter },
-    select: { id: true, unitSystem: true },
+    select: {
+      id: true,
+      unitSystem: true,
+      // Profile fields needed to compute this week's macro targets — same
+      // shape dashboard/page.tsx builds for computeTargets, so the numbers
+      // shown here always agree with what the app shows elsewhere.
+      weightKg: true,
+      heightCm: true,
+      age: true,
+      sex: true,
+      activityLevel: true,
+      nutritionGoal: true,
+      goalRateKgPerWeek: true,
+      proteinGPerKg: true,
+      fatPercentOfCalories: true,
+    },
   });
 
   const results: { userId: string; sent: boolean; reason: string }[] = [];
@@ -67,7 +85,7 @@ export async function POST(req: NextRequest) {
       }),
       db.foodLog.findMany({
         where: { userId: user.id, loggedAt: { gte: weekStart, lt: weekEnd } },
-        select: { loggedAt: true },
+        include: { food: true },
       }),
       db.weightLog.findMany({
         where: { userId: user.id, loggedAt: { gte: weekStart, lt: weekEnd } },
@@ -75,7 +93,11 @@ export async function POST(req: NextRequest) {
       }),
     ]);
 
-    const summary = buildWeeklySummary({ activities, foodLogDates: foodLogs.map((f) => f.loggedAt), weightLogs });
+    const summary = buildWeeklySummary({
+      activities,
+      foodLogs: foodLogs.map((f) => ({ loggedAt: f.loggedAt, ...macrosForGrams(f.food, f.grams) })),
+      weightLogs,
+    });
 
     // An all-zero week has nothing worth pushing — the claim above still
     // stands (this user's turn for this week is used up either way, next
@@ -86,9 +108,28 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
+    // No target to compare the week's average against unless the nutrition
+    // profile is filled in — mirrors dashboard/page.tsx's own pattern for
+    // computeTargets so this agrees with what the app shows elsewhere.
+    const nutritionProfile = {
+      weightKg: user.weightKg,
+      heightCm: user.heightCm,
+      age: user.age,
+      sex: user.sex,
+      activityLevel: user.activityLevel,
+      goal: user.nutritionGoal,
+      goalRateKgPerWeek: user.goalRateKgPerWeek,
+    };
+    let targets: WeeklyMacroTargets | null = null;
+    if (isProfileComplete(nutritionProfile)) {
+      const latestBodyComposition = await getLatestBodyComposition(user.id);
+      const macroPrefs = { proteinGPerKg: user.proteinGPerKg, fatPercentOfCalories: user.fatPercentOfCalories };
+      targets = computeTargets(nutritionProfile, latestBodyComposition, macroPrefs);
+    }
+
     const sentCount = await sendPushToUser(user.id, {
       title: "สรุปสัปดาห์ที่ผ่านมา 📊",
-      body: formatWeeklySummaryBody(summary, user.unitSystem),
+      body: formatWeeklySummaryBody(summary, user.unitSystem, targets),
       url: "/dashboard",
     });
     results.push({ userId: user.id, sent: sentCount > 0, reason: sentCount > 0 ? "sent" : "no_active_subscription" });

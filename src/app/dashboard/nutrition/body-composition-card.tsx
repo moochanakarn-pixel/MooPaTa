@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { parseBodyCompositionText } from "@/lib/body-composition-import-parse";
+import { BodyMetricTrendChart, type BodyMetricPoint } from "./body-composition-trend-chart";
 
 export interface BodyCompositionEntry {
   id: string;
@@ -125,6 +126,18 @@ export function BodyCompositionCard({
 
   const latest = entries[0] as BodyCompositionEntry | undefined;
   const recent = entries.slice(0, 6);
+  // entries arrives newest-first (for the "latest" summary above and the
+  // delete-chip row below); the trend charts need oldest-to-newest instead,
+  // same convention as WeightTrendChart's points. Each metric is optional
+  // per scan, so filtered independently — a scan missing body-fat% (say)
+  // just isn't a data point for that chart, it doesn't break the other one.
+  const oldestFirst = [...entries].reverse();
+  const fatPoints: BodyMetricPoint[] = oldestFirst
+    .filter((e): e is BodyCompositionEntry & { bodyFatPercent: number } => e.bodyFatPercent !== null)
+    .map((e) => ({ loggedAtMs: e.loggedAtMs, value: e.bodyFatPercent }));
+  const musclePoints: BodyMetricPoint[] = oldestFirst
+    .filter((e): e is BodyCompositionEntry & { skeletalMuscleMassKg: number } => e.skeletalMuscleMassKg !== null)
+    .map((e) => ({ loggedAtMs: e.loggedAtMs, value: e.skeletalMuscleMassKg }));
 
   async function save() {
     const w = Number(weightKg);
@@ -224,6 +237,23 @@ export function BodyCompositionCard({
             {t("seeHowItsCalculated")}
           </Link>
         </p>
+      )}
+
+      {(fatPoints.length >= 2 || musclePoints.length >= 2) && (
+        <div className="mb-4 space-y-4">
+          {fatPoints.length >= 2 && (
+            <div>
+              <p className="mb-1 text-xs font-medium text-neutral-400">{t("bodyFatTrend")}</p>
+              <BodyMetricTrendChart points={fatPoints} color="#a78bfa" unit="%" />
+            </div>
+          )}
+          {musclePoints.length >= 2 && (
+            <div>
+              <p className="mb-1 text-xs font-medium text-neutral-400">{t("muscleMassTrend")}</p>
+              <BodyMetricTrendChart points={musclePoints} color="#34d399" unit={kgUnit} higherIsBetter />
+            </div>
+          )}
+        </div>
       )}
 
       {showForm && (
