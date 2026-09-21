@@ -789,8 +789,9 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
   — มีเทส `messages/messages.test.ts` เทียบ key set สองไฟล์ต้องตรงกันเป๊ะ (เพิ่ม `messages/**/*.test.ts`
   เข้า `vitest.config.mts`'s `include` เพราะปกติจะสแกนแค่ `src/**`) กัน key หายไปฝั่งใดฝั่งหนึ่งเงียบ ๆ
   แบบเดียวกับที่เทส comma-thousands กันบั๊กคล้ายกันในพาร์เซอร์ AI-import
-- **แปลครบแล้วทั้ง 5 หน้าหลัก + component ลูกที่จำเป็น + หน้ารายละเอียดกิจกรรม + หน้าสถิติสูงสุด/
-  เปรียบเทียบ/ความสำเร็จ (เพิ่มรอบถัดมาจากที่ผู้ใช้ขอต่อทีละหน้า)**
+- **แปลครบแล้วทั้งแอพจริง ๆ ตอนนี้** — 5 หน้าหลัก + component ลูกที่จำเป็น + หน้ารายละเอียดกิจกรรม/
+  สถิติสูงสุด/เปรียบเทียบ/ความสำเร็จ + `log-activity`/`portion-guide`/`knowledge`/`summary`/
+  `supplements` (5 หน้าสุดท้ายที่ยังเหลือ ผู้ใช้ขอ "ลุยรวดเดียวเลยให้เสร็จ" ทำทั้งชุดในรอบเดียว)
   ทดสอบจริงผ่าน MariaDB ทุกหน้า: login แล้วสลับ EN
   ที่หน้าตั้งค่า → เนื้อหาเปลี่ยนภาษาทันที, ลบ cookie ทดสอบใหม่ (เหลือแค่ session cookie) → ยังคงโชว์
   อังกฤษ (พิสูจน์ว่า `User.locale` เป็นตัวตัดสิน ไม่ใช่ cookie), grep หาอักษรไทยในหน้าที่ตั้งเป็น EN แล้ว
@@ -917,6 +918,66 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
       "unlocked" — คนละตำแหน่งอีกเช่นกัน), และ 1RM badge "Bench Press 70 กก. (~82 กก. 1RM)"/"Bench
       Press 70 kg (~82 kg 1RM)" (Epley: 70×(1+5/30)≈81.67 ปัดเป็น 82 ตรงกับที่คำนวณจริง) —
       `npx tsc --noEmit`, `npm run build`, `npm run test` (197 เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
+  - **5 หน้าสุดท้าย — ผู้ใช้ขอ "ลุยรวดเดียวเลยให้เสร็จ" หลัง achievements ทำทั้งชุดในรอบเดียว**:
+    `log-activity` (+ `edit/page.tsx` ที่ใช้ `LogActivityForm` ตัวเดียวกัน — แปลไปด้วยแม้ไม่ได้อยู่ใน
+    5 หน้าที่ระบุชื่อไว้ เพราะ `LogActivityForm` แปลแล้ว ถ้าไม่แปล wrapper ของหน้าแก้ไขด้วยจะเห็นหัวข้อ
+    ไทยค้างอยู่เหนือฟอร์มที่เป็นอังกฤษ ครึ่ง ๆ กลาง ๆ แย่กว่าไม่แปลเลย), `portion-guide`, `knowledge`,
+    `summary`, `supplements` (namespace `logActivity`/`portionGuide`/`knowledge`/`summary`/
+    `supplements` ตามลำดับ)
+    - **`AI_PROMPT_TEMPLATE` และ placeholder ตัวอย่างในช่องวาง (`log-activity-form.tsx`) ตั้งใจไม่แปล
+      เหมือนเดิม** — เหตุผลเดียวกับ AI-import prompt อื่นทั้งหมดที่ CLAUDE.md เอกสารไว้แล้ว (parser
+      ผูกกับ label ไทยตรง ๆ) ตอนแก้ไฟล์นี้ต้องระวังเป็นพิเศษเพราะเป็นไฟล์เดียวที่ทั้งมี AI-prompt
+      ที่ห้ามแปล และมี UI ข้อความรอบ ๆ (ปุ่ม/label/error) ที่ต้องแปลอยู่ติดกัน
+    - **`TYPES`/`INTENSITIES`/`RPE_CARDIO_LEVELS`/`RPE_LIFT_LEVELS` ย้ายจาก module-level const เข้าไป
+      เป็น local const ในตัว component แทน** เพราะต้องเรียก `t()`/`t.raw()` ซึ่งใช้ได้แค่หลัง
+      `useTranslations()` hook แล้ว (เรียกที่ module scope ไม่ได้) — `TYPES[0].value` ที่เดิมใช้ seed
+      `useState` เริ่มต้นยังทำงานเหมือนเดิม เพราะ array ยังสร้างก่อนบรรทัด `useState` นั้นเสมอ แค่ย้ายเข้า
+      มาอยู่ในฟังก์ชันเดียวกัน — ต้องเปลี่ยนชื่อ parameter `(t) => t.value === ...` เป็น `(opt) => ...`
+      ใน 3 จุดที่ shadow ชื่อ `t` เดิม (ตัวแปร translations hook) ไปด้วย ไม่งั้น TS ไม่ error แต่จะงงว่า
+      `t` ไหนคือของใคร
+    - **`formatSetsCompact()` (module-level function, สร้างสรุปเซ็ทแบบย่อ "15×5กก. (RPE 8), ...") รับ
+      `t` (translator function ที่ hook คืนมา) เป็น parameter ที่สอง แทนที่จะ hardcode หน่วย "กก."/
+      "ครั้ง" ไทยตรง ๆ** — ไม่ใช่ hook เรียกซ้อนเพราะไม่ได้เรียก `useTranslations()` เอง แค่รับค่าที่
+      component เรียกมาแล้วส่งต่อมาใช้ ปลอดภัยตาม React's rules of hooks — เพิ่ม key ใหม่
+      `logActivity.compactSetWithWeight`/`compactSetNoWeight` สำหรับรูปแบบนี้โดยเฉพาะ (ไม่ reuse
+      `colWeight`/`weightPlaceholder` เพราะข้อความประกอบกันคนละแบบ)
+    - **`portion-guide-tabs.tsx`/`knowledge/page.tsx` ใช้ `t.raw()` อ่านทั้ง array/object ก้อนใหญ่
+      แทนสร้าง key แยกทีละสตริง** — `portionGuide.categories` (array ของ object ซ้อน array ของ
+      example อีกที) และ `knowledge.tdeeList`/`macroList`/`activityList` (array ของ bullet string
+      ธรรมดา) — `t.raw()` next-intl คืนค่า JSON ดิบไม่ผ่าน ICU parsing เลย เหมาะกับข้อมูลที่เป็น
+      โครงสร้าง/รายการ ไม่ใช่ประโยคเดี่ยวที่ต้อง interpolate ตัวแปร (ถ้าใช้ `t()` ทีละ key จะต้องสร้าง
+      30+ key แยกสำหรับแค่ portion-guide อย่างเดียว ไม่คุ้มและดูแลยากกว่า)
+    - **`knowledge/page.tsx`'s `bmrP2` ใช้ `t.rich()` แทน `t()`** เพราะข้อความมี `<strong>` ฝังอยู่กลาง
+      ประโยค (ชื่อสูตร Katch-McArdle/Lean Body Mass) — `t.rich("bmrP2", { strong: (chunks) =>
+      <strong>{chunks}</strong> })` จับคู่ tag `<strong>` ในข้อความ JSON กับ React component จริง
+      เดียวกับที่ `whey-reminder-toggle.tsx`'s `wheyNeedSubscription` ใช้ `<link>` tag คู่กับ
+      `<Link href="/dashboard/food">` (ลิงก์ไปหน้าไดอารี่ต้องอยู่ตรงกลางประโยค ต่อ string เองแบบเดิม
+      จะแปลลำดับคำข้ามภาษาไม่ได้ เหมือนปัญหาเดียวกับที่ achievements' progress text แก้ไปแล้วข้างบน)
+    - **`summary-configurator.tsx`'s `DEFAULT_FIELDS` เปลี่ยนจากเก็บ `{id, label, enabled}` เป็น
+      `{id, enabled}` ล้วน ๆ แล้วแยก `FIELD_LABEL_KEY: Record<string, string>` ไว้ map id → message key
+      ต่างหาก** — เดิม label เป็น literal Thai string ฝังอยู่ใน const ระดับโมดูล เปลี่ยนไม่ได้ตาม locale
+      เลย ย้าย label ไปคำนวณสดที่ render time ผ่าน `t(FIELD_LABEL_KEY[f.id])` แทน — `applyStoredFields()`
+      (merge ค่าที่ persist ไว้ใน `localStorage` เข้ากับ default list) ก็ต้องแก้ตามให้ทำงานกับ id ล้วน ๆ
+      ไม่อ้างอิง label เลย (เดิมก็ไม่เคย trust label ที่ persist ไว้อยู่แล้วตามที่ comment เดิมบอก แค่ตอนนี้
+      ไม่มี label ให้ persist ตั้งแต่แรกเลยยิ่งชัดเจนขึ้น) — พฤติกรรม persist เดิม (จำ id+enabled+ลำดับ
+      ข้าม session, ไม่จำ `lang`) ไม่เปลี่ยนเลย
+    - **Reuse ข้ามหน้าเยอะในจุดที่ข้อความซ้ำกับของเดิมที่แปลไปแล้วก่อนหน้า**: `summary-configurator.tsx`
+      reuse `common.language`/`common.background`/`common.opaque`/`common.transparent`/
+      `common.loadingPreview`/`common.generatingImage`/`common.downloadImage`/`common.downloadFailed`/
+      `common.share` (ตัวเลือกภาษา/พื้นหลัง/ปุ่มดาวน์โหลด-แชร์ ข้อความเหมือน `ShareActivityButton`/
+      `QuickDownloadSheet` เป๊ะ) และ `activityDetail.share.downloadShort` (ป้าย "ดาวน์โหลด" สั้น ๆ ตอน
+      มีปุ่มแชร์คู่กันแล้ว) — `log-activity/page.tsx`, `portion-guide` (ไม่ reuse เพราะ back link ไปคนละ
+      หน้า), `supplements/page.tsx`, `summary/page.tsx` reuse `common.backToOverview` (กลับไปหน้ารวม)
+    - ทดสอบจริงผ่าน MariaDB ทุกหน้า (รวมหน้าแก้ไขกิจกรรมด้วย): seed กิจกรรมวิ่ง+ท่าเวท+อาหารเสริม 1
+      รายการ, มินต์ session JWT, curl ทุกหน้าทั้ง TH/EN ยืนยัน HTML แปลถูกต้องพร้อม interpolation จริง
+      ทุกจุดที่ซับซ้อน — โดยเฉพาะ `t.raw()` array ทั้งสองที่ (RPE levels ของ `log-activity`, portion
+      categories, knowledge's bullet lists — เห็นทั้ง label/desc/examples ภาษาอังกฤษถูกต้องครบทุก item
+      ไม่มีตกหล่น), `t.rich()` ทั้งสองที่ (`<strong>Katch-McArdle</strong>` ใน knowledge, ลิงก์ "food
+      diary page" ใน whey reminder), field toggle aria-label ที่หน้า summary ("Show Calories"), และ
+      edit-activity page ที่โชว์ "Edit activity"/"Back to activity"/"Save changes" ถูกต้องทั้งที่ฟอร์ม
+      ข้างในเป็น component เดียวกับหน้าบันทึกใหม่ — `npx tsc --noEmit`, `npm run build`, `npm run test`
+      (197 เทสผ่านหมด) ผ่านทั้งหมดก่อน commit — **ถึงจุดนี้แปล UI ครบทุกหน้าที่เข้าถึงได้จริงในแอพแล้ว**
+      เหลือแค่สิ่งที่ตั้งใจไม่แปล (ดูหัวข้อถัดไป)
 - **ยังไม่แปล (ตั้งใจ, นอกขอบเขตรอบนี้)**:
   - `ACTIVITY_LEVEL_LABEL`/`GOAL_LABEL` (`src/lib/nutrition.ts`) — shared label map ที่ยังใช้ร่วมกับ
     หน้านอกขอบเขต (activity detail ฯลฯ) เปลี่ยนแค่ในหน้าที่แปลแล้วจะทำให้ไม่ตรงกันข้ามหน้า —
@@ -933,9 +994,9 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     parser ด้วย ซึ่งอยู่นอกขอบเขตรอบนี้
   - Grandchild ที่ไม่ใช่ core flow ของหน้าไดอารี่: `food-label-scanner.tsx`, `import-meal-panel.tsx`,
     `water-reminder-toggle.tsx` — เปิดจากปุ่มรองในแผงเพิ่มอาหาร ไม่ใช่ส่วนที่เห็นทันทีเมื่อเข้าหน้า
-  - ทุกหน้านอกเหนือจาก 5 หน้าหลัก + หน้ารายละเอียดกิจกรรม/สถิติสูงสุด/เปรียบเทียบ/ความสำเร็จด้านบน
-    (log-activity/portion-guide/knowledge) ข้อความ error จาก API, อีเมล, ข้อความในรูป
-    การ์ดแชร์ Satori — Thai-only ถาวรจนกว่าจะมีคนขอเพิ่ม
+  - ทุกหน้านอกเหนือจากหน้าที่แปลแล้วทั้งหมดด้านบน (ตอนนี้ครอบคลุมทุกหน้าใน bottom-nav + ทุกหน้าที่เข้าถึง
+    ได้จากลิงก์ในนั้นแล้ว) ข้อความ error จาก API, อีเมล, ข้อความในรูปการ์ดแชร์ Satori — Thai-only ถาวร
+    จนกว่าจะมีคนขอเพิ่ม
 - **ข้อมูลที่ผู้ใช้พิมพ์เอง (ชื่อเมนู/ชื่อกิจกรรม/ชื่อท่า/หมายเหตุ/ชื่อโปรไฟล์ ฯลฯ) ไม่ผ่านระบบแปลภาษา
   เลยไม่ว่ากรณีใด** — เก็บ/แสดงตามที่พิมพ์ไว้เป๊ะเสมอ ระบบ i18n ครอบคลุมแค่ข้อความ UI ของแอพเอง
   (label/ปุ่ม/หัวข้อ) เท่านั้น
@@ -1469,6 +1530,7 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
   แก้ปัญหานี้ได้ทันที
 - Deploy จริงอยู่บน **Windows Server** ผ่าน `nssm` (`D:\Projectphp\MooPaTa`, service ชื่อ `MooPaTa`)
   — คนละ workflow กับ dev/test ที่นี่ (Linux) ดู `DEPLOY-WINDOWS.md` สำหรับขั้นตอน deploy ฉบับเต็ม
-- ข้อความ UI ของ 5 หน้าหลัก (landing/หน้าแรก/ไดอารี่/เชิงลึก/บัญชี, ดู "### 5. ภาษา (i18n)") สลับ TH/EN
-  ได้จริงผ่าน `next-intl` แล้ว — หน้านอกเหนือจากนั้นยังเป็นภาษาไทยล้วน — comment ในโค้ดเป็นอังกฤษเป็นหลัก
-  อธิบาย "ทำไม" ไม่ใช่ "ทำอะไร"
+- ข้อความ UI ของแอพเกือบทั้งหมดสลับ TH/EN ได้จริงผ่าน `next-intl` แล้ว (ดู "### 5. ภาษา (i18n)" สำหรับ
+  รายชื่อหน้าทั้งหมด) — เหลือแค่จุดที่ตั้งใจไม่แปล (AI-import prompt, ข้อความ error จาก API, อีเมล,
+  ข้อความในรูปการ์ดแชร์ Satori, ข้อมูลที่ผู้ใช้พิมพ์เอง) — comment ในโค้ดเป็นอังกฤษเป็นหลัก อธิบาย
+  "ทำไม" ไม่ใช่ "ทำอะไร"

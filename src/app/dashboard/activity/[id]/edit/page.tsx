@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
 import { getExerciseStats, getLastWorkoutSession } from "@/lib/exercise-stats";
 import { getSessionUserId } from "@/lib/session";
@@ -18,6 +19,8 @@ function toDatetimeLocal(d: Date): string {
 export default async function EditActivityPage({ params }: { params: { id: string } }) {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
+
+  const t = await getTranslations("logActivity");
 
   const [activity, exerciseStats, lastWorkoutSession, user] = await Promise.all([
     db.activity.findUnique({
@@ -65,11 +68,11 @@ export default async function EditActivityPage({ params }: { params: { id: strin
         <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
           <path d="M13 4 7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        กลับไปหน้ากิจกรรม
+        {t("editBackLink")}
       </Link>
 
-      <h1 className="mb-1 text-xl font-bold">แก้ไขกิจกรรม</h1>
-      <p className="mb-8 text-sm text-neutral-500">แก้ไขข้อมูลกิจกรรมนี้ รวมถึงท่าออกกำลังกายแต่ละท่าได้</p>
+      <h1 className="mb-1 text-xl font-bold">{t("editTitle")}</h1>
+      <p className="mb-8 text-sm text-neutral-500">{t("editSubtitle")}</p>
 
       <LogActivityForm
         activityId={activity.id}

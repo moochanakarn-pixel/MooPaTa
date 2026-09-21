@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export interface SupplementItem {
   id: string;
@@ -25,6 +26,7 @@ function SupplementRow({
   onToggle: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations("supplements");
   return (
     <div className="flex items-center gap-3 rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-4 py-3">
       <button
@@ -33,7 +35,7 @@ function SupplementRow({
         className={`flex h-6 w-6 flex-none items-center justify-center rounded-md border transition disabled:opacity-50 ${
           item.takenToday ? "border-emerald-600 bg-emerald-600/20 text-emerald-400" : "border-neutral-700 text-transparent"
         }`}
-        title={item.takenToday ? "กินแล้ววันนี้" : "ยังไม่ได้กิน"}
+        title={item.takenToday ? t("takenToday") : t("notTakenYet")}
       >
         <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5">
           <path d="M4 10l4 4 8-8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -46,7 +48,7 @@ function SupplementRow({
         </p>
         {item.note && <p className="mt-0.5 text-xs text-neutral-600">{item.note}</p>}
       </div>
-      <button onClick={onDelete} className="flex-none text-neutral-600 hover:text-red-400" title="ลบ">
+      <button onClick={onDelete} className="flex-none text-neutral-600 hover:text-red-400" title={t("deleteTitle")}>
         <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
           <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </svg>
@@ -57,6 +59,7 @@ function SupplementRow({
 
 export function SupplementList({ items }: { items: SupplementItem[] }) {
   const router = useRouter();
+  const t = useTranslations("supplements");
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
   const [timeLabel, setTimeLabel] = useState("");
@@ -73,14 +76,14 @@ export function SupplementList({ items }: { items: SupplementItem[] }) {
   }
 
   async function remove(id: string) {
-    if (!confirm("ลบรายการอาหารเสริมนี้?")) return;
+    if (!confirm(t("confirmDelete"))) return;
     await fetch(`/api/supplements/${id}`, { method: "DELETE" });
     router.refresh();
   }
 
   async function add() {
     if (!name.trim()) {
-      setError("กรอกชื่ออาหารเสริมก่อน");
+      setError(t("errorNameRequired"));
       return;
     }
     setError(null);
@@ -98,14 +101,14 @@ export function SupplementList({ items }: { items: SupplementItem[] }) {
       setShowAdd(false);
       router.refresh();
     } else {
-      setError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setError(t("saveFailed"));
     }
   }
 
   return (
     <div>
       {items.length === 0 && !showAdd ? (
-        <p className="py-8 text-center text-sm text-neutral-600">ยังไม่มีรายการอาหารเสริม</p>
+        <p className="py-8 text-center text-sm text-neutral-600">{t("emptyState")}</p>
       ) : (
         <div className="mb-4 space-y-2">
           {items.map((item) => (
@@ -128,21 +131,21 @@ export function SupplementList({ items }: { items: SupplementItem[] }) {
           <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
             <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
-          เพิ่มอาหารเสริม
+          {t("addButton")}
         </button>
       ) : (
         <div className="space-y-2 rounded-xl border border-neutral-800/80 bg-neutral-900/40 p-4">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="ชื่อ เช่น Biotin Zinc+" className={INPUT_CLASS} />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("namePlaceholder")} className={INPUT_CLASS} />
           <input
             value={timeLabel}
             onChange={(e) => setTimeLabel(e.target.value)}
-            placeholder="เวลาที่ควรกิน (ไม่บังคับ) เช่น เช้า, ก่อนนอน"
+            placeholder={t("timeLabelPlaceholder")}
             className={INPUT_CLASS}
           />
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="หมายเหตุ (ไม่บังคับ) เช่น กินพร้อมมื้ออาหาร ไม่กินพร้อมแคลเซียม"
+            placeholder={t("notePlaceholder")}
             className={INPUT_CLASS}
           />
           {error && <p className="text-xs text-red-400">{error}</p>}
@@ -152,7 +155,7 @@ export function SupplementList({ items }: { items: SupplementItem[] }) {
               disabled={saving}
               className="rounded-lg bg-[#fc4c02] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:opacity-50"
             >
-              {saving ? "กำลังบันทึก..." : "บันทึก"}
+              {saving ? t("saving") : t("save")}
             </button>
             <button
               onClick={() => {
@@ -161,7 +164,7 @@ export function SupplementList({ items }: { items: SupplementItem[] }) {
               }}
               className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:border-neutral-600"
             >
-              ยกเลิก
+              {t("cancel")}
             </button>
           </div>
         </div>

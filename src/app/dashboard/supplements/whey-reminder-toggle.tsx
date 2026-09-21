@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 type PushStatus = "checking" | "unsupported" | "no_subscription" | "subscribed";
 
@@ -13,6 +14,7 @@ type PushStatus = "checking" | "unsupported" | "no_subscription" | "subscribed";
 // itself, so there's one subscribe/unsubscribe flow in the app rather than
 // two that could drift out of sync with each other.
 export function WheyReminderToggle({ initialEnabled }: { initialEnabled: boolean }) {
+  const t = useTranslations("supplements");
   const [pushStatus, setPushStatus] = useState<PushStatus>("checking");
   const [enabled, setEnabled] = useState(initialEnabled);
   const [saving, setSaving] = useState(false);
@@ -43,7 +45,7 @@ export function WheyReminderToggle({ initialEnabled }: { initialEnabled: boolean
     if (res.ok) {
       setEnabled(next);
     } else {
-      setError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setError(t("saveFailed"));
     }
   }
 
@@ -53,10 +55,8 @@ export function WheyReminderToggle({ initialEnabled }: { initialEnabled: boolean
     <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
       <div className="mb-1 flex items-center justify-between">
         <div>
-          <h2 className="font-medium">เตือนกินเวย์หลังออกกำลังกาย</h2>
-          <p className="mt-0.5 text-xs text-neutral-500">
-            แจ้งเตือน 30-60 นาทีหลังจบกิจกรรมที่บันทึกไว้ (ทั้งจาก Strava และบันทึกเอง)
-          </p>
+          <h2 className="font-medium">{t("wheyTitle")}</h2>
+          <p className="mt-0.5 text-xs text-neutral-500">{t("wheyDesc")}</p>
         </div>
         {pushStatus === "subscribed" && (
           <button
@@ -68,18 +68,20 @@ export function WheyReminderToggle({ initialEnabled }: { initialEnabled: boolean
                 : "bg-cyan-600 text-white hover:bg-cyan-500"
             }`}
           >
-            {saving ? "กำลังบันทึก..." : enabled ? "ปิดแจ้งเตือน" : "เปิดแจ้งเตือน"}
+            {saving ? t("saving") : enabled ? t("wheyTurnOff") : t("wheyTurnOn")}
           </button>
         )}
       </div>
 
       {pushStatus === "no_subscription" && (
         <p className="mt-2 text-xs text-amber-400">
-          ต้องเปิดการแจ้งเตือนที่{" "}
-          <Link href="/dashboard/food" className="underline hover:text-amber-300">
-            หน้าบันทึกอาหาร
-          </Link>{" "}
-          ก่อน ถึงจะรับการแจ้งเตือนนี้ได้
+          {t.rich("wheyNeedSubscription", {
+            link: (chunks) => (
+              <Link href="/dashboard/food" className="underline hover:text-amber-300">
+                {chunks}
+              </Link>
+            ),
+          })}
         </p>
       )}
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}

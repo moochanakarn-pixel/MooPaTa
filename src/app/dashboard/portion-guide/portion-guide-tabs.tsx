@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 interface PortionExample {
   food: string;
@@ -15,61 +16,6 @@ interface PortionCategory {
   instruction: string;
   examples: PortionExample[];
 }
-
-// Hand-based portion estimation — a common technique for eyeballing a
-// serving size without a kitchen scale (one hand part per macro group).
-// Figures are general guidelines like the rest of the app's catalog data
-// (see thai-food-catalog.ts's own comment) — a starting estimate, not a
-// substitute for weighing food when precision actually matters.
-const CATEGORIES: PortionCategory[] = [
-  {
-    key: "protein",
-    label: "โปรตีน",
-    handPart: "ฝ่ามือของคุณ (ไม่รวมนิ้ว) หนา 1-2 ซม.",
-    instruction: "ใช้ฝ่ามือของคุณกะปริมาณโปรตีน",
-    examples: [
-      { food: "ไก่ หมู หรือเนื้อ (สุก)", grams: "100 ก.", range: "~75-110 ก." },
-      { food: "ปลา (สุก)", grams: "120 ก.", range: "~100-150 ก." },
-      { food: "เต้าหู้แข็ง", grams: "100 ก.", range: "~90-120 ก." },
-      { food: "ไข่ไก่", grams: "2 ฟอง", range: "~100-120 ก." },
-    ],
-  },
-  {
-    key: "carb",
-    label: "คาร์บ",
-    handPart: "กำปั้นของคุณ 1 กำปั้น",
-    instruction: "ใช้กำปั้นของคุณกะปริมาณคาร์บ",
-    examples: [
-      { food: "ข้าวสวย (สุก)", grams: "150 ก.", range: "~120-180 ก." },
-      { food: "ก๋วยเตี๋ยว/เส้นพาสต้า (สุก)", grams: "140 ก.", range: "~110-170 ก." },
-      { food: "มันฝรั่ง/เผือก (สุก)", grams: "130 ก.", range: "~100-160 ก." },
-      { food: "ขนมปัง", grams: "2 แผ่น", range: "~60-80 ก." },
-    ],
-  },
-  {
-    key: "fat",
-    label: "ไขมัน",
-    handPart: "หัวแม่มือของคุณ 1 หัวแม่มือ",
-    instruction: "ใช้หัวแม่มือของคุณกะปริมาณไขมัน",
-    examples: [
-      { food: "น้ำมัน/เนย", grams: "15 ก.", range: "~10-20 ก." },
-      { food: "ถั่ว/เมล็ดพืช", grams: "20 ก.", range: "~15-30 ก." },
-      { food: "อะโวคาโด", grams: "50 ก.", range: "~40-70 ก." },
-      { food: "ชีส", grams: "30 ก.", range: "~20-40 ก." },
-    ],
-  },
-  {
-    key: "veg",
-    label: "ผัก",
-    handPart: "กำปั้นของคุณ 1 กำปั้น",
-    instruction: "ใช้กำปั้นของคุณกะปริมาณผัก",
-    examples: [
-      { food: "ผักใบเขียวสด", grams: "50 ก.", range: "~40-70 ก." },
-      { food: "ผักเนื้อแน่น (ฟักทอง แครอท)", grams: "90 ก.", range: "~80-100 ก." },
-      { food: "ผักสุก (ผัด/ต้ม)", grams: "80 ก.", range: "~60-100 ก." },
-    ],
-  },
-];
 
 function HandIcon({ variant }: { variant: "palm" | "fist" | "thumb" }) {
   const paths: Record<typeof variant, string> = {
@@ -92,6 +38,15 @@ const HAND_ICON_BY_CATEGORY: Record<string, "palm" | "fist" | "thumb"> = {
 };
 
 export function PortionGuideTabs() {
+  const t = useTranslations("portionGuide");
+  // Hand-based portion estimation — a common technique for eyeballing a
+  // serving size without a kitchen scale (one hand part per macro group).
+  // Figures are general guidelines like the rest of the app's catalog data
+  // (see thai-food-catalog.ts's own comment) — a starting estimate, not a
+  // substitute for weighing food when precision actually matters. Read via
+  // t.raw() since it's a whole nested array/object, not a single string to
+  // interpolate.
+  const CATEGORIES = t.raw("categories") as PortionCategory[];
   const [active, setActive] = useState(CATEGORIES[0].key);
   const category = CATEGORIES.find((c) => c.key === active) ?? CATEGORIES[0];
 

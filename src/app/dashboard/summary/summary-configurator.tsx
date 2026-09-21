@@ -1,23 +1,29 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 
 interface FieldOption {
   id: string;
-  label: string;
   enabled: boolean;
 }
 
-const DEFAULT_FIELDS: FieldOption[] = [
-  { id: "cal", label: "แคลอรี่", enabled: true },
-  { id: "macro", label: "แมโคร (โปรตีน / คาร์บ / ไขมัน)", enabled: true },
-  { id: "water", label: "น้ำดื่ม", enabled: true },
-  { id: "exercise", label: "ออกกำลังกาย — ถ้ามีบันทึกวันนั้น", enabled: true },
-  { id: "goal", label: "เป้าหมายระยะทางเดือนนี้ — ถ้าตั้งเป้าไว้", enabled: true },
-  { id: "streak", label: "สตรีคบันทึกต่อเนื่อง — ถ้ายังต่อเนื่องอยู่", enabled: true },
-  { id: "heatmap", label: "ความสม่ำเสมอ 7 วันล่าสุด", enabled: true },
-  { id: "weight", label: "น้ำหนักตัว — ถ้าเคยบันทึกไว้", enabled: true },
-];
+// Order/ids only — the display label is looked up live from FIELD_LABEL_KEY
+// + t() at render time (see the component below) so it re-translates
+// immediately on a locale switch instead of freezing whatever language was
+// active when the field list was first built.
+const DEFAULT_FIELD_IDS = ["cal", "macro", "water", "exercise", "goal", "streak", "heatmap", "weight"];
+const FIELD_LABEL_KEY: Record<string, string> = {
+  cal: "fieldCal",
+  macro: "fieldMacro",
+  water: "fieldWater",
+  exercise: "fieldExercise",
+  goal: "fieldGoal",
+  streak: "fieldStreak",
+  heatmap: "fieldHeatmap",
+  weight: "fieldWeight",
+};
+const DEFAULT_FIELDS: FieldOption[] = DEFAULT_FIELD_IDS.map((id) => ({ id, enabled: true }));
 
 // Remembers which fields are on/off, their order, and the background choice
 // across visits — these are the settings someone tends to land on once and
@@ -33,24 +39,22 @@ interface StoredConfig {
   transparent: boolean;
 }
 
-// Merges saved field order/enabled state onto the *current* DEFAULT_FIELDS
-// definitions (never trusts a stored `label`, which would go stale the
-// moment that copy changes) — drops any stored id that no longer exists
-// (a field removed since), and appends any field that exists now but wasn't
-// in the older saved list (a field added since) at the end with its default
-// enabled state, so neither kind of drift can silently hide/orphan a field.
+// Merges saved field order/enabled state onto the *current* DEFAULT_FIELD_IDS
+// definitions — drops any stored id that no longer exists (a field removed
+// since), and appends any field that exists now but wasn't in the older
+// saved list (a field added since) at the end with its default enabled
+// state, so neither kind of drift can silently hide/orphan a field.
 function applyStoredFields(stored: StoredConfig): FieldOption[] {
-  const byId = new Map(DEFAULT_FIELDS.map((f) => [f.id, f]));
+  const known = new Set(DEFAULT_FIELD_IDS);
   const seen = new Set<string>();
   const ordered: FieldOption[] = [];
   for (const id of stored.fieldOrder) {
-    const def = byId.get(id);
-    if (!def) continue;
-    ordered.push({ ...def, enabled: stored.fieldEnabled[id] ?? def.enabled });
+    if (!known.has(id)) continue;
+    ordered.push({ id, enabled: stored.fieldEnabled[id] ?? true });
     seen.add(id);
   }
-  for (const f of DEFAULT_FIELDS) {
-    if (!seen.has(f.id)) ordered.push(f);
+  for (const id of DEFAULT_FIELD_IDS) {
+    if (!seen.has(id)) ordered.push({ id, enabled: true });
   }
   return ordered;
 }
@@ -75,6 +79,9 @@ const LANG_OPTIONS = [
 type Lang = (typeof LANG_OPTIONS)[number]["value"];
 
 export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang }) {
+  const t = useTranslations("summary");
+  const tc = useTranslations("common");
+  const ts = useTranslations("activityDetail.share");
   const [dateMode, setDateMode] = useState<"today" | "yesterday" | "custom">("today");
   const [customDate, setCustomDate] = useState(todayKey());
   const [fields, setFields] = useState<FieldOption[]>(DEFAULT_FIELDS);
@@ -238,13 +245,13 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
   return (
     <div>
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-        <h2 className="mb-3 font-medium">วันที่</h2>
+        <h2 className="mb-3 font-medium">{t("dateTitle")}</h2>
         <div className="flex gap-2 rounded-xl bg-neutral-900 p-1">
           {(
             [
-              ["today", "วันนี้"],
-              ["yesterday", "เมื่อวาน"],
-              ["custom", "เลือกวันที่"],
+              ["today", t("dateToday")],
+              ["yesterday", t("dateYesterday")],
+              ["custom", t("dateCustom")],
             ] as const
           ).map(([mode, label]) => (
             <button
@@ -270,7 +277,7 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
       </div>
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-        <h2 className="mb-3 font-medium">ภาษา</h2>
+        <h2 className="mb-3 font-medium">{tc("language")}</h2>
         <div className="flex gap-2 rounded-xl bg-neutral-900 p-1">
           {LANG_OPTIONS.map((o) => (
             <button
@@ -287,16 +294,16 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
       </div>
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-        <h2 className="mb-3 font-medium">พื้นหลัง</h2>
+        <h2 className="mb-3 font-medium">{tc("background")}</h2>
         <div className="flex gap-2 rounded-xl bg-neutral-900 p-1">
           {(
             [
-              [false, "ทึบ"],
-              [true, "โปร่งใส"],
+              [false, tc("opaque")],
+              [true, tc("transparent")],
             ] as const
           ).map(([value, label]) => (
             <button
-              key={label}
+              key={String(value)}
               onClick={() => setTransparent(value)}
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
                 transparent === value ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
@@ -306,18 +313,16 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
             </button>
           ))}
         </div>
-        {transparent && (
-          <p className="mt-3 text-xs text-neutral-500">
-            เอาไปวางทับรูปพื้นหลังอื่นต่อได้ เช่น สติกเกอร์ใน IG/Line story
-          </p>
-        )}
+        {transparent && <p className="mt-3 text-xs text-neutral-500">{t("transparentHint")}</p>}
       </div>
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-        <h2 className="mb-1 font-medium">ข้อมูลที่จะแสดง</h2>
-        <p className="mb-3 text-xs text-neutral-500">ลากที่จุดซ้ายเพื่อจัดลำดับ กดสวิตช์เพื่อเปิด/ปิดรายการ</p>
+        <h2 className="mb-1 font-medium">{t("fieldsTitle")}</h2>
+        <p className="mb-3 text-xs text-neutral-500">{t("fieldsHint")}</p>
         <ul className="space-y-2">
-          {fields.map((f, i) => (
+          {fields.map((f, i) => {
+            const label = t(FIELD_LABEL_KEY[f.id]);
+            return (
             <li
               key={f.id}
               draggable
@@ -343,7 +348,7 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
               <button
                 role="switch"
                 aria-checked={f.enabled}
-                aria-label={`แสดง${f.label}`}
+                aria-label={t("toggleAriaLabel", { label })}
                 onClick={() => toggle(f.id)}
                 className={`relative h-5 w-9 flex-none rounded-full transition ${f.enabled ? "bg-[#fc4c02]" : "bg-neutral-700"}`}
               >
@@ -351,15 +356,16 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
                   className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition ${f.enabled ? "left-4" : "left-0.5"}`}
                 />
               </button>
-              <span className="text-sm text-neutral-200">{f.label}</span>
+              <span className="text-sm text-neutral-200">{label}</span>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </div>
 
       {anyEnabled && (
         <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-          <h2 className="mb-3 font-medium">ตัวอย่าง</h2>
+          <h2 className="mb-3 font-medium">{t("previewTitle")}</h2>
           {/* Checkerboard backdrop makes a transparent PNG's transparency
               actually visible in the preview, instead of it just looking
               identical to a solid-dark card — same pattern as the activity
@@ -370,20 +376,20 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
           >
             {previewLoading && (
               <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500">
-                กำลังโหลดตัวอย่าง...
+                {tc("loadingPreview")}
               </div>
             )}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               key={previewHref}
               src={previewHref}
-              alt="ตัวอย่างการ์ดสรุปผล"
+              alt={t("previewAlt")}
               className={`h-full w-full object-cover transition-opacity ${previewLoading ? "opacity-0" : "opacity-100"}`}
               // The image tag is already in the server-rendered HTML, so the
               // browser can start (and finish, if cached) loading it before
               // React finishes hydrating and attaches onLoad — a `load`
               // event that fires before any listener exists is simply
-              // missed, which left this stuck on "กำลังโหลดตัวอย่าง..."
+              // missed, which left this stuck on the loading label
               // forever the first time this page render was tested. The ref
               // callback runs during commit and catches that already-done
               // case via `.complete`; onLoad still handles the normal case
@@ -414,7 +420,7 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
                       <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
                       <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                     </svg>
-                    กำลังสร้างรูป...
+                    {tc("generatingImage")}
                   </>
                 ) : (
                   <>
@@ -422,7 +428,7 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
                       <path d="M10 3v9M6.5 6.5 10 3l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
                       <path d="M5 10v5.5A1.5 1.5 0 0 0 6.5 17h7a1.5 1.5 0 0 0 1.5-1.5V10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                     </svg>
-                    แชร์
+                    {tc("share")}
                   </>
                 )}
               </button>
@@ -443,7 +449,7 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
                     <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.7" strokeOpacity="0.3" />
                     <path d="M17.5 10a7.5 7.5 0 0 0-7.5-7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                   </svg>
-                  กำลังสร้างรูป...
+                  {tc("generatingImage")}
                 </>
               ) : (
                 <>
@@ -457,15 +463,15 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
                     />
                     <path d="M4 15.5v.5A1.5 1.5 0 0 0 5.5 17.5h9a1.5 1.5 0 0 0 1.5-1.5v-.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
                   </svg>
-                  {canWebShare ? "ดาวน์โหลด" : "ดาวน์โหลดรูปภาพ (PNG)"}
+                  {canWebShare ? ts("downloadShort") : tc("downloadImage")}
                 </>
               )}
             </button>
           </div>
-          {downloadFailed && <p className="mt-2 text-center text-xs text-red-400">สร้างรูปไม่สำเร็จ ลองใหม่อีกครั้ง</p>}
+          {downloadFailed && <p className="mt-2 text-center text-xs text-red-400">{tc("downloadFailed")}</p>}
         </>
       ) : (
-        <p className="text-center text-sm text-neutral-500">เลือกข้อมูลอย่างน้อย 1 อย่างก่อนสร้างรูป</p>
+        <p className="text-center text-sm text-neutral-500">{t("selectAtLeastOne")}</p>
       )}
     </div>
   );

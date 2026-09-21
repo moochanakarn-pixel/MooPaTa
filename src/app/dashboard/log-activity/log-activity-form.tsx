@@ -2,27 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { parseActivityText } from "@/lib/activity-import-parse";
 import { estimateCalories, type Intensity } from "@/lib/calorie-estimate";
 import type { ExerciseStat, LastWorkoutSession } from "@/lib/exercise-stats";
-import { formatActivityDate } from "@/lib/format";
-
-const TYPES = [
-  { value: "Run", label: "วิ่ง" },
-  { value: "Ride", label: "ปั่นจักรยาน" },
-  { value: "Walk", label: "เดิน" },
-  { value: "Swim", label: "ว่ายน้ำ" },
-  { value: "WeightTraining", label: "เวทเทรนนิ่ง" },
-  { value: "Football", label: "ฟุตบอล" },
-  { value: "Badminton", label: "แบดมินตัน" },
-  { value: "Workout", label: "ออกกำลังกายทั่วไป" },
-];
-
-const INTENSITIES = [
-  { value: "LOW", label: "เบา" },
-  { value: "MODERATE", label: "ปานกลาง" },
-  { value: "HIGH", label: "หนัก" },
-];
+import { formatActivityDate, type FormatLang } from "@/lib/format";
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
@@ -31,33 +15,14 @@ const LABEL_CLASS = "mb-1 block text-xs text-neutral-500";
 // Whole-session RPE — Borg/talk-test framing (how hard is it to breathe/
 // talk right now), same scale most watch apps show. A `title` tooltip
 // alone doesn't work on mobile (no hover), so RpeLevelsGuide below renders
-// this as a tappable <details> reference next to the field instead.
-const RPE_CARDIO_LEVELS: { level: string; label: string; desc: string }[] = [
-  { level: "10", label: "หนักสุดขีด", desc: "รู้สึกเหมือนจะหายใจไม่ออก พูดไม่ได้เลยสักคำ" },
-  { level: "9", label: "เกือบสุด", desc: "พูดได้ไม่เกิน 2-3 คำ หายใจหอบมาก" },
-  { level: "8", label: "หนักมากเป็นพิเศษ", desc: "พูดแทบไม่ออก หายใจหนักและลำบากมาก" },
-  { level: "7", label: "ลำบากมาก", desc: "พูดได้แค่ประโยคสั้น ๆ ทีละประโยค" },
-  { level: "6", label: "ท้าทาย", desc: "หายใจหอบชัดเจน พูดประโยคยาว ๆ ลำบาก" },
-  { level: "5", label: "หนัก", desc: "หายใจถี่ขึ้น ยังสนทนาต่อได้ถ้าฝืนหน่อย" },
-  { level: "4", label: "ค่อนข้างหนัก", desc: "หายใจแรงขึ้นแต่ยังคุมได้ สนทนาได้แต่ต้องใช้ความพยายาม" },
-  { level: "3", label: "ปานกลาง", desc: "รักษาจังหวะนี้ได้เป็นชั่วโมง พูดคุย/อ่านหนังสือไปด้วยได้สบาย" },
-  { level: "2", label: "เบา", desc: "หายใจแทบไม่ต่างจากปกติ พูดคุยได้สบาย ๆ" },
-  { level: "1", label: "เบามาก", desc: "แทบไม่รู้สึกออกแรงเลย เหมือนกำลังพักผ่อน" },
-];
-
-// Per-set RPE — reps-in-reserve framing (how many more reps could you have
-// done), a different scale from the cardio one above on purpose (see
+// this as a tappable <details> reference next to the field instead. Level
+// definitions live in messages/{th,en}.json's logActivity.rpeCardioLevels
+// (read via t.raw() inside the component, below) and
+// logActivity.rpeLiftLevels for the per-set reps-in-reserve scale (see
 // ExerciseSet.rpe's schema comment).
-const RPE_LIFT_LEVELS: { level: string; label: string; desc: string }[] = [
-  { level: "10", label: "ยกไม่ไหวแล้ว", desc: "ทำจนสุดแรง ไม่เหลือแม้แต่ครั้งเดียว" },
-  { level: "9", label: "เกือบสุด", desc: "เหลือแรงอีกแค่ 1 ครั้ง" },
-  { level: "8", label: "หนัก", desc: "เหลือแรงอีกประมาณ 2 ครั้ง" },
-  { level: "7", label: "ค่อนข้างหนัก", desc: "เหลือแรงอีกประมาณ 3 ครั้ง" },
-  { level: "5-6", label: "ปานกลาง", desc: "เหลือแรงอีก 4-6 ครั้ง" },
-  { level: "1-4", label: "เบา", desc: "ยังไหวอีกเยอะ เช่น เซ็ทวอร์มอัพ" },
-];
+type RpeLevel = { level: string; label: string; desc: string };
 
-function RpeLevelsGuide({ title, levels }: { title: string; levels: { level: string; label: string; desc: string }[] }) {
+function RpeLevelsGuide({ title, levels }: { title: string; levels: RpeLevel[] }) {
   return (
     <details className="mt-1.5 rounded-lg border border-neutral-800 bg-neutral-900/60 p-2.5">
       <summary className="cursor-pointer text-[11px] font-medium text-neutral-400">{title}</summary>
@@ -160,12 +125,20 @@ function toSetRows(sets: { reps: number; weightKg: number | null; rpe: number | 
 }
 
 // Compact "15×5kg (RPE 8), 14×5kg (RPE 8), 10×4kg (RPE 9)" summary for the
-// "ครั้งก่อน" hint — bodyweight sets (weightKg null) show as just "N ครั้ง"
-// with no "×weight", and a set logged without RPE just omits that part.
-function formatSetsCompact(sets: { reps: number; weightKg: number | null; rpe: number | null }[]): string {
+// "previous session" hint — bodyweight sets (weightKg null) show as just
+// "N reps" with no "×weight", and a set logged without RPE just omits that
+// part. Takes the translator function itself (not a lang code) since it's a
+// plain helper, not a hook — safe to pass the value a hook already returned.
+function formatSetsCompact(
+  sets: { reps: number; weightKg: number | null; rpe: number | null }[],
+  t: ReturnType<typeof useTranslations>
+): string {
   return sets
     .map((s) => {
-      const base = s.weightKg !== null ? `${s.reps}×${s.weightKg}กก.` : `${s.reps}ครั้ง`;
+      const base =
+        s.weightKg !== null
+          ? t("compactSetWithWeight", { reps: s.reps, weight: s.weightKg })
+          : t("compactSetNoWeight", { reps: s.reps });
       return s.rpe !== null ? `${base} (RPE ${s.rpe})` : base;
     })
     .join(", ");
@@ -210,6 +183,26 @@ export function LogActivityForm({
   userWeightKg?: number | null;
 }) {
   const router = useRouter();
+  const t = useTranslations("logActivity");
+  const locale = useLocale();
+  const lang: FormatLang = locale === "en" ? "en" : "th";
+  const TYPES = [
+    { value: "Run", label: t("typeRun") },
+    { value: "Ride", label: t("typeRide") },
+    { value: "Walk", label: t("typeWalk") },
+    { value: "Swim", label: t("typeSwim") },
+    { value: "WeightTraining", label: t("typeWeightTraining") },
+    { value: "Football", label: t("typeFootball") },
+    { value: "Badminton", label: t("typeBadminton") },
+    { value: "Workout", label: t("typeWorkout") },
+  ];
+  const INTENSITIES = [
+    { value: "LOW", label: t("intensityLow") },
+    { value: "MODERATE", label: t("intensityModerate") },
+    { value: "HIGH", label: t("intensityHigh") },
+  ];
+  const RPE_CARDIO_LEVELS = t.raw("rpeCardioLevels") as RpeLevel[];
+  const RPE_LIFT_LEVELS = t.raw("rpeLiftLevels") as RpeLevel[];
   const [type, setType] = useState(initial?.type ?? TYPES[0].value);
   const [name, setName] = useState(initial?.name ?? "");
   const [durationMin, setDurationMin] = useState(initial?.durationMin ?? "60");
@@ -317,13 +310,13 @@ export function LogActivityForm({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      setImportNotice("คัดลอกไม่สำเร็จ ลองกดค้างที่ข้อความด้านล่างเพื่อคัดลอกเองแทน");
+      setImportNotice(t("copyFailed"));
     }
   }
 
   function applyParsedText() {
     const parsed = parseActivityText(pasteText);
-    if (parsed.type && TYPES.some((t) => t.value === parsed.type)) setType(parsed.type);
+    if (parsed.type && TYPES.some((opt) => opt.value === parsed.type)) setType(parsed.type);
     if (parsed.durationMin !== null) setDurationMin(String(parsed.durationMin));
     if (parsed.distanceKm !== null) setDistanceKm(String(parsed.distanceKm));
     if (parsed.calories !== null) setCalories(String(parsed.calories));
@@ -338,7 +331,7 @@ export function LogActivityForm({
       // component's `usesPace`/`paceUnit` above, which still reflect the
       // *pre-setType* render and would be stale the moment parsed.type
       // differs from what's currently selected.
-      const effectiveType = parsed.type && TYPES.some((t) => t.value === parsed.type) ? parsed.type : type;
+      const effectiveType = parsed.type && TYPES.some((opt) => opt.value === parsed.type) ? parsed.type : type;
       const effectivePaceUnit = paceUnitMeters(effectiveType);
       if (effectivePaceUnit !== null) {
         const totalSec = effectivePaceUnit / parsed.maxSpeedMs;
@@ -383,7 +376,7 @@ export function LogActivityForm({
       parsed.notes !== null ||
       parsed.exercises.length > 0;
     if (!gotAnything) {
-      setImportNotice("อ่านค่าไม่ได้เลย ลองวางข้อความใหม่ หรือดูว่าตรงกับตัวอย่างมั้ย");
+      setImportNotice(t("importNoData"));
       return;
     }
     setImportNotice(null);
@@ -433,23 +426,19 @@ export function LogActivityForm({
 
   async function save() {
     if (!Number.isFinite(Number(durationMin)) || Number(durationMin) <= 0) {
-      setError("กรอกระยะเวลาให้ถูกต้องก่อน");
+      setError(t("errorDuration"));
       return;
     }
     if (rpe.trim()) {
       const n = Number(rpe);
       if (!Number.isFinite(n) || !Number.isInteger(n * 2) || n < 1 || n > 10) {
-        setError("ระดับความเหนื่อย (RPE) ต้องเป็นจำนวนเต็มหรือครึ่ง (เช่น 7, 7.5) ระหว่าง 1-10 เท่านั้น");
+        setError(t("errorRpe"));
         return;
       }
     }
     const bestSpeedMs = computeBestSpeedMs();
     if (Number.isNaN(bestSpeedMs)) {
-      setError(
-        usesPace
-          ? "กรอกเพซที่ดีที่สุดให้ถูกต้อง (นาที/วินาทีเป็นตัวเลขไม่ติดลบ วินาทีต้องน้อยกว่า 60)"
-          : "กรอกความเร็วสูงสุดให้ถูกต้อง (ตัวเลขมากกว่า 0)"
-      );
+      setError(usesPace ? t("errorPace") : t("errorSpeed"));
       return;
     }
     const namedExercises = exercises.filter((r) => r.name.trim());
@@ -457,13 +446,13 @@ export function LogActivityForm({
       for (const s of r.sets) {
         const reps = Number(s.reps);
         if (!Number.isInteger(reps) || reps <= 0) {
-          setError(`ท่า "${r.name.trim()}" ต้องกรอกจำนวนครั้งเป็นจำนวนเต็มมากกว่า 0 ทุกเซ็ท`);
+          setError(t("errorExerciseReps", { name: r.name.trim() }));
           return;
         }
         if (s.rpe.trim()) {
           const setRpe = Number(s.rpe);
           if (!Number.isFinite(setRpe) || !Number.isInteger(setRpe * 2) || setRpe < 1 || setRpe > 10) {
-            setError(`ท่า "${r.name.trim()}" มี RPE ที่ไม่ใช่จำนวนเต็มหรือครึ่ง (เช่น 7, 7.5) ระหว่าง 1-10`);
+            setError(t("errorExerciseRpe", { name: r.name.trim() }));
             return;
           }
         }
@@ -503,7 +492,7 @@ export function LogActivityForm({
       router.push(activityId ? `/dashboard/activity/${activityId}` : "/dashboard");
       router.refresh();
     } else {
-      setError("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setError(t("errorSaveFailed"));
     }
   }
 
@@ -516,7 +505,7 @@ export function LogActivityForm({
             mode === "manual" ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
           }`}
         >
-          กรอกเอง
+          {t("modeManual")}
         </button>
         <button
           onClick={() => setMode("import")}
@@ -524,25 +513,28 @@ export function LogActivityForm({
             mode === "import" ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
           }`}
         >
-          นำเข้าจาก AI
+          {t("modeImport")}
         </button>
       </div>
 
       {mode === "import" && (
         <div className="space-y-2">
           <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-3">
-            <p className="text-xs text-neutral-400">
-              1. คัดลอกคำสั่งนี้ไปวางถาม AI (Claude, ChatGPT) แล้วแนบรูปสรุปกิจกรรมจากแอพนาฬิกา/สายรัดเข้าไปด้วย
-            </p>
+            <p className="text-xs text-neutral-400">{t("importStep1")}</p>
             <button
               type="button"
               onClick={copyPrompt}
               className="mt-2 rounded-lg border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800"
             >
-              {copied ? "คัดลอกแล้ว ✓" : "คัดลอกคำสั่งสำหรับถาม AI"}
+              {copied ? t("copied") : t("copyPrompt")}
             </button>
-            <p className="mt-2 text-xs text-neutral-400">2. คัดลอกคำตอบที่ได้มาวางในช่องด้านล่างนี้</p>
+            <p className="mt-2 text-xs text-neutral-400">{t("importStep2")}</p>
           </div>
+          {/* This placeholder mirrors the exact Thai field-name format
+              AI_PROMPT_TEMPLATE asks for and parseActivityText expects back
+              (see its own comment) — stays Thai-only regardless of UI
+              language, same as every other AI-import prompt in the app
+              (see CLAUDE.md's "### 5. ภาษา (i18n)"). */}
           <textarea
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
@@ -556,7 +548,7 @@ export function LogActivityForm({
             disabled={!pasteText.trim()}
             className="rounded-lg bg-[#fc4c02] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:opacity-50"
           >
-            แปลงข้อมูล
+            {t("applyImport")}
           </button>
         </div>
       )}
@@ -564,24 +556,24 @@ export function LogActivityForm({
       {mode === "manual" && (
         <>
         <div>
-          <label className={LABEL_CLASS}>ประเภทกิจกรรม</label>
+          <label className={LABEL_CLASS}>{t("labelType")}</label>
           <select value={type} onChange={(e) => setType(e.target.value)} className={INPUT_CLASS}>
-            {TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
+            {TYPES.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className={LABEL_CLASS}>ชื่อกิจกรรม (ไม่บังคับ)</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="เช่น เตะบอลกับเพื่อน" className={INPUT_CLASS} />
+          <label className={LABEL_CLASS}>{t("labelName")}</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("namePlaceholder")} className={INPUT_CLASS} />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={LABEL_CLASS}>ระยะเวลา (นาที)</label>
+            <label className={LABEL_CLASS}>{t("labelDuration")}</label>
             <input
               type="number"
               min="1"
@@ -591,7 +583,7 @@ export function LogActivityForm({
             />
           </div>
           <div>
-            <label className={LABEL_CLASS}>ความหนัก</label>
+            <label className={LABEL_CLASS}>{t("labelIntensity")}</label>
             <select value={intensity} onChange={(e) => setIntensity(e.target.value)} className={INPUT_CLASS}>
               {INTENSITIES.map((i) => (
                 <option key={i.value} value={i.value}>
@@ -603,7 +595,7 @@ export function LogActivityForm({
         </div>
 
         <div>
-          <label className={LABEL_CLASS}>วันเวลาที่ทำกิจกรรม</label>
+          <label className={LABEL_CLASS}>{t("labelStartedAt")}</label>
           <input
             type="datetime-local"
             value={startedAt}
@@ -613,12 +605,10 @@ export function LogActivityForm({
         </div>
 
         <div className="border-t border-neutral-800 pt-4">
-          <p className="mb-3 text-xs text-neutral-500">
-            ข้อมูลเพิ่มเติม (ไม่บังคับ) — คัดลอกจากแอพนาฬิกา/สายรัดที่บันทึกไว้ได้
-          </p>
+          <p className="mb-3 text-xs text-neutral-500">{t("moreInfoHint")}</p>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={LABEL_CLASS}>ระยะทาง (กม.)</label>
+              <label className={LABEL_CLASS}>{t("labelDistance")}</label>
               <input
                 type="number"
                 min="0"
@@ -629,7 +619,7 @@ export function LogActivityForm({
               />
             </div>
             <div>
-              <label className={LABEL_CLASS}>แคลอรี่ (kcal)</label>
+              <label className={LABEL_CLASS}>{t("labelCalories")}</label>
               <input type="number" min="0" value={calories} onChange={(e) => setCalories(e.target.value)} className={INPUT_CLASS} />
               {!calories.trim() && estimatedCalories !== null && (
                 <button
@@ -637,12 +627,12 @@ export function LogActivityForm({
                   onClick={() => setCalories(String(estimatedCalories))}
                   className="mt-1 text-left text-[11px] text-neutral-500 underline decoration-dotted transition hover:text-neutral-300"
                 >
-                  ประมาณ ~{estimatedCalories} kcal (ใช้ค่านี้)
+                  {t("estimatedCalories", { value: estimatedCalories })}
                 </button>
               )}
             </div>
             <div>
-              <label className={LABEL_CLASS}>หัวใจเฉลี่ย (bpm)</label>
+              <label className={LABEL_CLASS}>{t("labelAvgHr")}</label>
               <input
                 type="number"
                 min="0"
@@ -652,7 +642,7 @@ export function LogActivityForm({
               />
             </div>
             <div>
-              <label className={LABEL_CLASS}>หัวใจสูงสุด (bpm)</label>
+              <label className={LABEL_CLASS}>{t("labelMaxHr")}</label>
               <input
                 type="number"
                 min="0"
@@ -662,18 +652,20 @@ export function LogActivityForm({
               />
             </div>
             <div>
-              <label className={LABEL_CLASS}>เคเดนซ์เฉลี่ย (spm/rpm)</label>
+              <label className={LABEL_CLASS}>{t("labelCadence")}</label>
               <input
                 type="number"
                 min="0"
                 value={avgCadence}
                 onChange={(e) => setAvgCadence(e.target.value)}
-                placeholder="spm ถ้าวิ่ง/เดิน, rpm ถ้าปั่นจักรยาน"
+                placeholder={t("cadencePlaceholder")}
                 className={INPUT_CLASS}
               />
             </div>
             <div>
-              <label className={LABEL_CLASS}>{usesPace ? `เพซสูงสุด (ต่อ ${paceUnit === 1000 ? "กม." : "100 ม."})` : "ความเร็วสูงสุด (กม./ชม.)"}</label>
+              <label className={LABEL_CLASS}>
+                {usesPace ? t("labelBestPace", { unit: paceUnit === 1000 ? t("unitKm") : t("unit100m") }) : t("labelBestSpeed")}
+              </label>
               {usesPace ? (
                 <div className="flex items-center gap-1.5">
                   <input
@@ -681,7 +673,7 @@ export function LogActivityForm({
                     min="0"
                     value={bestPaceMin}
                     onChange={(e) => setBestPaceMin(e.target.value)}
-                    placeholder="นาที"
+                    placeholder={t("minutePlaceholder")}
                     className={INPUT_CLASS}
                   />
                   <span className="text-neutral-600">:</span>
@@ -691,7 +683,7 @@ export function LogActivityForm({
                     max="59"
                     value={bestPaceSec}
                     onChange={(e) => setBestPaceSec(e.target.value)}
-                    placeholder="วินาที"
+                    placeholder={t("secondPlaceholder")}
                     className={INPUT_CLASS}
                   />
                 </div>
@@ -707,7 +699,7 @@ export function LogActivityForm({
               )}
             </div>
             <div>
-              <label className={LABEL_CLASS}>ระดับความเหนื่อย (RPE 1-10)</label>
+              <label className={LABEL_CLASS}>{t("labelRpe")}</label>
               <input
                 type="number"
                 min="1"
@@ -715,18 +707,18 @@ export function LogActivityForm({
                 step="0.5"
                 value={rpe}
                 onChange={(e) => setRpe(e.target.value)}
-                placeholder="เช่น 7 หรือ 7.5"
+                placeholder={t("rpePlaceholder")}
                 className={INPUT_CLASS}
               />
-              <RpeLevelsGuide title="แต่ละระดับหมายถึงอะไร?" levels={RPE_CARDIO_LEVELS} />
+              <RpeLevelsGuide title={t("rpeGuideTitle")} levels={RPE_CARDIO_LEVELS} />
             </div>
           </div>
           <div className="mt-3">
-            <label className={LABEL_CLASS}>หมายเหตุ (ไม่บังคับ)</label>
+            <label className={LABEL_CLASS}>{t("labelNotes")}</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="ข้อมูลอื่นจากแอพนาฬิกาที่ไม่มีช่องกรอกเฉพาะ เช่น Training Effect, VO2max, โซนหัวใจ, กล้ามเนื้อที่ใช้"
+              placeholder={t("notesPlaceholder")}
               maxLength={500}
               rows={2}
               className={`${INPUT_CLASS} resize-y`}
@@ -735,11 +727,9 @@ export function LogActivityForm({
         </div>
 
         <div className="border-t border-neutral-800 pt-4">
-          <p className="mb-1 text-xs text-neutral-500">
-            ท่าออกกำลังกาย (ไม่บังคับ) — สำหรับเวทเทรนนิ่ง/แคลิสเธนิกส์ ใส่ทีละท่าพร้อมเซ็ท/ครั้ง/น้ำหนักที่ใช้
-          </p>
+          <p className="mb-1 text-xs text-neutral-500">{t("exercisesHint")}</p>
           <div className="mb-3">
-            <RpeLevelsGuide title="RPE ของแต่ละเซ็ทหมายถึงอะไร?" levels={RPE_LIFT_LEVELS} />
+            <RpeLevelsGuide title={t("setRpeGuideTitle")} levels={RPE_LIFT_LEVELS} />
           </div>
           {/* Only offered while the list is still empty — repeating an
               entire previous session only makes sense as a starting point,
@@ -748,15 +738,17 @@ export function LogActivityForm({
           {exercises.length === 0 && lastWorkoutSession && (
             <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-neutral-800/50 px-3 py-2 text-xs text-neutral-400">
               <span>
-                ทำซ้ำทั้งวันจากครั้งก่อน ({formatActivityDate(new Date(lastWorkoutSession.startedAtMs))}) —{" "}
-                {lastWorkoutSession.exercises.length} ท่า
+                {t("repeatDayLabel", {
+                  date: formatActivityDate(new Date(lastWorkoutSession.startedAtMs), lang),
+                  count: lastWorkoutSession.exercises.length,
+                })}
               </span>
               <button
                 type="button"
                 onClick={useLastWorkout}
                 className="flex-none rounded border border-neutral-700 px-2 py-1 font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800"
               >
-                ใช้ค่านี้
+                {t("useThis")}
               </button>
             </div>
           )}
@@ -770,13 +762,13 @@ export function LogActivityForm({
                     <input
                       value={r.name}
                       onChange={(e) => updateExercise(r.id, { name: e.target.value })}
-                      placeholder="ชื่อท่า เช่น ดันไหล่ดัมเบล"
+                      placeholder={t("exerciseNamePlaceholder")}
                       list="exercise-name-history"
                       className={`${INPUT_CLASS} flex-1`}
                     />
                     <button
                       onClick={() => removeExerciseRow(r.id)}
-                      title="ลบท่านี้"
+                      title={t("removeExercise")}
                       className="flex-none text-neutral-600 hover:text-red-400"
                     >
                       <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
@@ -787,14 +779,17 @@ export function LogActivityForm({
                   {match && (
                     <div className="mb-2 flex items-center justify-between gap-2 rounded-md bg-neutral-800/50 px-2 py-1.5 text-xs text-neutral-400">
                       <span>
-                        ครั้งก่อน ({formatActivityDate(new Date(match.latestAtMs))}): {formatSetsCompact(match.latestSets)}
+                        {t("previousLabel", {
+                          date: formatActivityDate(new Date(match.latestAtMs), lang),
+                          sets: formatSetsCompact(match.latestSets, t),
+                        })}
                       </span>
                       <button
                         type="button"
                         onClick={() => useLastTime(r.id, match)}
                         className="flex-none rounded border border-neutral-700 px-1.5 py-0.5 font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800"
                       >
-                        ใช้ค่านี้
+                        {t("useThis")}
                       </button>
                     </div>
                   )}
@@ -804,10 +799,10 @@ export function LogActivityForm({
                       RPE here is reps-in-reserve framing (10 = 0 reps left)
                       — see ExerciseSet.rpe's schema comment. */}
                   <div className="mb-1 grid grid-cols-[1.5rem_1fr_1fr_2.75rem_1.25rem] gap-1 px-0.5">
-                    <span className="text-center text-[10px] text-neutral-600">เซ็ท</span>
-                    <span className="text-center text-[10px] text-neutral-600">ครั้ง</span>
-                    <span className="text-center text-[10px] text-neutral-600">น้ำหนัก (กก.)</span>
-                    <span className="text-center text-[10px] text-neutral-600">RPE</span>
+                    <span className="text-center text-[10px] text-neutral-600">{t("colSet")}</span>
+                    <span className="text-center text-[10px] text-neutral-600">{t("colReps")}</span>
+                    <span className="text-center text-[10px] text-neutral-600">{t("colWeight")}</span>
+                    <span className="text-center text-[10px] text-neutral-600">{t("colRpe")}</span>
                     <span />
                   </div>
                   <div className="space-y-1.5">
@@ -827,7 +822,7 @@ export function LogActivityForm({
                           step="0.5"
                           value={s.weightKg}
                           onChange={(e) => updateSetRow(r.id, s.id, { weightKg: e.target.value })}
-                          placeholder="ไม่มี"
+                          placeholder={t("weightPlaceholder")}
                           className={INPUT_CLASS}
                         />
                         <input
@@ -838,14 +833,14 @@ export function LogActivityForm({
                           value={s.rpe}
                           onChange={(e) => updateSetRow(r.id, s.id, { rpe: e.target.value })}
                           placeholder="-"
-                          title="RPE (เหลือแรงยกได้อีกกี่ที — 10 = ยกไม่ไหวแล้ว)"
+                          title={t("rpeCellTitle")}
                           className={`${INPUT_CLASS} px-1.5`}
                         />
                         <button
                           type="button"
                           onClick={() => removeSetRow(r.id, s.id)}
                           disabled={r.sets.length <= 1}
-                          title="ลบเซ็ทนี้"
+                          title={t("removeSet")}
                           className="flex-none text-neutral-600 hover:text-red-400 disabled:opacity-30"
                         >
                           <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5">
@@ -860,7 +855,7 @@ export function LogActivityForm({
                     onClick={() => addSetRow(r.id)}
                     className="mt-2 text-[11px] font-medium text-neutral-400 transition hover:text-neutral-200"
                   >
-                    + เพิ่มเซ็ท
+                    {t("addSet")}
                   </button>
                 </div>
                 );
@@ -879,7 +874,7 @@ export function LogActivityForm({
             <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5">
               <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
-            เพิ่มท่า
+            {t("addExercise")}
           </button>
         </div>
 
@@ -890,7 +885,7 @@ export function LogActivityForm({
           disabled={saving}
           className="rounded-lg bg-[#fc4c02] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#e04402] disabled:opacity-50"
         >
-          {saving ? "กำลังบันทึก..." : activityId ? "บันทึกการแก้ไข" : "บันทึกกิจกรรม"}
+          {saving ? t("saving") : activityId ? t("saveEdit") : t("saveNew")}
         </button>
         </>
       )}

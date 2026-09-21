@@ -748,5 +748,269 @@
     "prSubtitle": "{count} exercises with a max-weight PR",
     "prBadgeWithOneRm": "{name} {weight} kg (~{oneRm} kg 1RM)",
     "prBadgeNoOneRm": "{name} {weight} kg"
+  },
+  "logActivity": {
+    "title": "Log an activity",
+    "subtitle": "Log any activity — running, cycling, football, badminton, lifting — it'll count toward your stats, calendar, and automatically adjust today's water/macro targets.",
+    "editBackLink": "Back to activity",
+    "editTitle": "Edit activity",
+    "editSubtitle": "Edit this activity's details, including each exercise.",
+
+    "modeManual": "Manual entry",
+    "modeImport": "Import from AI",
+    "importStep1": "1. Copy this prompt and paste it to an AI (Claude, ChatGPT), attaching a screenshot of the activity summary from your watch/band app.",
+    "copyPrompt": "Copy prompt to ask AI",
+    "copied": "Copied ✓",
+    "importStep2": "2. Copy the AI's reply and paste it in the box below.",
+    "copyFailed": "Couldn't copy — try long-pressing the text below to copy it yourself instead.",
+    "applyImport": "Parse data",
+    "importNoData": "Couldn't read anything from that — try pasting again, or check it matches the example format.",
+
+    "typeRun": "Run",
+    "typeRide": "Ride",
+    "typeWalk": "Walk",
+    "typeSwim": "Swim",
+    "typeWeightTraining": "Weight training",
+    "typeFootball": "Football",
+    "typeBadminton": "Badminton",
+    "typeWorkout": "General workout",
+
+    "intensityLow": "Light",
+    "intensityModerate": "Moderate",
+    "intensityHigh": "High",
+
+    "labelType": "Activity type",
+    "labelName": "Activity name (optional)",
+    "namePlaceholder": "e.g. Football with friends",
+    "labelDuration": "Duration (minutes)",
+    "labelIntensity": "Intensity",
+    "labelStartedAt": "Date & time",
+    "moreInfoHint": "Extra details (optional) — copy these from your watch/band app if you have them",
+    "labelDistance": "Distance (km)",
+    "labelCalories": "Calories (kcal)",
+    "estimatedCalories": "Estimated ~{value} kcal (use this)",
+    "labelAvgHr": "Avg heart rate (bpm)",
+    "labelMaxHr": "Max heart rate (bpm)",
+    "labelCadence": "Avg cadence (spm/rpm)",
+    "cadencePlaceholder": "spm for run/walk, rpm for cycling",
+    "labelBestPace": "Best pace (per {unit})",
+    "unitKm": "km",
+    "unit100m": "100 m",
+    "compactSetWithWeight": "{reps}×{weight}kg",
+    "compactSetNoWeight": "{reps} reps",
+    "labelBestSpeed": "Max speed (km/h)",
+    "minutePlaceholder": "min",
+    "secondPlaceholder": "sec",
+    "labelRpe": "Exertion level (RPE 1-10)",
+    "rpePlaceholder": "e.g. 7 or 7.5",
+    "rpeGuideTitle": "What does each level mean?",
+    "labelNotes": "Notes (optional)",
+    "notesPlaceholder": "Anything else from your watch app with no dedicated field — e.g. Training Effect, VO2max, heart rate zones, muscles worked",
+
+    "exercisesHint": "Exercises (optional) — for weight training/calisthenics, add each exercise with its sets/reps/weight",
+    "setRpeGuideTitle": "What does each set's RPE mean?",
+    "repeatDayLabel": "Repeat the whole day from last time ({date}) — {count} exercises",
+    "useThis": "Use this",
+    "exerciseNamePlaceholder": "Exercise name, e.g. Shoulder press",
+    "removeExercise": "Remove this exercise",
+    "previousLabel": "Last time ({date}): {sets}",
+    "colSet": "Set",
+    "colReps": "Reps",
+    "colWeight": "Weight (kg)",
+    "colRpe": "RPE",
+    "weightPlaceholder": "None",
+    "rpeCellTitle": "RPE (how many more reps could you do — 10 = failure)",
+    "removeSet": "Remove this set",
+    "addSet": "+ Add set",
+    "addExercise": "Add exercise",
+
+    "saving": "Saving...",
+    "saveEdit": "Save changes",
+    "saveNew": "Save activity",
+
+    "errorDuration": "Enter a valid duration first",
+    "errorRpe": "Exertion level (RPE) must be a whole number or half-step (e.g. 7, 7.5) between 1-10",
+    "errorPace": "Enter a valid best pace (minutes/seconds as non-negative numbers, seconds under 60)",
+    "errorSpeed": "Enter a valid max speed (a number greater than 0)",
+    "errorExerciseReps": "\"{name}\" needs a whole number of reps greater than 0 for every set",
+    "errorExerciseRpe": "\"{name}\" has an RPE that isn't a whole number or half-step (e.g. 7, 7.5) between 1-10",
+    "errorSaveFailed": "Save failed — please try again",
+
+    "rpeCardioLevels": [
+      { "level": "10", "label": "Maximal", "desc": "Feels like you can't breathe, can't speak at all" },
+      { "level": "9", "label": "Nearly maximal", "desc": "Can only say 2-3 words, breathing very hard" },
+      { "level": "8", "label": "Very hard", "desc": "Can barely speak, breathing hard and labored" },
+      { "level": "7", "label": "Hard", "desc": "Can only manage short sentences, one at a time" },
+      { "level": "6", "label": "Challenging", "desc": "Noticeably out of breath, long sentences are hard" },
+      { "level": "5", "label": "Vigorous", "desc": "Breathing quickens, can still talk if you push a bit" },
+      { "level": "4", "label": "Somewhat hard", "desc": "Breathing harder but controlled, talking takes effort" },
+      { "level": "3", "label": "Moderate", "desc": "Could keep this pace for an hour, chat/read comfortably" },
+      { "level": "2", "label": "Light", "desc": "Barely different from resting, easy to talk" },
+      { "level": "1", "label": "Very light", "desc": "Barely feels like effort, like resting" }
+    ],
+    "rpeLiftLevels": [
+      { "level": "10", "label": "Failure", "desc": "Pushed to the max, not even one more rep left" },
+      { "level": "9", "label": "Nearly maximal", "desc": "About 1 rep left in the tank" },
+      { "level": "8", "label": "Hard", "desc": "About 2 reps left in the tank" },
+      { "level": "7", "label": "Somewhat hard", "desc": "About 3 reps left in the tank" },
+      { "level": "5-6", "label": "Moderate", "desc": "4-6 reps left in the tank" },
+      { "level": "1-4", "label": "Light", "desc": "Plenty left, e.g. a warm-up set" }
+    ]
+  },
+  "portionGuide": {
+    "backLink": "Back to food diary",
+    "title": "Eyeballing portions by hand",
+    "subtitle": "No scale handy? Use your own hand to estimate roughly — accurate enough for everyday logging.",
+    "footnote": "These are general estimates, not an actual weighing — for high precision, use a food scale.",
+    "categories": [
+      {
+        "key": "protein",
+        "label": "Protein",
+        "handPart": "Your palm (not fingers), 1-2 cm thick",
+        "instruction": "Use your palm to estimate protein",
+        "examples": [
+          { "food": "Chicken, pork, or meat (cooked)", "grams": "100 g", "range": "~75-110 g" },
+          { "food": "Fish (cooked)", "grams": "120 g", "range": "~100-150 g" },
+          { "food": "Firm tofu", "grams": "100 g", "range": "~90-120 g" },
+          { "food": "Eggs", "grams": "2 eggs", "range": "~100-120 g" }
+        ]
+      },
+      {
+        "key": "carb",
+        "label": "Carbs",
+        "handPart": "1 of your fists",
+        "instruction": "Use your fist to estimate carbs",
+        "examples": [
+          { "food": "Cooked rice", "grams": "150 g", "range": "~120-180 g" },
+          { "food": "Noodles/pasta (cooked)", "grams": "140 g", "range": "~110-170 g" },
+          { "food": "Potato/taro (cooked)", "grams": "130 g", "range": "~100-160 g" },
+          { "food": "Bread", "grams": "2 slices", "range": "~60-80 g" }
+        ]
+      },
+      {
+        "key": "fat",
+        "label": "Fat",
+        "handPart": "1 of your thumbs",
+        "instruction": "Use your thumb to estimate fat",
+        "examples": [
+          { "food": "Oil/butter", "grams": "15 g", "range": "~10-20 g" },
+          { "food": "Nuts/seeds", "grams": "20 g", "range": "~15-30 g" },
+          { "food": "Avocado", "grams": "50 g", "range": "~40-70 g" },
+          { "food": "Cheese", "grams": "30 g", "range": "~20-40 g" }
+        ]
+      },
+      {
+        "key": "veg",
+        "label": "Vegetables",
+        "handPart": "1 of your fists",
+        "instruction": "Use your fist to estimate vegetables",
+        "examples": [
+          { "food": "Fresh leafy greens", "grams": "50 g", "range": "~40-70 g" },
+          { "food": "Dense vegetables (pumpkin, carrot)", "grams": "90 g", "range": "~80-100 g" },
+          { "food": "Cooked vegetables (stir-fried/boiled)", "grams": "80 g", "range": "~60-100 g" }
+        ]
+      }
+    ]
+  },
+  "knowledge": {
+    "backLink": "Back to nutrition",
+    "title": "Where these numbers come from",
+    "subtitle": "A short explanation behind every number on the nutrition page — nothing mysterious, just standard formulas widely used, not an AI guess.",
+    "footer": "All numbers are estimates from standard formulas, not medical advice — if you have a specific health condition, consult a doctor or dietitian.",
+
+    "bmrTitle": "BMR (energy burned at rest)",
+    "bmrP1": "BMR is the energy your body burns even without moving at all (breathing, pumping blood, etc). Calculated with the Mifflin-St Jeor formula, which current nutrition guidelines consider the most accurate for most people (more accurate than the older Harris-Benedict formula).",
+    "bmrFormulaMale": "Men: BMR = 10×weight(kg) + 6.25×height(cm) − 5×age + 5",
+    "bmrFormulaFemale": "Women: BMR = 10×weight(kg) + 6.25×height(cm) − 5×age − 161",
+    "bmrP2": "If you have an InBody scan (or other body composition device) logged on the nutrition page, the app switches to the <strong>Katch-McArdle</strong> formula instead, which is more accurate than Mifflin-St Jeor because it's based on your actual <strong>Lean Body Mass</strong> from the scan, instead of estimating from population averages of weight/height/age/sex.",
+    "bmrFormulaLbm": "Lean Body Mass (LBM) = weight from scan(kg) × (1 − body fat% from scan ÷ 100)",
+    "bmrFormulaKatch": "BMR (Katch-McArdle) = 370 + 21.6 × LBM(kg)",
+    "bmrP3": "Only uses the most recent scan that has a body fat% value — if you haven't logged a scan yet, or logged one without body fat%, the Mifflin-St Jeor formula above is used as usual instead.",
+
+    "tdeeTitle": "TDEE (actual daily energy use)",
+    "tdeeP1": "BMR multiplied by a factor based on your everyday activity level — activities logged in the app aren't counted again on top of this, since the multiplier already covers your overall lifestyle.",
+    "tdeeList": [
+      "Barely active: ×1.2",
+      "Light exercise (1-3 days/week): ×1.375",
+      "Moderate exercise (3-5 days/week): ×1.55",
+      "Heavy exercise (6-7 days/week): ×1.725",
+      "Very heavy/physical job: ×1.9"
+    ],
+
+    "goalTitle": "Calorie target (lose/maintain/gain weight)",
+    "goalP1": "1 kg of body fat ≈ 7,700 kcal — this is the standard figure used to calculate how much of a daily surplus/deficit you need to change weight at your chosen rate.",
+    "goalFormula": "Daily difference = (rate kg/week × 7,700) ÷ 7",
+    "goalP2": "Calorie target = TDEE ± this difference (add if gaining, subtract if losing), and it will never recommend below 1,200 kcal/day no matter how aggressive a loss rate you set — that's a minimum safety floor, not an amount actually recommended to eat. If you need to eat less than that, it should be under a doctor's supervision.",
+
+    "macroTitle": "Macros (protein/carbs/fat)",
+    "macroList": [
+      "Protein (no InBody scan): 1.8 grams per kg of body weight (mid-range of the 1.6-2.2 g/kg recommended for people who exercise regularly)",
+      "Protein (with an InBody scan that has body fat%): 2.4 grams per kg of Lean Body Mass (LBM) — the top end of the 2.0-2.4 g/kg LBM range sports research recommends, since the actual fat/muscle split is known, no need to buffer for the error margin of a bodyweight-only formula",
+      "Fat: 25% of total target calories",
+      "Carbs: whatever's left after protein and fat"
+    ],
+    "macroExample": "Example: 70.1 kg body weight, 19.3% body fat → LBM ≈ 56.6 kg → protein target ≈ 56.6 × 2.4 ≈ 136 g/day (higher than a bodyweight-only calculation, since it's now known exactly how much of that weight is muscle/organs that actually need protein)",
+
+    "waterTitle": "Water",
+    "waterFormula": "Base = body weight(kg) × 33 mL",
+    "waterP1": "This is the midpoint of the commonly used 30-35 mL/kg range.",
+
+    "activityTitle": "Why today's activity increases your targets",
+    "activityP1": "A day with an activity logged (from Strava or manually) automatically bumps up your targets, counted in 30-minute blocks:",
+    "activityList": [
+      "Water: +500 mL per 30 min (up to +1.5 L/day)",
+      "Carbs: +15 g per 30 min (up to +90 g/day) — replenishing used glycogen",
+      "Protein: +5 g per 30 min (up to +30 g/day)"
+    ],
+    "activityP2": "Calculated from duration alone, not split by intensity, since manually logged activities don't have intensity data comparable to activities synced from Strava — so the same formula works for both.",
+
+    "weightTitle": "What the weight trend chart is for",
+    "weightP1": "Logging your weight on the nutrition page automatically updates your profile's weight, so BMR/TDEE always calculate from your latest weight without having to go back and edit it on the settings page each time."
+  },
+  "summary": {
+    "title": "Daily summary",
+    "subtitle": "Build a summary image of calories, water, and exercise for a chosen day, ready to post as a story — pick which fields to show and in what order.",
+    "fieldCal": "Calories",
+    "fieldMacro": "Macros (protein / carbs / fat)",
+    "fieldWater": "Water",
+    "fieldExercise": "Exercise — if logged that day",
+    "fieldGoal": "This month's distance goal — if one is set",
+    "fieldStreak": "Logging streak — if still active",
+    "fieldHeatmap": "Last 7 days' consistency",
+    "fieldWeight": "Body weight — if ever logged",
+    "dateTitle": "Date",
+    "dateToday": "Today",
+    "dateYesterday": "Yesterday",
+    "dateCustom": "Pick a date",
+    "transparentHint": "Overlay this on another background photo, e.g. an IG/Line story sticker.",
+    "fieldsTitle": "What to show",
+    "fieldsHint": "Drag the handle to reorder, tap the switch to turn a field on/off",
+    "toggleAriaLabel": "Show {label}",
+    "previewTitle": "Preview",
+    "previewAlt": "Summary card preview",
+    "selectAtLeastOne": "Select at least 1 field before creating an image"
+  },
+  "supplements": {
+    "title": "Supplements/vitamins",
+    "subtitle": "A checklist in the app",
+    "takenToday": "Taken today",
+    "notTakenYet": "Not taken yet",
+    "deleteTitle": "Delete",
+    "confirmDelete": "Delete this supplement?",
+    "emptyState": "No supplements yet",
+    "addButton": "Add supplement",
+    "namePlaceholder": "Name, e.g. Biotin Zinc+",
+    "timeLabelPlaceholder": "When to take it (optional), e.g. morning, before bed",
+    "notePlaceholder": "Note (optional), e.g. take with a meal, avoid with calcium",
+    "saving": "Saving...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saveFailed": "Save failed — please try again",
+    "errorNameRequired": "Enter a supplement name first",
+    "wheyTitle": "Post-workout whey reminder",
+    "wheyDesc": "A notification 30-60 minutes after a logged activity ends (from Strava or manually logged)",
+    "wheyTurnOff": "Turn off",
+    "wheyTurnOn": "Turn on",
+    "wheyNeedSubscription": "You need to turn on notifications on the <link>food diary page</link> first before you can get this reminder."
   }
 }
