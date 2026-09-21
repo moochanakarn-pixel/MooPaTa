@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 const WIDTH = 300;
 const HEIGHT = 44;
 const PADDING = 4;
@@ -23,6 +25,8 @@ export function ExerciseProgressionChart({
   color: string;
   formatValue: (v: number) => string;
 }) {
+  const t = useTranslations("records");
+
   // Needs at least two sessions to show a trend at all — a single data
   // point has nothing to compare it against.
   if (points.length < 2) return null;
@@ -52,7 +56,7 @@ export function ExerciseProgressionChart({
   return (
     <div className="mt-2 border-t border-neutral-800/60 pt-2">
       <div className="mb-1 flex items-baseline justify-between text-xs">
-        <span className="text-neutral-500">เทรนด์น้ำหนัก ({points.length} ครั้งล่าสุด)</span>
+        <span className="text-neutral-500">{t("weightTrend", { count: points.length })}</span>
         {/* Only worth calling out when the two ends actually differ — a
             flat trend saying "+0" isn't useful information, same
             "don't show a delta with no meaning" convention as the

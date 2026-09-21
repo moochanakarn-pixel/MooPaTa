@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { activityColor } from "@/lib/activity-colors";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
@@ -9,6 +10,7 @@ import {
   formatActivityDate,
   formatDistanceKm,
   formatDuration,
+  type FormatLang,
   type UnitSystem,
 } from "@/lib/format";
 import { estimateOneRepMaxKg, getExerciseStats } from "@/lib/exercise-stats";
@@ -82,6 +84,13 @@ export default async function RecordsPage() {
 
   const user = await db.user.findUnique({ where: { id: userId } });
   const unit: UnitSystem = user?.unitSystem ?? "METRIC";
+
+  const [t, tc, locale] = await Promise.all([
+    getTranslations("records"),
+    getTranslations("common"),
+    getLocale(),
+  ]);
+  const lang: FormatLang = locale === "en" ? "en" : "th";
 
   const [grouped, history, exerciseStats] = await Promise.all([
     db.activity.groupBy({
@@ -165,28 +174,30 @@ export default async function RecordsPage() {
         <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
           <path d="M13 4 7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        กลับไปหน้ารวม
+        {tc("backToOverview")}
       </Link>
 
-      <h1 className="mb-8 text-xl font-bold">สถิติสูงสุด</h1>
+      <h1 className="mb-8 text-xl font-bold">{t("title")}</h1>
 
       {records.length === 0 ? (
-        <p className="text-neutral-500">ยังไม่มีข้อมูลกิจกรรม</p>
+        <p className="text-neutral-500">{t("emptyState")}</p>
       ) : (
         <>
           <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
             <div className="flex items-center gap-8">
               <div>
-                <p className="text-2xl font-bold tabular-nums text-neutral-100">{totalCount.toLocaleString("th-TH")}</p>
-                <p className="text-xs text-neutral-500">กิจกรรมทั้งหมด</p>
+                <p className="text-2xl font-bold tabular-nums text-neutral-100">
+                  {totalCount.toLocaleString(lang === "en" ? "en-US" : "th-TH")}
+                </p>
+                <p className="text-xs text-neutral-500">{t("totalActivities")}</p>
               </div>
               <div>
-                <p className="text-2xl font-bold tabular-nums text-neutral-100">{formatDistanceKm(totalDistanceM, unit)}</p>
-                <p className="text-xs text-neutral-500">ระยะทางรวม</p>
+                <p className="text-2xl font-bold tabular-nums text-neutral-100">{formatDistanceKm(totalDistanceM, unit, lang)}</p>
+                <p className="text-xs text-neutral-500">{t("totalDistance")}</p>
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums text-neutral-100">{records.length}</p>
-                <p className="text-xs text-neutral-500">ประเภทกีฬา</p>
+                <p className="text-xs text-neutral-500">{t("sportTypes")}</p>
               </div>
             </div>
             {totalDistanceM > 0 && (
@@ -195,7 +206,7 @@ export default async function RecordsPage() {
                   const color = activityColor(r.type);
                   const pct = (r.sumDistanceMeters / totalDistanceM) * 100;
                   if (pct <= 0) return null;
-                  return <div key={r.type} className={color.solid} style={{ width: `${pct}%` }} title={activityTypeLabel(r.type)} />;
+                  return <div key={r.type} className={color.solid} style={{ width: `${pct}%` }} title={activityTypeLabel(r.type, lang)} />;
                 })}
               </div>
             )}
@@ -220,27 +231,29 @@ export default async function RecordsPage() {
                 </div>
                 <div className="flex-1">
                   <h2 className="flex items-center gap-1.5 font-medium">
-                    {activityTypeLabel(r.type)}
-                    {hasRealRanking && MEDALS[i] && <span title="กิจกรรมที่ทำบ่อยที่สุด">{MEDALS[i]}</span>}
+                    {activityTypeLabel(r.type, lang)}
+                    {hasRealRanking && MEDALS[i] && <span title={t("mostFrequentTitle")}>{MEDALS[i]}</span>}
                   </h2>
-                  <p className="text-xs text-neutral-500">{r.count.toLocaleString("th-TH")} กิจกรรม</p>
+                  <p className="text-xs text-neutral-500">
+                    {t("activitiesCount", { count: r.count.toLocaleString(lang === "en" ? "en-US" : "th-TH") })}
+                  </p>
                 </div>
               </div>
               <div className="divide-y divide-neutral-800/60">
                 <RecordRow
-                  label="ระยะทางไกลที่สุด"
-                  value={formatDistanceKm(r.maxDistanceMeters, unit)}
+                  label={t("longestDistance")}
+                  value={formatDistanceKm(r.maxDistanceMeters, unit, lang)}
                   href={r.longestActivityId ? `/dashboard/activity/${r.longestActivityId}` : undefined}
                 />
                 <RecordRow
-                  label={usesPace ? "เพซเร็วที่สุด" : "ความเร็วสูงสุด"}
-                  value={activitySpeedValue(r.type, r.maxAvgSpeedMs, unit)}
+                  label={usesPace ? t("fastestPace") : t("fastestSpeed")}
+                  value={activitySpeedValue(r.type, r.maxAvgSpeedMs, unit, lang)}
                   href={r.fastestActivityId ? `/dashboard/activity/${r.fastestActivityId}` : undefined}
                 />
-                <RecordRow label="เวลานานที่สุด" value={r.maxDurationSec ? formatDuration(r.maxDurationSec) : "-"} />
+                <RecordRow label={t("longestDuration")} value={r.maxDurationSec ? formatDuration(r.maxDurationSec, lang) : "-"} />
                 <RecordRow
-                  label="ไต่ระดับสูงสุด"
-                  value={r.maxElevationGainM ? `${Math.round(r.maxElevationGainM)} ม.` : "-"}
+                  label={t("maxElevationGain")}
+                  value={r.maxElevationGainM ? `${Math.round(r.maxElevationGainM)} ${t("meters")}` : "-"}
                 />
               </div>
 
@@ -248,15 +261,15 @@ export default async function RecordsPage() {
                 <div className="mt-3 space-y-3 border-t border-neutral-800/60 pt-3">
                   <PrProgressionChart
                     points={r.distanceProgression}
-                    label="แนวโน้ม PR ระยะทาง"
+                    label={t("distancePrTrend")}
                     color={stroke}
-                    formatValue={(v) => formatDistanceKm(v, unit)}
+                    formatValue={(v) => formatDistanceKm(v, unit, lang)}
                   />
                   <PrProgressionChart
                     points={r.speedProgression}
-                    label={usesPace ? "แนวโน้ม PR เพซ" : "แนวโน้ม PR ความเร็ว"}
+                    label={usesPace ? t("pacePrTrend") : t("speedPrTrend")}
                     color={stroke}
-                    formatValue={(v) => activitySpeedValue(r.type, v, unit)}
+                    formatValue={(v) => activitySpeedValue(r.type, v, unit, lang)}
                   />
                 </div>
               )}
@@ -267,7 +280,7 @@ export default async function RecordsPage() {
 
           {prList.length > 0 && (
             <div className="mt-8">
-              <h2 className="mb-4 font-medium">PR ท่าออกกำลังกาย</h2>
+              <h2 className="mb-4 font-medium">{t("exercisePrTitle")}</h2>
               <div className="space-y-2">
                 {prList.map((s) => {
                   // Session-over-session trend — only weighted sessions
@@ -285,11 +298,11 @@ export default async function RecordsPage() {
                       <Link href={`/dashboard/activity/${s.prActivityId}`} className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-neutral-200">{s.name}</p>
-                          <p className="text-xs text-neutral-500">{formatActivityDate(new Date(s.prAtMs))}</p>
+                          <p className="text-xs text-neutral-500">{formatActivityDate(new Date(s.prAtMs), lang)}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-bold tabular-nums text-neutral-100">
-                            {s.prWeightKg} กก. × {s.prReps}
+                            {s.prWeightKg} {t("kg")} × {s.prReps}
                           </p>
                           {/* At exactly 1 rep the PR set already is the 1RM — an
                               "estimate" line would just repeat the number above.
@@ -299,7 +312,7 @@ export default async function RecordsPage() {
                               filter doesn't narrow the array's element type. */}
                           {s.prWeightKg !== null && s.prReps > 1 && (
                             <p className="text-xs tabular-nums text-neutral-500">
-                              ~{Math.round(estimateOneRepMaxKg(s.prWeightKg, s.prReps))} กก. (1RM ประมาณ)
+                              {t("oneRepMaxEstimate", { value: Math.round(estimateOneRepMaxKg(s.prWeightKg, s.prReps)) })}
                             </p>
                           )}
                         </div>
@@ -307,7 +320,7 @@ export default async function RecordsPage() {
                       <ExerciseProgressionChart
                         points={progressionPoints}
                         color="#8b5cf6"
-                        formatValue={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} กก.`}
+                        formatValue={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} ${t("kg")}`}
                       />
                     </div>
                   );

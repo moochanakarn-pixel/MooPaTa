@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { activityColor } from "@/lib/activity-colors";
 import {
   activitySpeedValue,
@@ -16,6 +17,7 @@ import {
   formatSignedSwimPace,
   paceSecondsPerUnit,
   swimPaceSecondsPerUnit,
+  type FormatLang,
   type UnitSystem,
 } from "@/lib/format";
 import { ActivityIcon } from "../activity-icon";
@@ -34,12 +36,12 @@ export interface CompareActivity {
   calories: number | null;
 }
 
-function shortDate(ms: number): string {
-  return new Date(ms).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" });
+function shortDate(ms: number, lang: FormatLang): string {
+  return new Date(ms).toLocaleDateString(lang === "en" ? "en-US" : "th-TH", { day: "numeric", month: "short", year: "2-digit" });
 }
 
-function optionLabel(a: CompareActivity): string {
-  return `${a.name ?? activityTypeLabel(a.type)} · ${shortDate(a.startedAtMs)}`;
+function optionLabel(a: CompareActivity, lang: FormatLang): string {
+  return `${a.name ?? activityTypeLabel(a.type, lang)} · ${shortDate(a.startedAtMs, lang)}`;
 }
 
 type Tone = "up" | "down" | "neutral";
@@ -59,7 +61,7 @@ function Row({ label, aValue, bValue, deltaText, tone }: { label: string; aValue
   );
 }
 
-function ActivityHeader({ activity, align }: { activity: CompareActivity; align: "left" | "right" }) {
+function ActivityHeader({ activity, align, lang }: { activity: CompareActivity; align: "left" | "right"; lang: FormatLang }) {
   const color = activityColor(activity.type);
   return (
     <div className={`flex items-center gap-2.5 ${align === "right" ? "flex-row-reverse text-right" : "text-left"}`}>
@@ -67,8 +69,8 @@ function ActivityHeader({ activity, align }: { activity: CompareActivity; align:
         <ActivityIcon type={activity.type} className="h-4 w-4" />
       </div>
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-neutral-200">{activity.name ?? activityTypeLabel(activity.type)}</p>
-        <p className="text-xs text-neutral-500">{shortDate(activity.startedAtMs)}</p>
+        <p className="truncate text-sm font-medium text-neutral-200">{activity.name ?? activityTypeLabel(activity.type, lang)}</p>
+        <p className="text-xs text-neutral-500">{shortDate(activity.startedAtMs, lang)}</p>
       </div>
     </div>
   );
@@ -83,6 +85,10 @@ const SELECT_CLASS =
 // this is for the "how does today's run stack up against that race in
 // March" kind of question, where the two activities aren't adjacent.
 export function CompareView({ activities, unit }: { activities: CompareActivity[]; unit: UnitSystem }) {
+  const t = useTranslations("compare");
+  const ts = useTranslations("activityDetail.stats");
+  const locale = useLocale();
+  const lang: FormatLang = locale === "en" ? "en" : "th";
   const sorted = useMemo(() => [...activities].sort((x, y) => y.startedAtMs - x.startedAtMs), [activities]);
   const [aId, setAId] = useState(sorted[0]?.id ?? "");
   const [bId, setBId] = useState(sorted[1]?.id ?? "");
@@ -91,7 +97,7 @@ export function CompareView({ activities, unit }: { activities: CompareActivity[
   const b = sorted.find((x) => x.id === bId);
 
   if (sorted.length < 2) {
-    return <p className="text-sm text-neutral-500">ต้องมีกิจกรรมอย่างน้อย 2 รายการถึงจะเปรียบเทียบได้</p>;
+    return <p className="text-sm text-neutral-500">{t("needTwoActivities")}</p>;
   }
 
   const bothRun = a?.type === "Run" && b?.type === "Run";
@@ -133,65 +139,65 @@ export function CompareView({ activities, unit }: { activities: CompareActivity[
         <select value={aId} onChange={(e) => setAId(e.target.value)} className={SELECT_CLASS}>
           {sorted.map((x) => (
             <option key={x.id} value={x.id}>
-              {optionLabel(x)}
+              {optionLabel(x, lang)}
             </option>
           ))}
         </select>
         <select value={bId} onChange={(e) => setBId(e.target.value)} className={SELECT_CLASS}>
           {sorted.map((x) => (
             <option key={x.id} value={x.id}>
-              {optionLabel(x)}
+              {optionLabel(x, lang)}
             </option>
           ))}
         </select>
       </div>
 
       {!a || !b ? (
-        <p className="text-sm text-neutral-500">เลือกกิจกรรมทั้งสองฝั่งเพื่อเปรียบเทียบ</p>
+        <p className="text-sm text-neutral-500">{t("selectBoth")}</p>
       ) : a.id === b.id ? (
-        <p className="text-sm text-neutral-500">เลือกกิจกรรมสองรายการที่ต่างกันเพื่อเปรียบเทียบ</p>
+        <p className="text-sm text-neutral-500">{t("selectDifferent")}</p>
       ) : (
         <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
           <div className="mb-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-            <ActivityHeader activity={a} align="right" />
-            <span className="text-xs font-semibold text-neutral-600">VS</span>
-            <ActivityHeader activity={b} align="left" />
+            <ActivityHeader activity={a} align="right" lang={lang} />
+            <span className="text-xs font-semibold text-neutral-600">{t("vs")}</span>
+            <ActivityHeader activity={b} align="left" lang={lang} />
           </div>
 
           <Row
-            label="ระยะทาง"
-            aValue={formatDistanceKm(a.distanceMeters, unit)}
-            bValue={formatDistanceKm(b.distanceMeters, unit)}
-            deltaText={distanceDiff !== null ? formatSignedDistance(distanceDiff, unit) : undefined}
+            label={ts("distance")}
+            aValue={formatDistanceKm(a.distanceMeters, unit, lang)}
+            bValue={formatDistanceKm(b.distanceMeters, unit, lang)}
+            deltaText={distanceDiff !== null ? formatSignedDistance(distanceDiff, unit, lang) : undefined}
             tone={distanceDiff !== null ? (distanceDiff > 0 ? "up" : distanceDiff < 0 ? "down" : "neutral") : undefined}
           />
           <Row
-            label="เวลา"
-            aValue={formatDuration(a.durationSec)}
-            bValue={formatDuration(b.durationSec)}
-            deltaText={durationDiff !== null ? formatSignedDuration(durationDiff) : undefined}
+            label={ts("time")}
+            aValue={formatDuration(a.durationSec, lang)}
+            bValue={formatDuration(b.durationSec, lang)}
+            deltaText={durationDiff !== null ? formatSignedDuration(durationDiff, lang) : undefined}
           />
           <Row
-            label={bothRun || bothSwim ? "เพซเฉลี่ย" : "เพซ/ความเร็วเฉลี่ย"}
-            aValue={activitySpeedValue(a.type, a.avgSpeedMs, unit)}
-            bValue={activitySpeedValue(b.type, b.avgSpeedMs, unit)}
-            deltaText={paceDiff !== null ? (bothSwim ? formatSignedSwimPace(paceDiff, unit) : formatSignedPace(paceDiff, unit)) : undefined}
+            label={bothRun || bothSwim ? ts("avgPace") : t("paceOrSpeedAvg")}
+            aValue={activitySpeedValue(a.type, a.avgSpeedMs, unit, lang)}
+            bValue={activitySpeedValue(b.type, b.avgSpeedMs, unit, lang)}
+            deltaText={paceDiff !== null ? (bothSwim ? formatSignedSwimPace(paceDiff, unit, lang) : formatSignedPace(paceDiff, unit, lang)) : undefined}
             tone={paceDiff !== null ? (paceDiff < 0 ? "up" : paceDiff > 0 ? "down" : "neutral") : undefined}
           />
           <Row
-            label="ไต่ระดับ"
-            aValue={a.elevationGainM ? formatElevationM(a.elevationGainM, unit) : "-"}
-            bValue={b.elevationGainM ? formatElevationM(b.elevationGainM, unit) : "-"}
-            deltaText={elevationDiff !== null ? `${elevationDiff > 0 ? "+" : ""}${Math.round(elevationDiff)} ม.` : undefined}
+            label={t("elevationGain")}
+            aValue={a.elevationGainM ? formatElevationM(a.elevationGainM, unit, lang) : "-"}
+            bValue={b.elevationGainM ? formatElevationM(b.elevationGainM, unit, lang) : "-"}
+            deltaText={elevationDiff !== null ? `${elevationDiff > 0 ? "+" : ""}${Math.round(elevationDiff)} ${t("meters")}` : undefined}
           />
           <Row
-            label="หัวใจเฉลี่ย"
+            label={ts("avgHr")}
             aValue={a.avgHeartRate ? `${Math.round(a.avgHeartRate)} bpm` : "-"}
             bValue={b.avgHeartRate ? `${Math.round(b.avgHeartRate)} bpm` : "-"}
             deltaText={hrDiff !== null ? formatSignedHeartRate(hrDiff) : undefined}
           />
           <Row
-            label="เคเดนซ์เฉลี่ย"
+            label={ts("avgCadence")}
             aValue={a.avgCadence ? `${Math.round(a.avgCadence)} ${cadenceUnitLabel(a.type)}` : "-"}
             bValue={b.avgCadence ? `${Math.round(b.avgCadence)} ${cadenceUnitLabel(b.type)}` : "-"}
             deltaText={
@@ -201,7 +207,7 @@ export function CompareView({ activities, unit }: { activities: CompareActivity[
             }
           />
           <Row
-            label="แคลอรี่"
+            label={ts("calories")}
             aValue={a.calories ? `${Math.round(a.calories)} kcal` : "-"}
             bValue={b.calories ? `${Math.round(b.calories)} kcal` : "-"}
             deltaText={caloriesDiff !== null ? `${caloriesDiff > 0 ? "+" : ""}${Math.round(caloriesDiff)} kcal` : undefined}

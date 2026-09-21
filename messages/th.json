@@ -695,5 +695,37 @@
       "previewAlt": "ตัวอย่างรูปดาวน์โหลด",
       "downloadShort": "ดาวน์โหลด"
     }
+  },
+  "records": {
+    "title": "สถิติสูงสุด",
+    "emptyState": "ยังไม่มีข้อมูลกิจกรรม",
+    "totalActivities": "กิจกรรมทั้งหมด",
+    "totalDistance": "ระยะทางรวม",
+    "sportTypes": "ประเภทกีฬา",
+    "activitiesCount": "{count} กิจกรรม",
+    "mostFrequentTitle": "กิจกรรมที่ทำบ่อยที่สุด",
+    "longestDistance": "ระยะทางไกลที่สุด",
+    "fastestPace": "เพซเร็วที่สุด",
+    "fastestSpeed": "ความเร็วสูงสุด",
+    "longestDuration": "เวลานานที่สุด",
+    "maxElevationGain": "ไต่ระดับสูงสุด",
+    "meters": "ม.",
+    "distancePrTrend": "แนวโน้ม PR ระยะทาง",
+    "pacePrTrend": "แนวโน้ม PR เพซ",
+    "speedPrTrend": "แนวโน้ม PR ความเร็ว",
+    "exercisePrTitle": "PR ท่าออกกำลังกาย",
+    "oneRepMaxEstimate": "~{value} กก. (1RM ประมาณ)",
+    "weightTrend": "เทรนด์น้ำหนัก ({count} ครั้งล่าสุด)",
+    "kg": "กก."
+  },
+  "compare": {
+    "title": "เทียบกิจกรรม",
+    "needTwoActivities": "ต้องมีกิจกรรมอย่างน้อย 2 รายการถึงจะเปรียบเทียบได้",
+    "selectBoth": "เลือกกิจกรรมทั้งสองฝั่งเพื่อเปรียบเทียบ",
+    "selectDifferent": "เลือกกิจกรรมสองรายการที่ต่างกันเพื่อเปรียบเทียบ",
+    "vs": "VS",
+    "paceOrSpeedAvg": "เพซ/ความเร็วเฉลี่ย",
+    "elevationGain": "ไต่ระดับ",
+    "meters": "ม."
   }
 }

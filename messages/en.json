@@ -695,5 +695,37 @@
       "previewAlt": "Download preview",
       "downloadShort": "Download"
     }
+  },
+  "records": {
+    "title": "Records",
+    "emptyState": "No activity data yet",
+    "totalActivities": "Total activities",
+    "totalDistance": "Total distance",
+    "sportTypes": "Sport types",
+    "activitiesCount": "{count} activities",
+    "mostFrequentTitle": "Most frequent activity",
+    "longestDistance": "Longest distance",
+    "fastestPace": "Fastest pace",
+    "fastestSpeed": "Highest speed",
+    "longestDuration": "Longest duration",
+    "maxElevationGain": "Highest elevation gain",
+    "meters": "m",
+    "distancePrTrend": "Distance PR trend",
+    "pacePrTrend": "Pace PR trend",
+    "speedPrTrend": "Speed PR trend",
+    "exercisePrTitle": "Exercise PRs",
+    "oneRepMaxEstimate": "~{value} kg (est. 1RM)",
+    "weightTrend": "Weight trend (last {count} sessions)",
+    "kg": "kg"
+  },
+  "compare": {
+    "title": "Compare activities",
+    "needTwoActivities": "You need at least 2 activities to compare",
+    "selectBoth": "Select both activities to compare",
+    "selectDifferent": "Select two different activities to compare",
+    "vs": "VS",
+    "paceOrSpeedAvg": "Avg pace/speed",
+    "elevationGain": "Elevation gain",
+    "meters": "m"
   }
 }

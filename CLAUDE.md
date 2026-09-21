@@ -789,7 +789,8 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
   — มีเทส `messages/messages.test.ts` เทียบ key set สองไฟล์ต้องตรงกันเป๊ะ (เพิ่ม `messages/**/*.test.ts`
   เข้า `vitest.config.mts`'s `include` เพราะปกติจะสแกนแค่ `src/**`) กัน key หายไปฝั่งใดฝั่งหนึ่งเงียบ ๆ
   แบบเดียวกับที่เทส comma-thousands กันบั๊กคล้ายกันในพาร์เซอร์ AI-import
-- **แปลครบแล้วทั้ง 5 หน้าหลัก + component ลูกที่จำเป็น + หน้ารายละเอียดกิจกรรม (เพิ่มรอบถัดมา)**
+- **แปลครบแล้วทั้ง 5 หน้าหลัก + component ลูกที่จำเป็น + หน้ารายละเอียดกิจกรรม + หน้าสถิติสูงสุด/
+  เปรียบเทียบ (เพิ่มรอบถัดมาจากที่ผู้ใช้ขอต่อ)**
   ทดสอบจริงผ่าน MariaDB ทุกหน้า: login แล้วสลับ EN
   ที่หน้าตั้งค่า → เนื้อหาเปลี่ยนภาษาทันที, ลบ cookie ทดสอบใหม่ (เหลือแค่ session cookie) → ยังคงโชว์
   อังกฤษ (พิสูจน์ว่า `User.locale` เป็นตัวตัดสิน ไม่ใช่ cookie), grep หาอักษรไทยในหน้าที่ตั้งเป็น EN แล้ว
@@ -856,6 +857,42 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
       "บันทึกด้วย Garmin Forerunner 965"/"Recorded with Garmin Forerunner 965", "เซ็ท 1"/"Set 1",
       หน่วยระยะทาง/เวลาเปลี่ยนตาม locale ด้วย) — `npx tsc --noEmit`, `npm run build`,
       `npm run test` (197 เทสผ่านหมด รวม `messages.test.ts`'s key-parity check) ผ่านทั้งหมดก่อน commit
+  - **หน้าสถิติสูงสุด (`/dashboard/records`) + หน้าเปรียบเทียบ (`/dashboard/compare`) — ผู้ใช้ขอต่อทันที
+    หลังหน้ารายละเอียดกิจกรรม ("records กับ compare หน้าถัดไปแปลด้วยเลย")** — `records/page.tsx`
+    (namespace `records`) + `records/exercise-progression-chart.tsx` (เรียก `useTranslations("records")`
+    เองข้างในสำหรับ label "เทรนด์น้ำหนัก (N ครั้งล่าสุด)" แทนที่จะรับเป็น prop — ตาม pattern เดียวกับ
+    `hr-zones.tsx` ก่อนหน้า คือให้ nested component เรียก hook เองได้เลยไม่ต้อง prop-drill) —
+    `records/pr-progression-chart.tsx` **ไม่ต้องแก้เลย** เพราะรับ `label`/`formatValue` เป็น prop จาก
+    `page.tsx` อยู่แล้วแต่แรก (`page.tsx` ส่งข้อความที่แปลแล้วเข้าไปตรง ๆ) — `compare/page.tsx`
+    (namespace `compare`) + `compare/compare-view.tsx` ("use client", ย้าย `shortDate`/`optionLabel`
+    จากฟังก์ชันระดับโมดูลที่ hardcode `"th-TH"` เป็นรับ `lang: FormatLang` เป็น argument แทน เพราะทั้งคู่
+    ไม่ใช่ hook เรียก `useTranslations`/`useLocale` เองไม่ได้ ต้องรับค่าจาก component ที่เรียกมันมาอีกที —
+    `ActivityHeader` เพิ่ม prop `lang` ด้วยเหตุผลเดียวกัน)
+    - **Reuse ข้ามหน้าเยอะขึ้นรอบนี้เพราะข้อความตรงกับที่ `activityDetail` namespace มีอยู่แล้วพอดีหลาย
+      จุด** — `compare-view.tsx` เรียก `useTranslations("activityDetail.stats")` เป็น hook ที่สองคู่กับ
+      `useTranslations("compare")` แล้ว reuse `distance`/`time`/`avgPace`/`avgHr`/`avgCadence`/
+      `calories` ตรง ๆ (ข้อความเหมือนเป๊ะ) เหลือแค่ `paceOrSpeedAvg`/`elevationGain`/`vs`/`meters` ที่
+      สร้างเป็น key ใหม่ใน `compare` namespace เพราะข้อความไม่ตรงกับ `activityDetail.stats` ที่มี (เช่น
+      `elevationGain`="ระยะไต่ระดับ" ≠ compare's "ไต่ระดับ") — `records/page.tsx` ไม่ reuse
+      `activityDetail.stats` เลยเพราะข้อความต่างกันหมด (เช่น "เพซเร็วที่สุด"/"ระยะทางไกลที่สุด" เป็นสถิติ
+      แบบ "สูงสุดตลอดกาล" คนละความหมายกับ stat แบบ "ค่าเฉลี่ยของกิจกรรมนี้" ที่ `activityDetail.stats`
+      ใช้) เก็บเป็น key ของตัวเองใน namespace `records` ทั้งหมด
+    - **`formatElevationM(lang)` ไม่ได้ถูกเรียกสำหรับค่า elevation-gain delta ทั้งที่หน้า records/
+      compare** — ทั้งสองจุด (`records/page.tsx`'s `maxElevationGainM`, `compare-view.tsx`'s
+      `elevationDiff`) ต่อ string "ม." เข้ากับตัวเลขดิบตรง ๆ (ไม่ผ่าน `formatElevationM`, ซึ่งจะแปลงเป็น
+      ฟุตถ้า `unit === "IMPERIAL"`) ของเดิมก่อนรอบนี้แล้ว — **ไม่ใช่บั๊กที่แก้รอบนี้** (ไม่ได้อยู่ใน scope
+      "แปลข้อความ UI" ของงานนี้ แค่เปลี่ยน "ม." ให้ตอบสนอง `lang` ผ่าน key `records.meters`/
+      `compare.meters` เพื่อให้ EN เห็น "m" แทน แต่ค่าที่โชว์ยังเป็นเมตรดิบเหมือนเดิมไม่ว่า
+      `unitSystem` จะเป็นอะไร — ถ้ามีคน report ว่าเลขไต่ระดับผิดหน่วยตอนตั้ง imperial ให้ดู 2 จุดนี้ก่อน)
+    - ทดสอบจริงผ่าน MariaDB: seed user + 3 กิจกรรมวิ่ง (4/5/6 กม., ระยะห่างกันคนละสัปดาห์ เพื่อให้
+      `distanceProgression`/`speedProgression` มี ≥3 จุดจริง ปลด `PrProgressionChart` ออกมาโชว์ได้) +
+      2 กิจกรรมเวทเทรนนิ่งที่มีท่า Bench Press คนละน้ำหนัก (60→70 กก.) เพื่อให้ `ExerciseProgressionChart`
+      มี ≥2 จุด, มินต์ session JWT, curl ทั้งสองหน้าทั้ง TH/EN (สลับผ่าน `User.locale` ตรงผ่าน Prisma
+      เหมือนหน้ารายละเอียดกิจกรรม) ยืนยัน HTML มีข้อความแปลถูกต้องพร้อม interpolation จริง (เช่น
+      "~77 กก. (1RM ประมาณ)"/"~77 kg (est. 1RM)", "เทรนด์น้ำหนัก (2 ครั้งล่าสุด)"/"Weight trend (last 2
+      sessions)") และหน้าเปรียบเทียบโชว์ label "เพซ/ความเร็วเฉลี่ย"/"Avg pace/speed" ถูกต้องตอนเทียบข้าม
+      ประเภทกิจกรรม (วิ่ง vs เวทเทรนนิ่ง) — `npx tsc --noEmit`, `npm run build`, `npm run test` (197
+      เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
 - **ยังไม่แปล (ตั้งใจ, นอกขอบเขตรอบนี้)**:
   - `ACTIVITY_LEVEL_LABEL`/`GOAL_LABEL` (`src/lib/nutrition.ts`) — shared label map ที่ยังใช้ร่วมกับ
     หน้านอกขอบเขต (activity detail ฯลฯ) เปลี่ยนแค่ในหน้าที่แปลแล้วจะทำให้ไม่ตรงกันข้ามหน้า —
@@ -872,9 +909,9 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     parser ด้วย ซึ่งอยู่นอกขอบเขตรอบนี้
   - Grandchild ที่ไม่ใช่ core flow ของหน้าไดอารี่: `food-label-scanner.tsx`, `import-meal-panel.tsx`,
     `water-reminder-toggle.tsx` — เปิดจากปุ่มรองในแผงเพิ่มอาหาร ไม่ใช่ส่วนที่เห็นทันทีเมื่อเข้าหน้า
-  - ทุกหน้านอกเหนือจาก 5 หน้าหลัก + หน้ารายละเอียดกิจกรรมด้านบน (records/compare/achievements/
-    log-activity/portion-guide/knowledge) ข้อความ error จาก API, อีเมล, ข้อความในรูปการ์ดแชร์ Satori —
-    Thai-only ถาวรจนกว่าจะมีคนขอเพิ่ม
+  - ทุกหน้านอกเหนือจาก 5 หน้าหลัก + หน้ารายละเอียดกิจกรรม/สถิติสูงสุด/เปรียบเทียบด้านบน
+    (achievements/log-activity/portion-guide/knowledge) ข้อความ error จาก API, อีเมล, ข้อความในรูป
+    การ์ดแชร์ Satori — Thai-only ถาวรจนกว่าจะมีคนขอเพิ่ม
 - **ข้อมูลที่ผู้ใช้พิมพ์เอง (ชื่อเมนู/ชื่อกิจกรรม/ชื่อท่า/หมายเหตุ/ชื่อโปรไฟล์ ฯลฯ) ไม่ผ่านระบบแปลภาษา
   เลยไม่ว่ากรณีใด** — เก็บ/แสดงตามที่พิมพ์ไว้เป๊ะเสมอ ระบบ i18n ครอบคลุมแค่ข้อความ UI ของแอพเอง
   (label/ปุ่ม/หัวข้อ) เท่านั้น
