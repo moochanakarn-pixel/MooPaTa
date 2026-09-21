@@ -33,15 +33,18 @@ import { parseShareLang, shareT } from "@/lib/share-card-i18n";
 // a quick centered flex that reads at a glance (closer to what most people
 // actually post to a story).
 //
-// ?pos=top|center|bottom picks where the whole details block (badges, name,
-// hero number, sub-stats/route, stat grid) sits vertically in the frame —
-// as one group, not the header separately pinned to the top and a stat grid
-// separately pinned to the bottom like before. Combined with ?bg=transparent
-// this is what makes the card usable as an Instagram/Line-story sticker:
-// pick top or bottom to leave the rest of the frame free for the photo
-// underneath to show through. Defaults to "center". The header logo itself
-// always stays pinned top-left regardless of this — it's a small brand mark,
-// not part of "the details."
+// ?pos=top|center|bottom picks where the whole details block (logo, badges,
+// name, hero number, sub-stats/route, stat grid) sits vertically in the
+// frame — as one group, not the logo/header separately pinned to the top
+// and a stat grid separately pinned to the bottom like before. Combined
+// with ?bg=transparent this is what makes the card usable as an
+// Instagram/Line-story sticker: pick top or bottom to leave the rest of the
+// frame free for the photo underneath to show through. Defaults to
+// "center". The logo used to stay pinned top-left regardless of ?pos (on
+// the theory that it's just a small brand mark, not part of "the
+// details") — changed after user feedback that a centered/bottom-anchored
+// card left the logo stranded alone at the top with a large empty gap
+// before the rest of the content; it now moves as part of the same group.
 const POSITIONS = ["top", "center", "bottom"] as const;
 type Position = (typeof POSITIONS)[number];
 const POSITION_JUSTIFY: Record<Position, string> = { top: "flex-start", center: "center", bottom: "flex-end" };
@@ -162,11 +165,23 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const statRows: { value: string; label: string }[][] = [];
   for (let i = 0; i < statItems.length; i += 3) statRows.push(statItems.slice(i, i + 3));
 
-  // style=hero shows at most 2 supporting numbers instead of the full grid
-  // above — just whichever second/third numbers matter most next to the
-  // hero, so the card stays glanceable instead of turning into a smaller
-  // version of the grid layout.
-  const heroSubStats = statItems.slice(0, 2);
+  // style=hero shows at most 4 supporting numbers (2x2) instead of the full
+  // grid above — enough to actually say something for a heart-rate-only
+  // activity like weight training or badminton (which has no distance/pace/
+  // speed/cadence at all, so a plain "first N" slice used to leave only the
+  // two HR stats and nothing else), while still staying visibly sparser
+  // than the grid layout. Calories is deliberately guaranteed one of those
+  // slots whenever present rather than taking whatever falls out of
+  // statItems' build order above (distance/pace/speed/elevation/HR/cadence,
+  // then calories last) — users specifically want to see it on the hero
+  // card, and for a stat-rich activity (e.g. a run with pace + elevation +
+  // both HR readings already filling every slot) it would otherwise always
+  // lose out to earlier fields no matter how many slots there are.
+  const caloriesStat = statItems.find((s) => s.label === t.caloriesLabel);
+  const otherStats = statItems.filter((s) => s !== caloriesStat);
+  const heroSubStats = caloriesStat ? [...otherStats.slice(0, 3), caloriesStat] : otherStats.slice(0, 4);
+  const heroSubStatRows: typeof heroSubStats[] = [];
+  for (let i = 0; i < heroSubStats.length; i += 2) heroSubStatRows.push(heroSubStats.slice(i, i + 2));
 
   // A malformed/unsupported polyline shouldn't cost the user the whole
   // card — fall back to a routeless layout instead of a 500.
@@ -424,25 +439,18 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           fontFamily: "Noto Sans Thai",
         }}
       >
-        {/* Just the mascot mark, no "MooPaTa" wordmark next to it — the
-            details block below (badges/name/numbers/stat grid) is the whole
-            point of the card, this is only a small brand corner. Stays
-            pinned top-left regardless of ?pos: it's not part of "the
-            details" whose position is selectable. */}
-        <div style={{ display: "flex" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={mascotLogo} width={96} height={96} style={{ borderRadius: 24 }} />
-        </div>
-
-        {/* Everything that makes up "the details" — badges, name, hero
-            number, sub-stats/route, and (grid style) the full stat grid —
-            now moves together as one group, positioned via ?pos instead of
-            the old layout where the header sat fixed at the top and the
-            stat grid sat fixed at the bottom regardless of how much content
-            was in between. Hero style additionally centers everything
-            horizontally too, instead of grid's left alignment — the one
-            visual choice that does the most to make it read as a different,
-            sparser card rather than just "grid with less stuff." */}
+        {/* Everything that makes up "the details" — logo, badges, name,
+            hero number, sub-stats/route, and (grid style) the full stat
+            grid — moves together as one group, positioned via ?pos instead
+            of the old layout where the logo/header sat fixed at the top and
+            the stat grid sat fixed at the bottom regardless of how much
+            content was in between. Hero style additionally centers
+            everything horizontally too, instead of grid's left alignment —
+            the one visual choice that does the most to make it read as a
+            different, sparser card rather than just "grid with less
+            stuff." (Just the mascot mark, no "MooPaTa" wordmark next to
+            it — the rest of the details is the whole point of the card,
+            the logo is only a small brand corner.) */}
         <div
           style={{
             display: "flex",
@@ -451,9 +459,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             justifyContent: POSITION_JUSTIFY[pos],
             alignItems: cardStyle === "hero" ? "center" : "stretch",
             gap: 28,
-            marginTop: 40,
           }}
         >
+          <div style={{ display: "flex" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={mascotLogo} width={96} height={96} style={{ borderRadius: 24 }} />
+          </div>
+
           <span style={{ fontSize: 22, color: "#a3a3a3", textShadow, textAlign: cardStyle === "hero" ? "center" : "left" }}>
             {dateLabel}
           </span>
@@ -516,11 +528,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           </div>
 
           {cardStyle === "hero" && heroSubStats.length > 0 && (
-            <div style={{ display: "flex", gap: 48, justifyContent: "center" }}>
-              {heroSubStats.map((s) => (
-                <div key={s.label} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                  <span style={{ fontSize: 40, fontWeight: 700, color: "white", textShadow }}>{s.value}</span>
-                  <span style={{ fontSize: 25, color: "#a3a3a3", textShadow }}>{s.label}</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+              {heroSubStatRows.map((row, i) => (
+                <div key={i} style={{ display: "flex", gap: 48, justifyContent: "center" }}>
+                  {row.map((s) => (
+                    <div key={s.label} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 220 }}>
+                      <span style={{ fontSize: 40, fontWeight: 700, color: "white", textShadow }}>{s.value}</span>
+                      <span style={{ fontSize: 25, color: "#a3a3a3", textShadow }}>{s.label}</span>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
