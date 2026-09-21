@@ -727,5 +727,26 @@
     "paceOrSpeedAvg": "Avg pace/speed",
     "elevationGain": "Elevation gain",
     "meters": "m"
+  },
+  "achievements": {
+    "title": "Achievements",
+    "subtitleEmpty": "No activity data yet — start logging activities and milestones will unlock over time",
+    "subtitle": "Milestones based on all your activity data — updates every time you log a new activity",
+    "distanceTitle": "Total distance",
+    "distanceProgress": "{remaining} to go to {target}",
+    "countTitle": "Activity count",
+    "countLabel": "{count} activities",
+    "countProgress": "{remaining} more to reach {target} activities",
+    "streakTitle": "Day streak",
+    "streakLabel": "{days} days",
+    "streakProgress": "{remaining} more days to a {target}-day streak",
+    "liftTitle": "Total weight lifted",
+    "liftLabel": "{value} kg",
+    "liftProgress": "{remaining} kg to go to {target} kg",
+    "unlockedCount": "{unlocked}/{total} unlocked",
+    "prTitle": "Lift PRs",
+    "prSubtitle": "{count} exercises with a max-weight PR",
+    "prBadgeWithOneRm": "{name} {weight} kg (~{oneRm} kg 1RM)",
+    "prBadgeNoOneRm": "{name} {weight} kg"
   }
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { estimateOneRepMaxKg } from "@/lib/exercise-stats";
 import { BadgeChip } from "./achievement-section";
 
@@ -16,6 +17,8 @@ export function ExercisePrBadges({
 }: {
   exercises: { name: string; weightKg: number; reps: number; activityId: string }[];
 }) {
+  const t = useTranslations("achievements");
+
   if (exercises.length === 0) return null;
 
   return (
@@ -25,8 +28,8 @@ export function ExercisePrBadges({
           <span className="text-base">🏆</span>
         </div>
         <div>
-          <h2 className="font-medium">PR ท่าเวท</h2>
-          <p className="text-xs text-neutral-500">{exercises.length} ท่าที่เคยทำสถิติน้ำหนักสูงสุดไว้</p>
+          <h2 className="font-medium">{t("prTitle")}</h2>
+          <p className="text-xs text-neutral-500">{t("prSubtitle", { count: exercises.length })}</p>
         </div>
       </div>
 
@@ -37,7 +40,10 @@ export function ExercisePrBadges({
           // estimate (which doesn't collapse to the input weight there)
           // would misleadingly suggest a higher number than actually lifted.
           const oneRm = e.reps > 1 ? Math.round(estimateOneRepMaxKg(e.weightKg, e.reps)) : null;
-          const label = oneRm !== null ? `${e.name} ${e.weightKg} กก. (~${oneRm} กก. 1RM)` : `${e.name} ${e.weightKg} กก.`;
+          const label =
+            oneRm !== null
+              ? t("prBadgeWithOneRm", { name: e.name, weight: e.weightKg, oneRm })
+              : t("prBadgeNoOneRm", { name: e.name, weight: e.weightKg });
           return (
             <Link key={e.name} href={`/dashboard/activity/${e.activityId}`}>
               <BadgeChip label={label} unlocked />

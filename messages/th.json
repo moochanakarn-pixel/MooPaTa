@@ -727,5 +727,26 @@
     "paceOrSpeedAvg": "เพซ/ความเร็วเฉลี่ย",
     "elevationGain": "ไต่ระดับ",
     "meters": "ม."
+  },
+  "achievements": {
+    "title": "ความสำเร็จ",
+    "subtitleEmpty": "ยังไม่มีข้อมูลกิจกรรม — เริ่มบันทึกกิจกรรมแล้วหมุดหมายจะค่อยๆ ปลดล็อก",
+    "subtitle": "หมุดหมายจากข้อมูลกิจกรรมทั้งหมดของคุณ อัปเดตทุกครั้งที่บันทึกกิจกรรมใหม่",
+    "distanceTitle": "ระยะทางสะสม",
+    "distanceProgress": "อีก {remaining} ถึง {target}",
+    "countTitle": "จำนวนกิจกรรม",
+    "countLabel": "{count} ครั้ง",
+    "countProgress": "อีก {remaining} ครั้ง ถึง {target} ครั้ง",
+    "streakTitle": "ติดต่อกันกี่วัน",
+    "streakLabel": "{days} วัน",
+    "streakProgress": "อีก {remaining} วัน ถึงติดต่อกัน {target} วัน",
+    "liftTitle": "น้ำหนักสะสมที่ยกได้",
+    "liftLabel": "{value} กก.",
+    "liftProgress": "อีก {remaining} กก. ถึง {target} กก.",
+    "unlockedCount": "ปลดล็อกแล้ว {unlocked}/{total}",
+    "prTitle": "PR ท่าเวท",
+    "prSubtitle": "{count} ท่าที่เคยทำสถิติน้ำหนักสูงสุดไว้",
+    "prBadgeWithOneRm": "{name} {weight} กก. (~{oneRm} กก. 1RM)",
+    "prBadgeNoOneRm": "{name} {weight} กก."
   }
 }

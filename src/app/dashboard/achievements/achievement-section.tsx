@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { milestoneStatuses, nextMilestone } from "@/lib/achievements";
 
 export function BadgeChip({ label, unlocked }: { label: string; unlocked: boolean }) {
@@ -29,6 +30,7 @@ export function AchievementSection({
   formatLabel: (v: number) => string;
   formatProgress: (current: number, next: number) => string;
 }) {
+  const t = useTranslations("achievements");
   const statuses = milestoneStatuses(current, thresholds);
   const next = nextMilestone(current, thresholds);
   const unlockedCount = statuses.filter((s) => s.unlocked).length;
@@ -41,9 +43,7 @@ export function AchievementSection({
         </div>
         <div>
           <h2 className="font-medium">{title}</h2>
-          <p className="text-xs text-neutral-500">
-            ปลดล็อกแล้ว {unlockedCount}/{thresholds.length}
-          </p>
+          <p className="text-xs text-neutral-500">{t("unlockedCount", { unlocked: unlockedCount, total: thresholds.length })}</p>
         </div>
       </div>
 

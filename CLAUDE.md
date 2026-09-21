@@ -790,7 +790,7 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
   เข้า `vitest.config.mts`'s `include` เพราะปกติจะสแกนแค่ `src/**`) กัน key หายไปฝั่งใดฝั่งหนึ่งเงียบ ๆ
   แบบเดียวกับที่เทส comma-thousands กันบั๊กคล้ายกันในพาร์เซอร์ AI-import
 - **แปลครบแล้วทั้ง 5 หน้าหลัก + component ลูกที่จำเป็น + หน้ารายละเอียดกิจกรรม + หน้าสถิติสูงสุด/
-  เปรียบเทียบ (เพิ่มรอบถัดมาจากที่ผู้ใช้ขอต่อ)**
+  เปรียบเทียบ/ความสำเร็จ (เพิ่มรอบถัดมาจากที่ผู้ใช้ขอต่อทีละหน้า)**
   ทดสอบจริงผ่าน MariaDB ทุกหน้า: login แล้วสลับ EN
   ที่หน้าตั้งค่า → เนื้อหาเปลี่ยนภาษาทันที, ลบ cookie ทดสอบใหม่ (เหลือแค่ session cookie) → ยังคงโชว์
   อังกฤษ (พิสูจน์ว่า `User.locale` เป็นตัวตัดสิน ไม่ใช่ cookie), grep หาอักษรไทยในหน้าที่ตั้งเป็น EN แล้ว
@@ -893,6 +893,30 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
       sessions)") และหน้าเปรียบเทียบโชว์ label "เพซ/ความเร็วเฉลี่ย"/"Avg pace/speed" ถูกต้องตอนเทียบข้าม
       ประเภทกิจกรรม (วิ่ง vs เวทเทรนนิ่ง) — `npx tsc --noEmit`, `npm run build`, `npm run test` (197
       เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
+  - **หน้าความสำเร็จ (`/dashboard/achievements`) — ผู้ใช้ขอต่อทันทีหลังหน้าสถิติสูงสุด/เปรียบเทียบ
+    ("achievements หน้าถัดไปแปลด้วยเลย")** — `achievements/page.tsx` (namespace `achievements`) +
+    `achievement-section.tsx` (เพิ่ม `useTranslations("achievements")` เองสำหรับ "ปลดล็อกแล้ว {n}/{total}"
+    — `title` ยังคงรับเป็น prop จาก `page.tsx` เหมือนเดิมเพราะแต่ละ section ใช้ชื่อคนละคำ ไม่มีอะไรให้
+    reuse ข้าม 4 section) + `exercise-pr-badges.tsx` (เพิ่ม `useTranslations("achievements")` เอง) —
+    **`formatLabel`/`formatProgress` ทั้ง 4 section ใน `page.tsx` เปลี่ยนจากการต่อ string ตรง ๆ
+    (`` `อีก ${a} ถึง ${b}` ``) เป็นเรียก `t("xxxProgress", {remaining, target})`** เพราะลำดับคำใน
+    ประโยคภาษาอังกฤษต่างจากไทย (ไทย "อีก X ถึง Y" ตรงๆ ตามลำดับพารามิเตอร์ แต่อังกฤษ "X to go to Y" คำว่า
+    "to go" อยู่กลางประโยคไม่ใช่ต้น) ต่อ string ตรง ๆ แบบเดิมจะไม่มีทางแปลลำดับคำให้ถูกได้ ต้องผ่าน ICU
+    message key ที่แต่ละภาษากำหนดตำแหน่ง `{remaining}`/`{target}` เองอิสระ
+    - **`BadgeChip` (`achievement-section.tsx`) เองไม่ต้องแตะเลย** เพราะรับ `label`/`unlocked` เป็น prop
+      ล้วน ๆ ไม่มี hardcode ข้อความเอง — ทั้ง milestone badges (`formatLabel`) และ exercise PR badges
+      (`exercise-pr-badges.tsx`'s `label`) ส่งข้อความที่แปลแล้วเข้ามาตรง ๆ
+    - ทดสอบจริงผ่าน MariaDB: seed user + 12 กิจกรรมวิ่ง 5 กม. (รวม 60 กม., unlock หมุดหมาย 10/50 กม.
+      อยู่ระหว่างทางไป 100 กม., unlock หมุดหมาย 10 ครั้ง อยู่ระหว่างทางไป 25 ครั้ง) + 2 กิจกรรมเวทเทรนนิ่ง
+      มีท่า Bench Press (reps>1 ทั้งคู่ เพื่อให้เห็น 1RM ประมาณ, PR ล่าสุด 70 กก. × 5) รวม volume พอ unlock
+      หมุดหมายแรก (1,000 กก.), มินต์ session JWT, curl หน้าเดียวกันทั้ง TH/EN (สลับผ่าน `User.locale`)
+      ยืนยัน HTML มีข้อความแปลถูกต้องพร้อม interpolation จริงทุกจุด — โดยเฉพาะ progress-bar text ที่
+      ลำดับคำต่างกันข้ามภาษา: "อีก 40.00 กม. ถึง 100.00 กม." (ไทย) เทียบ "40.00 km to go to 100.00 km"
+      (อังกฤษ, ลำดับคำสลับกันจริงตามที่ตั้งใจ), "อีก 11 ครั้ง ถึง 25 ครั้ง"/"11 more to reach 25
+      activities", ปลดล็อก "2/7"/"2/7 unlocked" (Thai นำหน้าด้วย "ปลดล็อกแล้ว", English ตามด้วย
+      "unlocked" — คนละตำแหน่งอีกเช่นกัน), และ 1RM badge "Bench Press 70 กก. (~82 กก. 1RM)"/"Bench
+      Press 70 kg (~82 kg 1RM)" (Epley: 70×(1+5/30)≈81.67 ปัดเป็น 82 ตรงกับที่คำนวณจริง) —
+      `npx tsc --noEmit`, `npm run build`, `npm run test` (197 เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
 - **ยังไม่แปล (ตั้งใจ, นอกขอบเขตรอบนี้)**:
   - `ACTIVITY_LEVEL_LABEL`/`GOAL_LABEL` (`src/lib/nutrition.ts`) — shared label map ที่ยังใช้ร่วมกับ
     หน้านอกขอบเขต (activity detail ฯลฯ) เปลี่ยนแค่ในหน้าที่แปลแล้วจะทำให้ไม่ตรงกันข้ามหน้า —
@@ -909,8 +933,8 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     parser ด้วย ซึ่งอยู่นอกขอบเขตรอบนี้
   - Grandchild ที่ไม่ใช่ core flow ของหน้าไดอารี่: `food-label-scanner.tsx`, `import-meal-panel.tsx`,
     `water-reminder-toggle.tsx` — เปิดจากปุ่มรองในแผงเพิ่มอาหาร ไม่ใช่ส่วนที่เห็นทันทีเมื่อเข้าหน้า
-  - ทุกหน้านอกเหนือจาก 5 หน้าหลัก + หน้ารายละเอียดกิจกรรม/สถิติสูงสุด/เปรียบเทียบด้านบน
-    (achievements/log-activity/portion-guide/knowledge) ข้อความ error จาก API, อีเมล, ข้อความในรูป
+  - ทุกหน้านอกเหนือจาก 5 หน้าหลัก + หน้ารายละเอียดกิจกรรม/สถิติสูงสุด/เปรียบเทียบ/ความสำเร็จด้านบน
+    (log-activity/portion-guide/knowledge) ข้อความ error จาก API, อีเมล, ข้อความในรูป
     การ์ดแชร์ Satori — Thai-only ถาวรจนกว่าจะมีคนขอเพิ่ม
 - **ข้อมูลที่ผู้ใช้พิมพ์เอง (ชื่อเมนู/ชื่อกิจกรรม/ชื่อท่า/หมายเหตุ/ชื่อโปรไฟล์ ฯลฯ) ไม่ผ่านระบบแปลภาษา
   เลยไม่ว่ากรณีใด** — เก็บ/แสดงตามที่พิมพ์ไว้เป๊ะเสมอ ระบบ i18n ครอบคลุมแค่ข้อความ UI ของแอพเอง

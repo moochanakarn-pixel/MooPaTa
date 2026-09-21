@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
-import { formatDistanceKm, type UnitSystem } from "@/lib/format";
+import { formatDistanceKm, type FormatLang, type UnitSystem } from "@/lib/format";
 import {
   COUNT_MILESTONES,
   DISTANCE_MILESTONES_KM,
@@ -21,6 +22,13 @@ export default async function AchievementsPage() {
   if (!userId) redirect("/");
 
   const heatmapSince = new Date(Date.now() - HEATMAP_WEEKS_BACK * 7 * 24 * 60 * 60 * 1000);
+
+  const [t, tc, locale] = await Promise.all([
+    getTranslations("achievements"),
+    getTranslations("common"),
+    getLocale(),
+  ]);
+  const lang: FormatLang = locale === "en" ? "en" : "th";
 
   const [user, agg, heatmapRows, totalLiftVolumeKg, exerciseStats] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
@@ -55,52 +63,58 @@ export default async function AchievementsPage() {
         <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
           <path d="M13 4 7 10l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        กลับไปหน้ารวม
+        {tc("backToOverview")}
       </Link>
 
-      <h1 className="mb-1 text-xl font-bold">ความสำเร็จ</h1>
-      <p className="mb-8 text-sm text-neutral-500">
-        {totalCount === 0
-          ? "ยังไม่มีข้อมูลกิจกรรม — เริ่มบันทึกกิจกรรมแล้วหมุดหมายจะค่อยๆ ปลดล็อก"
-          : "หมุดหมายจากข้อมูลกิจกรรมทั้งหมดของคุณ อัปเดตทุกครั้งที่บันทึกกิจกรรมใหม่"}
-      </p>
+      <h1 className="mb-1 text-xl font-bold">{t("title")}</h1>
+      <p className="mb-8 text-sm text-neutral-500">{totalCount === 0 ? t("subtitleEmpty") : t("subtitle")}</p>
 
       <div className="space-y-6">
         <AchievementSection
-          title="ระยะทางสะสม"
+          title={t("distanceTitle")}
           icon="🏁"
           iconColor="bg-[#fc4c02]/10 text-[#fc4c02]"
           thresholds={DISTANCE_MILESTONES_KM}
           current={totalKm}
-          formatLabel={(v) => formatDistanceKm(v * 1000, unit)}
-          formatProgress={(cur, next) => `อีก ${formatDistanceKm((next - cur) * 1000, unit)} ถึง ${formatDistanceKm(next * 1000, unit)}`}
+          formatLabel={(v) => formatDistanceKm(v * 1000, unit, lang)}
+          formatProgress={(cur, next) =>
+            t("distanceProgress", {
+              remaining: formatDistanceKm((next - cur) * 1000, unit, lang),
+              target: formatDistanceKm(next * 1000, unit, lang),
+            })
+          }
         />
         <AchievementSection
-          title="จำนวนกิจกรรม"
+          title={t("countTitle")}
           icon="📋"
           iconColor="bg-sky-500/10 text-sky-400"
           thresholds={COUNT_MILESTONES}
           current={totalCount}
-          formatLabel={(v) => `${v} ครั้ง`}
-          formatProgress={(cur, next) => `อีก ${Math.ceil(next - cur)} ครั้ง ถึง ${next} ครั้ง`}
+          formatLabel={(v) => t("countLabel", { count: v })}
+          formatProgress={(cur, next) => t("countProgress", { remaining: Math.ceil(next - cur), target: next })}
         />
         <AchievementSection
-          title="ติดต่อกันกี่วัน"
+          title={t("streakTitle")}
           icon="🔥"
           iconColor="bg-orange-500/10 text-orange-400"
           thresholds={STREAK_MILESTONES}
           current={bestStreak}
-          formatLabel={(v) => `${v} วัน`}
-          formatProgress={(cur, next) => `อีก ${Math.ceil(next - cur)} วัน ถึงติดต่อกัน ${next} วัน`}
+          formatLabel={(v) => t("streakLabel", { days: v })}
+          formatProgress={(cur, next) => t("streakProgress", { remaining: Math.ceil(next - cur), target: next })}
         />
         <AchievementSection
-          title="น้ำหนักสะสมที่ยกได้"
+          title={t("liftTitle")}
           icon="🏋️"
           iconColor="bg-violet-500/10 text-violet-400"
           thresholds={LIFT_VOLUME_MILESTONES_KG}
           current={totalLiftVolumeKg}
-          formatLabel={(v) => `${v.toLocaleString("th-TH")} กก.`}
-          formatProgress={(cur, next) => `อีก ${Math.ceil(next - cur).toLocaleString("th-TH")} กก. ถึง ${next.toLocaleString("th-TH")} กก.`}
+          formatLabel={(v) => t("liftLabel", { value: v.toLocaleString(lang === "en" ? "en-US" : "th-TH") })}
+          formatProgress={(cur, next) =>
+            t("liftProgress", {
+              remaining: Math.ceil(next - cur).toLocaleString(lang === "en" ? "en-US" : "th-TH"),
+              target: next.toLocaleString(lang === "en" ? "en-US" : "th-TH"),
+            })
+          }
         />
         <ExercisePrBadges exercises={prExercises} />
       </div>
