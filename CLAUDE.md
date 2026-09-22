@@ -40,7 +40,6 @@
 | `ActivityGoal` | เป้าหมายระยะทางรายเดือนต่อประเภทกิจกรรม (`userId`+`activityType`+`goalKm`, unique ต่อคู่) — แทนที่ `User.monthlyGoalKm` เดิม (เป้าเดียวรวมทุกกีฬา) ดู "### 6. อื่น ๆ"'s "เป้าหมายรายเดือนแยกตามประเภทกิจกรรม" |
 | `WaterLog` / `WeightLog` | บันทึกน้ำ/น้ำหนักรายครั้ง — log น้ำหนักใหม่จะอัปเดต `User.weightKg` ด้วย |
 | `BodyCompositionLog` | ผลตรวจ InBody/เครื่องวัดองค์ประกอบร่างกายแบบเป็นครั้ง ๆ (ไม่ใช่ทุกวัน) — เฉพาะ `weightKg` บังคับ ที่เหลือ optional ตาม field ที่เครื่องแต่ละรุ่นมี |
-| `PushSubscription` | Web Push subscription ต่ออุปกรณ์ (มีแถว = เปิดแจ้งเตือนสำหรับเครื่องนั้น) |
 | `Supplement` / `SupplementLog` | รายการอาหารเสริมที่ต้องกินประจำ + เช็คว่ากินไปหรือยันแต่ละวัน |
 | `AuthToken` | ลิงก์ยืนยันอีเมล/รีเซ็ตรหัสผ่านแบบใช้ครั้งเดียว เก็บแค่ hash ของ token ไม่เก็บตัวจริง (ดู "ระบบ login" ด้านล่าง) |
 
@@ -210,9 +209,7 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
     มี `activitiesByDay: Map<string, {durationSec, calories}[]>` แทน `durationByDay`/
     `activityCaloriesByDay` เดิมที่เป็น sum ต่อวัน — ตั้งใจแยกชื่อจาก `caloriesByDay` เดิมที่หมายถึง
     แคลอรี่ที่ "กิน" ไม่ใช่ "เผาผลาญ" อยู่แล้ว ระวังอย่าสับสน), การ์ดสรุปผลประจำวัน
-    (`daily-summary/route.tsx`, มี `activities` แบบ full row อยู่แล้วแค่ `.map()` เอา 2 field) — ส่วน
-    `cron/water-reminder` ส่ง array 1 element ที่มีแค่ `durationSec` (`calories: null`) เพราะใช้แค่
-    `.waterMl` ที่ไม่ขึ้นกับ multiplier เลย
+    (`daily-summary/route.tsx`, มี `activities` แบบ full row อยู่แล้วแค่ `.map()` เอา 2 field)
   - เทสอยู่ที่ `nutrition.test.ts` describe block "activity-based bonuses" — ครอบคลุมทั้ง clamp บน/ล่าง,
     guard เวลาขั้นต่ำ, กิจกรรมไม่มีแคลอรี่ได้ multiplier เป็นกลาง (1), ถ่วงน้ำหนักตามเวลาไม่ใช่ค่าเฉลี่ย
     ธรรมดา, โบนัสน้ำไม่ขึ้นกับ multiplier — โดยเฉพาะเทสที่ยืนยัน**กรณีที่เป็นเหตุผลหลักที่เปลี่ยนสูตรรอบนี้**:
@@ -246,7 +243,7 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
   `computeTargets` เอง (`PROTEIN_G_PER_KG(_LBM)_MIN/MAX`, `FAT_PERCENT_MIN/MAX` ใน `nutrition.ts`)
   กันไม่ให้ค่าที่ค้างอยู่ก่อนเปลี่ยนช่วง หรือแก้ตรง DB เอง ดันตัวเลขออกนอกเกณฑ์ที่ฟอร์มอนุญาต — ทุกจุด
   ที่เรียก `computeTargets` (เหมือน body composition) ต้องส่ง `{ proteinGPerKg, fatPercentOfCalories }`
-  ของ user เข้าไปด้วย ยกเว้น `cron/water-reminder` ที่ใช้แค่ `.waterMl` ซึ่งไม่ขึ้นกับค่านี้เลย
+  ของ user เข้าไปด้วย
 - **คำอธิบายเป้าหมายแคลอรี่แบบเจาะจงตัวเอง** — `explainCalorieTarget(profile, targets)`
   (`src/lib/nutrition.ts`) คืนประโยคเดียวอธิบายว่าทำไมเป้าหมายแคลอรี่ของ**ผู้ใช้คนนี้**ถึงเป็นตัวเลขนี้
   โดยเอา TDEE/เป้าหมาย/อัตราจริงของ user ไปแทนค่าในสูตร (เช่น "TDEE ของคุณคือ 2,556 kcal/วัน — เป้าหมาย
@@ -271,7 +268,7 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
   `bodyFatPercent` จะสลับไปใช้สูตร Katch-McArdle (`computeBmrKatchMcArdle`, อิง lean body mass =
   weightKg × (1 - bodyFat%/100)) แทน และคำนวณโปรตีนจาก lean body mass (2.4 g/kg, `PROTEIN_G_PER_KG_LBM`
   — ปลายบนของช่วง 2.0-2.4 g/kg ที่แนะนำกัน) แทน total bodyweight (1.8 g/kg) — ทุกจุดในแอพที่เรียก
-  `computeTargets` (หน้าแรก/ไดอารี่/เชิงลึก/share card/cron water-reminder) ต้องดึง body composition
+  `computeTargets` (หน้าแรก/ไดอารี่/เชิงลึก/share card) ต้องดึง body composition
   ล่าสุดผ่าน `getLatestBodyComposition(userId)` (`src/lib/body-composition.ts`) มาส่งเข้าไปด้วยเสมอ
   ไม่งั้นตัวเลขจะไม่ตรงกันระหว่างหน้าต่าง ๆ (หลักการเดียวกับที่ `applyActivityBonus`'s comment อธิบายไว้
   สำหรับ activity bonus) — ฟังก์ชันนี้คืน `null` ถ้ายังไม่มีสแกน หรือสแกนล่าสุดไม่มี `bodyFatPercent`
@@ -1078,8 +1075,8 @@ achievements, activity detail, weight-training) เข้าถึงผ่า�
     กับ prompt เป๊ะ ๆ (เช่น `missing` array ใน `applyParsedText`) — คงเป็นภาษาไทยเสมอเพราะ parser
     (`body-composition-import-parse.ts` ฯลฯ) ผูกกับ label ไทยตรง ๆ เปลี่ยนตาม locale ไม่ได้โดยไม่แก้
     parser ด้วย ซึ่งอยู่นอกขอบเขตรอบนี้
-  - Grandchild ที่ไม่ใช่ core flow ของหน้าไดอารี่: `food-label-scanner.tsx`, `import-meal-panel.tsx`,
-    `water-reminder-toggle.tsx` — เปิดจากปุ่มรองในแผงเพิ่มอาหาร ไม่ใช่ส่วนที่เห็นทันทีเมื่อเข้าหน้า
+  - Grandchild ที่ไม่ใช่ core flow ของหน้าไดอารี่: `food-label-scanner.tsx`, `import-meal-panel.tsx` —
+    เปิดจากปุ่มรองในแผงเพิ่มอาหาร ไม่ใช่ส่วนที่เห็นทันทีเมื่อเข้าหน้า
   - ทุกหน้านอกเหนือจากหน้าที่แปลแล้วทั้งหมดด้านบน (ตอนนี้ครอบคลุมทุกหน้าใน bottom-nav + ทุกหน้าที่เข้าถึง
     ได้จากลิงก์ในนั้นแล้ว) ข้อความ error จาก API, อีเมล, ข้อความในรูปการ์ดแชร์ Satori — Thai-only ถาวร
     จนกว่าจะมีคนขอเพิ่ม
@@ -1807,125 +1804,27 @@ achievements, activity detail, weight-training) เข้าถึงผ่า�
   ทั่วไปที่คนอาจกดบันทึกแค่เพื่อแก้ field อื่น (เช่น activity level) โดยไม่ได้ตั้งใจ "log น้ำหนักวันนี้"
   ถ้าสร้างทุกครั้งไม่มีเงื่อนไข กราฟจะเต็มไปด้วยจุดซ้ำ ๆ ค่าเดิมทุกครั้งที่แก้โปรไฟล์เรื่องอื่น
 - Supplements: `/dashboard/supplements`, checklist รายวันจาก `SupplementLog`
-- Push notifications: `src/lib/push.ts` + `src/app/api/cron/{water-reminder,whey-reminder,weekly-summary}` —
-  ต้องมี `PushSubscription` และ flag ที่เกี่ยวข้องเปิดอยู่ทั้งคู่ (ดู comment ใน schema)
-  - **`cron/water-reminder`'s atomic claim (`lastWaterReminderSentAt = now`) ต้องอยู่หลังเช็ค `on_pace`
-    เท่านั้น ห้ามย้ายกลับไปก่อน** — เคยมีบั๊กจริง (เจอจากการตรวจโค้ดแบบ audit ไม่ใช่จาก user report):
-    เดิม claim เกิดก่อนคำนวณ `on_pace` ถ้าผลเป็น on_pace (ดื่มทันเป้าแล้ว ไม่ต้องส่ง) โค้ดจะ `continue`
-    ออกจาก loop ทันทีโดยไม่คืนค่า timestamp เดิม (คืนค่าคืนเฉพาะกรณี `sentCount === 0` เท่านั้น) ทำให้
-    `lastWaterReminderSentAt` ถูกอัปเดตเป็น "เพิ่งส่ง" ทั้งที่ไม่เคยส่ง push จริงเลย — พอผู้ใช้ทันเป้าตอน
-    เช็ครอบหนึ่ง แล้วมาตกเป้าทีหลังในหน้าต่างเวลาเดียวกัน ระบบจะเข้าใจผิดว่าเพิ่งเตือนไปแล้วและข้ามรอบ
-    ถัดไปตาม `waterReminderIntervalMin` เงียบ ๆ (reason จะกลายเป็น `too_soon` แทนที่จะส่งจริง) — แก้โดย
-    ย้าย atomic claim ไปวางหลังเช็ค `if (drunkMl >= expectedMl)` แทน (claim เฉพาะตอนตัดสินใจจะส่งจริง
-    แล้วเท่านั้น) ยังคงกัน cron ยิงซ้อนกันส่ง push ซ้ำได้เหมือนเดิม เพราะยังเป็น atomic `updateMany`
-    เทียบ staleness เหมือนเดิมทุกอย่าง แค่เช็คช้าลงหนึ่งจังหวะ — ทดสอบยืนยันจริงด้วยการ seed user ที่
-    on_pace ก่อน (ยิง cron รอบแรกได้ reason `on_pace`, query ตรงจาก Prisma ยืนยันว่า
-    `lastWaterReminderSentAt` ยังเป็น `null` อยู่) แล้วขยับ window ให้ตกเป้า (ยิงรอบสองได้ reason
-    `no_active_subscription` ซึ่งแปลว่าโค้ดพยายามส่งจริงแล้ว ไม่ใช่ `too_soon` แบบที่บั๊กเดิมจะให้)
-  - **มี guard `if (endMinutes <= startMinutes)` คืน reason `invalid_window` ก่อนคำนวณ pacing formula
-    เสมอ** — กัน division-by-zero (`start === end`) และกันสูตร pacing เพี้ยนตอน overnight window
-    (`start > end` เช่น 22:00–06:00) ที่จะทำให้ user ดูเหมือน "อยู่นอกช่วงเวลา" ตลอดเวลาไม่มีวันได้แจ้งเตือน
-    — **เป็น defensive เท่านั้น ไม่ reachable ผ่านแอปจริงตอนนี้** เพราะ
-    `api/settings/water-reminder-schedule/route.ts` ปฏิเสธ `start >= end` อยู่แล้วเป็นจุดเขียนค่าเดียว
-    (กัน overnight window ไปในตัว) แต่ใส่ guard ซ้ำไว้ที่ cron เองด้วยเผื่อมีจุดเขียนค่าอื่นในอนาคตที่ข้าม
-    เช็คนั้นไป — ทดสอบยืนยันจริงด้วยการ set `waterReminderStart === waterReminderEnd` ตรงผ่าน Prisma
-    (ข้าม settings route ไปตรง ๆ) แล้วยิง cron ได้ reason `invalid_window` ไม่ crash/ไม่ค้าง แล้วรีเซ็ต
-    กลับเป็น window ปกติยืนยันว่า evaluation รอบถัดไปทำงานถูกต้องเหมือนเดิม
-  - **`cron/weekly-summary`** — แจ้งเตือนสรุปกิจกรรม/บันทึกอาหาร/น้ำหนักของสัปดาห์ที่ผ่านมา ทุกเช้า
-    วันจันทร์ เพิ่มเข้ามาเพราะโค้ดที่ต้องใช้มีอยู่แล้ว 90% (ระบบ push, pattern cron-secret + atomic-claim,
-    ข้อมูลครบใน DB) เป็น engagement ฟีเจอร์ตัวแรกที่ดึงคนกลับเข้าแอพจริง ๆ ไม่ใช่แค่ปรับให้คนที่เปิดแอพอยู่
-    แล้วสะดวกขึ้นแบบฟีเจอร์อื่น — ผู้ใช้เปิดเองที่หน้าตั้งค่า (`User.weeklySummaryEnabled`, default
-    `false`, off เหมือน whey reminder เพราะเป็น engagement เสริมไม่ใช่ safety-critical) ยังต้องมี
-    `PushSubscription` อย่างน้อย 1 อุปกรณ์เหมือนกันทั้งคู่
-    - **ต่างจาก water/whey-reminder ตรงที่ไม่ต้อง poll ถี่** — สองอันนั้นต้องดักจังหวะที่คาดเดาไม่ได้ล่วงหน้า
-      (ผู้ใช้ตั้ง window เอง / กิจกรรมจบเมื่อไหร่ก็ไม่รู้) เลย poll ทุก 15 นาที ส่วน weekly summary เป้าหมาย
-      เวลาส่งแน่นอนอยู่แล้ว (สัปดาห์ละครั้ง) เลยแค่ตั้ง Windows Scheduled Task แบบ `-Weekly -DaysOfWeek
-      Monday -At 8am` ตรง ๆ (ดู `DEPLOY-WINDOWS.md`'s "9d.") ไม่ต้อง poll เลย — `lastWeeklySummarySentAt`
-      (`User`, nullable `DateTime`) ยังกันการยิงซ้ำถ้า trigger ถูกเรียกซ้ำ/retry โดยไม่ตั้งใจอยู่ดี
-      (atomic `updateMany` claim ก่อนทำงานจริง, staleness threshold 6 วัน — pattern เดียวกับ
-      `wheyReminderSentAt` แค่ระดับ user ไม่ใช่ระดับ activity)
-    - **"สัปดาห์ที่ผ่านมา" = 7 วันย้อนหลังนับถึงเที่ยงคืนของวันนี้ (ไม่รวมวันนี้)** ไม่ใช่ ISO week
-      (จันทร์-อาทิตย์ตามปฏิทิน) เพราะไม่ต้องพึ่งว่า cron รันตรงเวลาเป๊ะทุกครั้ง — รันวันไหนก็ได้ในสัปดาห์
-      ยังได้ค่าที่สมเหตุสมผล (7 วันล่าสุดที่จบแล้วจริง ๆ)
-    - **Logic คำนวณสรุป (`src/lib/weekly-summary.ts`) แยกจาก query DB เหมือน `nutrition.ts`/
-      `exercise-stats.ts`** — `buildWeeklySummary()` รับ array ดิบ (activities/foodLogDates/weightLogs
-      ของสัปดาห์นั้น) คืนตัวเลขรวม (จำนวนกิจกรรม, เวลารวม, ระยะทางรวม, จำนวนวันที่บันทึกอาหาร — นับวัน
-      ปฏิทินที่ไม่ซ้ำผ่าน `localDateKey` จาก `streak.ts` ไม่ใช่จำนวนแถว `FoodLog` ดิบ เพราะกิน 3 มื้อในวัน
-      เดียวไม่ควรนับเป็น "3 วัน", ส่วนต่างน้ำหนัก — ล่าสุดลบเก่าสุดในสัปดาห์นั้น เรียงตาม `loggedAt` เอง
-      ก่อนคำนวณเพราะ query ไม่ได้ sort มาให้) — เทสอยู่ที่ `weekly-summary.test.ts` รันเร็วไม่ต้องพึ่ง DB
-    - **ไม่ส่ง push ถ้าสัปดาห์นั้นไม่มีอะไรจะบอกเลย** (`hasWeeklySummaryContent`, `activityCount === 0 &&
-      foodLoggedDays === 0`) — ตรงกับธรรมเนียมเดียวกับ activity bonus ที่ซ่อนแถบ "+0 kcal" ที่ไม่มี
-      ความหมาย ผู้ใช้ที่หายไปทั้งสัปดาห์ได้แจ้งเตือนว่าง ๆ จะยิ่งรู้สึกว่าแอพน่ารำคาญ ไม่ใช่ดึงกลับมา —
-      claim ของ user คนนั้นยังคงเซ็ตไว้เหมือนเดิม (ไม่ปล่อยคืนให้ลองใหม่) เพราะ cron รันสัปดาห์ละครั้ง
-      อยู่แล้ว ไม่มี "ลองใหม่เร็ว ๆ นี้" ที่มีความหมายเหมือน push ส่งไม่สำเร็จจริง ๆ แบบ whey-reminder
-    - **ข้อความในการ์ด Thai-only เหมือน push อื่นทุกตัว** ไม่ผ่าน `?lang=`/`resolveLocale()` เพราะเป็น
-      backend-generated text ที่ไม่อยู่ใน scope 5 หน้าหลักที่แปลแล้ว (ดู "### 5. ภาษา (i18n)") — แต่ยัง
-      เคารพ `User.unitSystem` สำหรับ format ระยะทาง (กม./ไมล์) เพราะเป็นคนละการตัดสินใจกับภาษา (ตัวเลข/
-      หน่วยข้อมูล vs ข้อความ UI)
-    - **แต่ละ segment ในข้อความ (กิจกรรม/ระยะทาง/น้ำหนัก) โผล่เฉพาะที่มีความหมายเท่านั้น** ยกเว้นจำนวนวัน
-      บันทึกอาหารที่โชว์เสมอแม้เป็น 0/7 (เป็นตัวเลขหลักที่อยากให้เห็นตลอด ไม่ใช่ตัวเลข "ไม่มีอะไรเกิดขึ้น"
-      แบบระยะทาง/น้ำหนักที่เป็น 0 จริง ๆ ไม่มีอะไรให้พูดถึง) — ส่วนต่างน้ำหนักปัดทศนิยม 1 ตำแหน่งก่อนเช็คว่า
-      เป็น 0 มั้ย (กัน noise จากการชั่งที่คลาดเคลื่อนเล็กน้อยระหว่างสองครั้งโผล่เป็น "+0.04 กก." ที่ไม่มี
-      ความหมาย)
-    - **แคลอรี่/แมโครเฉลี่ยเทียบเป้าหมาย** — เพิ่ม 2 segment ต่อจาก "บันทึกอาหารครบ N/7 วัน" ในข้อความ
-      push: "แคลอรี่เฉลี่ย X/Y kcal" กับ "แมโครเฉลี่ย: โปรตีน.../คาร์บ.../ไขมัน... ก." — `buildWeeklySummary`
-      (`src/lib/weekly-summary.ts`) พับ `FoodLog` ของสัปดาห์นั้นเป็นยอดรวมต่อวันปฏิทินก่อน (กัน 3 มื้อ/วัน
-      นับซ้ำเหมือนที่ `foodLoggedDays` ทำอยู่แล้ว) แล้ว**เฉลี่ยด้วยจำนวนวันที่มี log จริงเท่านั้น
-      (`foodLoggedDays`) ไม่ใช่หาร 7 เสมอ** — วันที่ไม่ได้ log ไม่ใช่ "กิน 0 kcal" แค่ไม่มีข้อมูล หารด้วย 7
-      จะทำให้ค่าเฉลี่ยต่ำกว่าที่กินจริงในวันที่ log ไว้ — ฟิลด์ใหม่ 4 ตัว (`avgCaloriesPerLoggedDay`/
-      `avgProteinGPerLoggedDay`/`avgCarbGPerLoggedDay`/`avgFatGPerLoggedDay`, ทั้งหมด `null` ถ้า
-      `foodLoggedDays === 0`) — **`WeeklySummaryInput.foodLogDates: Date[]` เปลี่ยนเป็น
-      `foodLogs: WeeklyFoodLogInput[]`** (`{ loggedAt, calories, proteinG, carbG, fatG }`, breaking
-      change ของ input shape) เพราะต้องการแมโครต่อแถวมาด้วย ไม่ใช่แค่วันที่ — cron route
-      (`src/app/api/cron/weekly-summary/route.ts`) เปลี่ยน query `foodLog.findMany` จาก
-      `select: { loggedAt: true }` เป็น `include: { food: true }` แล้ว map ผ่าน `macrosForGrams(f.food,
-      f.grams)` (`src/lib/food.ts`, ตัวเดียวกับที่ทุกหน้าคำนวณแมโครจาก log ใช้อยู่แล้ว) ก่อนส่งเข้า
-      `buildWeeklySummary` — **เป้าหมายที่เอามาเทียบมาจาก `computeTargets` ตัวเดียวกับทุกหน้าในแอพ**
-      (ไม่ใช่สูตรแยกใหม่) route ประกอบ `nutritionProfile` จาก `User` fields แบบเดียวกับที่
-      `dashboard/page.tsx` ทำ (`isProfileComplete` เช็คก่อน, ถ้าครบค่อยดึง
-      `getLatestBodyComposition(userId)` + macro prefs (`proteinGPerKg`/`fatPercentOfCalories`) มาคำนวณ) —
-      **ถ้าโปรไฟล์โภชนาการยังกรอกไม่ครบ ไม่มีเป้าให้เทียบ เลยไม่โชว์ทั้ง 2 segment นี้เลย** (`targets` เป็น
-      `null`, `formatWeeklySummaryBody`'s `targets` param optional เช็คคู่กับ `avgCaloriesPerLoggedDay
-      !== null` ก่อนต่อท้าย — ทั้งสองเงื่อนไขต้องผ่านคือมีทั้งข้อมูลจริงและเป้าหมายให้เทียบ) ไม่ใช่โชว์
-      ตัวเลขเฉลี่ยเดี่ยว ๆ ไม่มีเป้ากำกับ เพราะจุดประสงค์ทั้งฟีเจอร์คือ "เทียบเป้า" ไม่ใช่แค่รายงานตัวเลข —
-      เทสอยู่ที่ `weekly-summary.test.ts`: ยืนยันเฉลี่ยพับต่อวันถูก (ไม่ใช่เฉลี่ยต่อแถว), เฉลี่ยด้วยจำนวน
-      วันที่ log จริงไม่ใช่ 7 เสมอ, ข้อความมี/ไม่มี segment ตามเงื่อนไข targets+ข้อมูลจริงถูกต้อง — ทดสอบ
-      จริงด้วยการ seed user ที่มีโปรไฟล์ครบ+สแกน InBody (มี %ไขมัน ทำให้ใช้สูตร Katch-McArdle) กับอาหาร
-      500g × 2 วันที่รู้ค่าแมโครต่อ 100g แน่นอน คำนวณเป้าหมายด้วยมือเทียบกับ Katch-McArdle+PROTEIN_G_PER_KG_LBM
-      ได้ 2495 kcal/138P/330C/69F ตรงกับที่ cron คำนวณจริงเป๊ะทุกตัว (ยืนยันผ่าน debug log ชั่วคราวที่ลบ
-      ออกหลังตรวจเสร็จ) — reason `no_active_subscription` (ไม่ใช่ `no_content`) ยืนยันว่า route พยายาม
-      ส่งจริงด้วยเนื้อหาที่คำนวณครบแล้ว
-    - **หน้าตั้งค่า** — เพิ่ม section ใหม่ (`settings/page.tsx` + `weekly-summary-toggle.tsx`) ก่อนหัวข้อ
-      "ผลตรวจสุขภาพ" ใช้ pattern เดียวกับ `WheyReminderToggle` เป๊ะ (เช็คสถานะ browser push subscription
-      ก่อน โชว์ปุ่มเปิด/ปิดถ้ามี subscription จริงแล้ว ไม่งั้นโชว์ลิงก์ให้ไปเปิดที่หน้าไดอารี่ก่อน) ต่างจาก
-      `WheyReminderToggle` แค่ตรงที่**แปลผ่าน `next-intl`** (`settings.weeklySummary` namespace ใน
-      `messages/th.json`/`en.json`) เพราะหน้าตั้งค่าอยู่ใน scope 5 หน้าหลักที่แปลแล้ว ต่างจากหน้า
-      `/dashboard/supplements` ที่ `WheyReminderToggle` อยู่ (นอกขอบเขต i18n) — วางไว้ที่หน้าตั้งค่าแทนที่
-      จะผูกกับหน้าฟีเจอร์เดียวแบบ water/whey (`/dashboard/food`/`/dashboard/supplements`) เพราะสรุปนี้
-      ครอบคลุมทั้งแอพ (กิจกรรม+อาหาร+น้ำหนัก) ไม่ได้ผูกกับ domain เดียว — **`WeeklySummaryToggle` ต้อง
-      เรียกทั้งการ์ด (ไอคอน+หัวข้อ+คำอธิบาย+ปุ่ม) เองทั้งหมดเหมือน `WheyReminderToggle` เป๊ะ ไม่ใช่แค่
-      ปุ่ม** — บั๊กที่พบจาก code-review รอบตรวจของฟีเจอร์นี้เอง (ไม่ใช่ user report): ตอนแรกวางหัวข้อ/
-      คำอธิบายไว้ที่ `settings/page.tsx` (server component, render เสมอ) แล้วให้ `WeeklySummaryToggle`
-      คืนแค่ตัวปุ่ม/hint พร้อม `return null` ตอน `pushStatus` เป็น `"checking"`/`"unsupported"` — ทำให้
-      ใครก็ตามที่เบราว์เซอร์ไม่รองรับ Push API เห็น section ที่มีแค่หัวข้อ+คำอธิบายค้างอยู่ตลอด ไม่มีปุ่ม
-      ไม่มีคำอธิบายว่าทำไม (component อื่นในแอพ, `WheyReminderToggle`, ไม่โดนบั๊กนี้เพราะเรียกทั้งการ์ด
-      รวมหัวข้อเองอยู่แล้ว `return null` เลยซ่อนทั้งการ์ดไปด้วยกัน) — แก้โดยย้ายไอคอน+หัวข้อ+คำอธิบายเข้าไป
-      อยู่ใน `WeeklySummaryToggle` เอง (`settings/page.tsx` เหลือแค่เรียก `<WeeklySummaryToggle
-      initialEnabled={...} />` ตัวเดียว ไม่มี `<section>` ห่อเอง) ทดสอบจริงด้วย Playwright:
-      `page.addInitScript(() => delete window.navigator.serviceWorker)` ก่อนโหลดหน้าตั้งค่า จำลอง
-      เบราว์เซอร์ที่ไม่รองรับ Push API — ก่อนแก้ยังเห็นหัวข้อ "สรุปผลประจำสัปดาห์" ค้างอยู่ หลังแก้
-      หายไปทั้ง section (นับด้วย `page.getByText(...).count()` ได้ 0) พร้อม regression-check เคสปกติ
-      (เบราว์เซอร์รองรับแต่ยังไม่มี subscription) ว่ายังเห็นหัวข้อ+ลิงก์ "ต้องเปิดการแจ้งเตือนที่..."
-      เหมือนเดิมไม่กระทบ
-    - ทดสอบจริงด้วยการ seed user 2 คน (คนแรกมีกิจกรรม 2 ครั้ง/บันทึกอาหาร 3 วัน/น้ำหนักลด 0.7 กก. ในสัปดาห์,
-      คนที่สองไม่มีอะไรเลย) + `PushSubscription` ปลอม (endpoint ปลอมส่ง push จริงไม่ได้ แต่พอทดสอบ query/
-      claim/summary logic ได้ครบ ไม่ใช่ปลายทาง delivery จริง) ยิง cron ยืนยัน: คนแรกได้ reason
-      `no_active_subscription` (แปลว่าพยายามส่งจริงแล้ว ไม่ใช่ `no_content`/`too_soon`), คนที่สองได้
-      `no_content` ถูกต้อง, ยิงซ้ำทันทีคนแรกไม่โดนเลือกอีก (`usersConsidered: 0`, claim กันซ้ำทำงาน),
-      `lastWeeklySummarySentAt` อัปเดตจริงใน DB, PATCH `/api/settings/weekly-summary` persist ค่าถูกต้อง,
-      และเปิดหน้าตั้งค่าจริงผ่าน Playwright เห็น section ใหม่ขึ้น + ข้อความ "ต้องเปิดการแจ้งเตือนที่หน้า
-      บันทึกอาหารก่อน" พร้อมลิงก์ทำงานถูกต้อง (เพราะ browser ทดสอบไม่มี push subscription จริง แค่แถวปลอม
-      ใน DB สำหรับทดสอบ cron)
+- **Push notifications (แจ้งเตือนน้ำ/whey/สรุปรายสัปดาห์) ถูกลบออกจากแอพทั้งหมดแล้ว** — ผู้ใช้แจ้งว่า
+  ไม่ได้ใช้เลยสักฟีเจอร์ ตัดทิ้งทั้งหมดแทนที่จะซ่อน UI เฉย ๆ (แนวทางเดียวกับตอนตัด Strava sync ออก — ดู
+  "### 0. ระบบ login") ลบไฟล์/route ทั้งหมด: `src/lib/push.ts`, `src/app/api/push/{subscribe,unsubscribe}`,
+  `src/app/api/cron/{water-reminder,whey-reminder,weekly-summary}`, `src/app/api/settings/
+  {water-reminder-schedule,whey-reminder,weekly-summary}`, `src/lib/weekly-summary.ts` (+ เทส), 3 toggle
+  component (`water-reminder-toggle.tsx`/`whey-reminder-toggle.tsx`/`weekly-summary-toggle.tsx`) — ตัด
+  `web-push`/`@types/web-push` ออกจาก `package.json` ด้วย (ไม่มีที่ไหนใช้อีกแล้ว) — `service worker`
+  (`public/sw.js`) ตัดแค่ `push`/`notificationclick` event listener ออก ส่วน install/activate/fetch
+  (offline caching ของ PWA) ยังอยู่เหมือนเดิมเพราะไม่เกี่ยวกับ push เลย — migration
+  `20260922095449_remove_push_notifications` ลบ `PushSubscription` table + `User.{waterReminderStart,
+  waterReminderEnd, waterReminderIntervalMin, lastWaterReminderSentAt, wheyReminderEnabled,
+  weeklySummaryEnabled, lastWeeklySummarySentAt}` + `Activity.wheyReminderSentAt` ออกจาก schema ทั้งหมด
+  (ข้อมูลเก่าหายจริง ไม่มี backfill เพราะเป็นการลบฟีเจอร์ตั้งใจ ไม่ใช่ migrate ไปที่อื่น) — ลบ
+  `CRON_SECRET`/`VAPID_*` ออกจาก `.env.example` และหน้า feature bullet "แจ้งเตือนน้ำ+อาหารเสริม" ที่
+  landing page ออกด้วย (พร้อม key ใน `messages/th.json`/`en.json`) — **production ต้องลบ Windows
+  Scheduled Task ทั้ง 3 ตัวเอง** (`MooPaTaWaterReminder`/`MooPaTaWheyReminder`/`MooPaTaWeeklySummary`,
+  ดู `DEPLOY-WINDOWS.md`'s "9b." สำหรับคำสั่ง `Unregister-ScheduledTask`) ไม่งั้นจะยิง request ไปที่
+  route ที่ไม่มีอยู่แล้วเปล่า ๆ (ได้ 404 เฉย ๆ ไม่พังอะไร แต่ไม่มีประโยชน์ ควรลบทิ้ง) — ทดสอบจริงด้วยการ
+  seed user + login ผ่าน Playwright เปิดหน้าแรก/ไดอารี่/ตั้งค่า/อาหารเสริม ยืนยันไม่มีข้อความ/ปุ่มแจ้งเตือน
+  หลงเหลือเลย ไม่มี console error, ยิง request ตรงไปที่ทุก route ที่ลบแล้วได้ 404 ครบ (ไม่ใช่ 500/ค้าง) —
+  `npx tsc --noEmit`, `npm run build`, `npm run test` (199 เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
 - PWA: `manifest.webmanifest`, service worker — ติดตั้งเป็นแอพได้
 
 ## Workflow ตอนแก้โค้ด (ทำทุกครั้งก่อน commit)

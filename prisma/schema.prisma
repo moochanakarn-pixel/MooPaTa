@@ -11,9 +11,9 @@ datasource db {
 // they connect first (currently Strava, or email+password); more
 // providers can link to the same user later.
 model User {
-  id            String     @id @default(cuid())
-  name          String?
-  avatarUrl     String?    @db.VarChar(512) // set from Strava's athlete profile on connect — never set by an email/password signup
+  id         String     @id @default(cuid())
+  name       String?
+  avatarUrl  String?    @db.VarChar(512) // set from Strava's athlete profile on connect — never set by an email/password signup
   // A self-uploaded profile picture (src/app/api/avatar) — takes priority
   // over avatarUrl for display when present. Exists because an
   // email/password account (see "ระบบ login" — no Strava connection at
@@ -21,14 +21,14 @@ model User {
   // Strava-linked one which gets both automatically on every connect.
   // Same private-relative-path convention as frontPhotoPath etc. below —
   // only ever served back through the auth-gated GET /api/avatar route.
-  avatarPath    String?    @db.VarChar(255)
-  unitSystem    UnitSystem @default(METRIC)
+  avatarPath String?    @db.VarChar(255)
+  unitSystem UnitSystem @default(METRIC)
   // UI display language — separate from unitSystem (a user could want km
   // with English labels, or miles with Thai labels). Default TH since the
   // app started Thai-only; a new EN-preferring signup gets seeded from the
   // moopata_locale cookie at signup time instead (see src/lib/locale.ts).
-  locale        Locale     @default(TH)
-  createdAt     DateTime   @default(now())
+  locale     Locale     @default(TH)
+  createdAt  DateTime   @default(now())
 
   // Email+password login — optional, alongside (not instead of) Strava.
   // A Strava-only user has all of these null; a fresh email signup has
@@ -38,8 +38,7 @@ model User {
   // email signup or an existing Strava user added a password from
   // Settings. failedLoginCount/lockedUntil are a simple brute-force guard
   // (password login, unlike Strava OAuth, is guessable) — reset on
-  // success, incremented on mismatch, mirrors the atomic-claim style
-  // src/app/api/cron/water-reminder/route.ts already uses.
+  // success, incremented on mismatch.
   email            String?   @unique
   passwordHash     String?   @db.Text
   emailVerifiedAt  DateTime?
@@ -70,38 +69,12 @@ model User {
   proteinGPerKg        Float?
   fatPercentOfCalories Float?
 
-  // Water-reminder schedule (src/app/api/cron/water-reminder) — a time
-  // window plus how often within it, instead of the two fixed
-  // afternoon/evening checkpoints the feature launched with. "HH:mm",
-  // 24-hour, in the server's local time (same clock the rest of the app's
-  // "today" boundaries already use).
-  waterReminderStart       String    @default("09:00")
-  waterReminderEnd         String    @default("22:00")
-  waterReminderIntervalMin Int       @default(60)
-  lastWaterReminderSentAt  DateTime?
-
   // Health-flag warnings (src/lib/health-flags.ts) — set by the user from
   // their own blood-test results, not diagnosed by the app. Purely
   // rule-based (a daily cholesterol total, a purine-keyword food-name
   // match), no AI involved.
   healthFlagHighCholesterol Boolean @default(false)
   healthFlagHighUricAcid    Boolean @default(false)
-
-  // Post-workout whey reminder (src/app/api/cron/whey-reminder) — off by
-  // default since it needs an activity to trigger from; a device still
-  // needs its own push subscription (see PushSubscription) regardless of
-  // this flag, same two-part opt-in as the water reminder.
-  wheyReminderEnabled Boolean @default(false)
-
-  // Weekly recap push notification (src/app/api/cron/weekly-summary) — off
-  // by default, same two-part opt-in as the whey reminder (this flag +
-  // at least one PushSubscription row). Unlike water/whey-reminder, the
-  // target send time is fully predictable (once a week, see
-  // DEPLOY-WINDOWS.md's weekly Scheduled Task trigger) so this doesn't need
-  // a tight pacing window — lastWeeklySummarySentAt just guards against a
-  // duplicate/retried trigger re-sending within the same week.
-  weeklySummaryEnabled    Boolean   @default(false)
-  lastWeeklySummarySentAt DateTime?
 
   connections         ProviderConnection[]
   activities          Activity[]
@@ -114,7 +87,6 @@ model User {
   weightLogs          WeightLog[]
   bodyCompositionLogs BodyCompositionLog[]
   progressPhotoLogs   ProgressPhotoLog[]
-  pushSubscriptions   PushSubscription[]
   authTokens          AuthToken[]
 }
 
@@ -310,26 +282,26 @@ model ProviderConnection {
 // Normalized activity shape shared across all providers so the rest of the
 // app (dashboard, stats, future features) never has to branch on provider.
 model Activity {
-  id                 String    @id @default(cuid())
-  provider           Provider
-  providerActId      String // original activity id from the source provider
-  type               String // e.g. Run, Ride, Walk, Hike, Swim
-  name               String?
-  startedAt          DateTime
-  durationSec        Int
-  distanceMeters     Float?
-  elevationGainM     Float?
-  elevHighM          Float?
-  elevLowM           Float?
-  avgHeartRate       Float?
-  maxHeartRate       Float?
-  avgSpeedMs         Float? // meters/second
-  maxSpeedMs         Float? // meters/second
-  avgCadence         Float?
-  avgWatts           Float?
-  kilojoules         Float?
-  sufferScore        Int?
-  calories           Float?
+  id               String   @id @default(cuid())
+  provider         Provider
+  providerActId    String // original activity id from the source provider
+  type             String // e.g. Run, Ride, Walk, Hike, Swim
+  name             String?
+  startedAt        DateTime
+  durationSec      Int
+  distanceMeters   Float?
+  elevationGainM   Float?
+  elevHighM        Float?
+  elevLowM         Float?
+  avgHeartRate     Float?
+  maxHeartRate     Float?
+  avgSpeedMs       Float? // meters/second
+  maxSpeedMs       Float? // meters/second
+  avgCadence       Float?
+  avgWatts         Float?
+  kilojoules       Float?
+  sufferScore      Int?
+  calories         Float?
   // 1-10 subjective exertion (RPE) for the session as a whole, in
   // half-point steps (7, 7.5, 8, ...) — the talk-test/breathlessness
   // framing (Borg-style), distinct from the per-set reps-in-reserve RPE on
@@ -338,7 +310,7 @@ model Activity {
   // formula derives it in-app. Float rather than Int so a half-point value
   // isn't silently truncated (see src/lib/activity-validation.ts's
   // optionalRpe for the actual 1-10-in-halves validation).
-  rpe                Float?
+  rpe              Float?
   // Free-text summary for manual/AI-import entry — a workout screenshot
   // (Zepp/Garmin/Huawei/...) usually shows several metrics with no matching
   // structured column here (training effect, VO2max estimate, heart-rate
@@ -351,22 +323,17 @@ model Activity {
   // unlike the numeric fields nearby, a clipped summary is a low-stakes,
   // recoverable loss (the user can just shorten and re-save), not silent
   // data corruption the way a misread number would be.
-  notes              String?   @db.VarChar(500)
-  kudosCount         Int?
-  achievementCount   Int?
-  prCount            Int?
-  commentCount       Int?
-  gearId             String?
-  timezone           String?
-  startLat           Float?
-  startLng           Float?
-  raw                Json // original provider payload, kept for anything not normalized above
-  createdAt          DateTime  @default(now())
-  // Set once the post-workout whey reminder has been sent for this activity
-  // (src/app/api/cron/whey-reminder) — null means "not sent (or not
-  // eligible) yet", not "no reminder wanted"; that's controlled separately
-  // by User.wheyReminderEnabled. Prevents re-sending on every cron poll.
-  wheyReminderSentAt DateTime?
+  notes            String?  @db.VarChar(500)
+  kudosCount       Int?
+  achievementCount Int?
+  prCount          Int?
+  commentCount     Int?
+  gearId           String?
+  timezone         String?
+  startLat         Float?
+  startLng         Float?
+  raw              Json // original provider payload, kept for anything not normalized above
+  createdAt        DateTime @default(now())
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -409,7 +376,7 @@ model ActivityGoal {
 // 15×5kg, 14×5kg, 10×4kg) can be recorded set-by-set instead of forcing one
 // uniform number onto all of them.
 model Exercise {
-  id    String @id @default(cuid())
+  id    String  @id @default(cuid())
   name  String
   order Int // preserves the order entered in the form
   // Free-text reflection on THIS exercise specifically — how it felt, what
@@ -524,24 +491,6 @@ model BodyCompositionLog {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, loggedAt])
-}
-
-// One browser/device's Web Push subscription — a user can have several
-// (phone + desktop, or after reinstalling the PWA). Presence of a row is
-// itself the "reminders on" state for that device; deleting it (via
-// unsubscribe, or when a push to it starts failing — see src/lib/push.ts)
-// is what turns reminders off.
-model PushSubscription {
-  id        String   @id @default(cuid())
-  endpoint  String   @db.VarChar(1000)
-  p256dh    String   @db.VarChar(255)
-  auth      String   @db.VarChar(255)
-  createdAt DateTime @default(now())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, endpoint(length: 500)])
 }
 
 // A recurring supplement/vitamin the user wants a daily reminder for — no

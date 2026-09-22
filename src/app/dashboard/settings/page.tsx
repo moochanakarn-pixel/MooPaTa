@@ -12,7 +12,6 @@ import { MacroPreferencesForm } from "./macro-preferences-form";
 import { HealthFlagsForm } from "./health-flags-form";
 import { SetPasswordForm } from "./set-password-form";
 import { ProfileForm } from "./profile-form";
-import { WeeklySummaryToggle } from "./weekly-summary-toggle";
 
 export default async function SettingsPage({
   searchParams,
@@ -194,8 +193,6 @@ export default async function SettingsPage({
           <MacroPreferencesForm initial={macroPreferencesInitial} />
         </section>
       )}
-
-      <WeeklySummaryToggle initialEnabled={user?.weeklySummaryEnabled ?? false} />
 
       <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
         <div className="mb-3 flex items-center gap-3">

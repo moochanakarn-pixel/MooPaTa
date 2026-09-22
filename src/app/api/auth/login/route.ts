@@ -5,10 +5,8 @@ import { createSession } from "@/lib/session";
 
 // Password login is guessable in a way Strava OAuth never was, so this
 // needs its own brute-force guard — a simple attempt counter + timed
-// lockout on the User row itself (same "just add a field" shape as every
-// other per-user throttle already in schema.prisma, e.g.
-// lastWaterReminderSentAt) rather than pulling in a separate rate-limit
-// service for what's a small-group app.
+// lockout on the User row itself rather than pulling in a separate
+// rate-limit service for what's a small-group app.
 const MAX_FAILED_ATTEMPTS = 8;
 const LOCKOUT_MS = 15 * 60 * 1000;
 

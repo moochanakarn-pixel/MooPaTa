@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { WaterReminderToggle, type WaterReminderSchedule } from "./water-reminder-toggle";
-
 export interface WaterLogEntry {
   id: string;
   ml: number;
@@ -99,13 +97,11 @@ export function WaterLogCard({
   targetMl,
   viewDate,
   isToday,
-  reminderSchedule,
 }: {
   todayLogs: WaterLogEntry[];
   targetMl: number | null;
   viewDate: string;
   isToday: boolean;
-  reminderSchedule: WaterReminderSchedule;
 }) {
   const t = useTranslations("food.waterLogCard");
   const router = useRouter();
@@ -233,8 +229,6 @@ export function WaterLogCard({
       </div>
 
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
-
-      <WaterReminderToggle initialSchedule={reminderSchedule} />
     </div>
   );
 }

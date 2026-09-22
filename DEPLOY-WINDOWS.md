@@ -63,7 +63,7 @@ Fill in `.env` (same values as the Linux guide):
 
 - `DATABASE_URL="mysql://root:YOUR_MYSQL_PASSWORD@localhost:3306/moopata"`
 - `APP_BASE_URL="https://moopata.mcnkth.com"`
-- `TOKEN_ENCRYPTION_KEY` / `SESSION_SECRET` / `CRON_SECRET` — generate each with:
+- `TOKEN_ENCRYPTION_KEY` / `SESSION_SECRET` — generate each with:
   ```powershell
   -join ((1..32) | ForEach-Object { "{0:x2}" -f (Get-Random -Max 256) })
   ```
@@ -73,12 +73,6 @@ Fill in `.env` (same values as the Linux guide):
   client. Only needs the basic `email`/`profile`/`openid` scopes, so the OAuth consent screen
   doesn't require Google's manual review.
 - `GOOGLE_REDIRECT_URI="https://moopata.mcnkth.com/api/auth/google/callback"`
-- `VAPID_PUBLIC_KEY` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (same value, both vars) / `VAPID_PRIVATE_KEY` — needed for the
-  water-reminder push notifications. Generate once with:
-  ```powershell
-  npx web-push generate-vapid-keys
-  ```
-  `VAPID_SUBJECT` can stay `mailto:` + whatever email you want push services to be able to reach you at.
 - `RESEND_API_KEY` — from resend.com (free tier: 100 emails/day, 3,000/month, no card) — needed for
   email/password login's verification + password-reset emails. Optional: if left unset, the app
   doesn't crash, it just logs the verification/reset link to the server console instead of emailing
@@ -167,64 +161,26 @@ Historical Strava-synced activities are unaffected and keep displaying —
 only the connect flow and the periodic re-sync are gone. Activities are
 logged manually going forward (`/dashboard/log-activity`).
 
-## 9b. Water reminder — one scheduled task, polling frequently
+## 9b. Push notifications (water/whey/weekly-summary reminders) — removed
 
-Each user has their own configurable window and frequency (set via the
-toggle on the food page — start/end time + how often), so this endpoint
-just needs polling often enough to catch each user's interval; the endpoint
-itself checks whether "now" falls in a given user's window and whether
-enough time has passed since their last reminder (`lastWaterReminderSentAt`).
-One task, every 15 minutes, is enough for any interval users can configure
-(minimum 15 minutes):
-
-```powershell
-$secret = "YOUR_CRON_SECRET"
-
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-Command `"Invoke-RestMethod -Method Post -Uri 'https://moopata.mcnkth.com/api/cron/water-reminder' -Headers @{Authorization='Bearer $secret'}`""
-$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration ([TimeSpan]::MaxValue)
-Register-ScheduledTask -TaskName "MooPaTaWaterReminder" -Action $action -Trigger $trigger -RunLevel Highest
-```
-
-If you already have the old `MooPaTaWaterReminderAfternoon` /
-`MooPaTaWaterReminderEvening` tasks from before this feature was made
-configurable, remove them first:
+All three push-notification features (water-intake reminder, post-workout
+whey reminder, weekly recap) were removed entirely — see CLAUDE.md. That
+means `/api/cron/water-reminder`, `/api/cron/whey-reminder`, and
+`/api/cron/weekly-summary` no longer exist (they now 404), and the
+`PushSubscription` table + related `User`/`Activity` columns are gone from
+the DB after this update's migration runs. If you have the three scheduled
+tasks from before this change, remove them (they now point at routes that
+no longer exist):
 
 ```powershell
-Unregister-ScheduledTask -TaskName "MooPaTaWaterReminderAfternoon" -Confirm:$false
-Unregister-ScheduledTask -TaskName "MooPaTaWaterReminderEvening" -Confirm:$false
+Unregister-ScheduledTask -TaskName "MooPaTaWaterReminder" -Confirm:$false
+Unregister-ScheduledTask -TaskName "MooPaTaWheyReminder" -Confirm:$false
+Unregister-ScheduledTask -TaskName "MooPaTaWeeklySummary" -Confirm:$false
 ```
 
-## 9c. Post-workout whey reminder — one more scheduled task
-
-Polls `/api/cron/whey-reminder` every 15 minutes. Fires 30-60 minutes after
-a logged activity ends for users who've turned it on (toggle on the
-supplements page) — a separate opt-in from the water reminder above:
-
-```powershell
-$secret = "YOUR_CRON_SECRET"
-
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-Command `"Invoke-RestMethod -Method Post -Uri 'https://moopata.mcnkth.com/api/cron/whey-reminder' -Headers @{Authorization='Bearer $secret'}`""
-$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration ([TimeSpan]::MaxValue)
-Register-ScheduledTask -TaskName "MooPaTaWheyReminder" -Action $action -Trigger $trigger -RunLevel Highest
-```
-
-## 9d. Weekly summary — one scheduled task, once a week (not polled)
-
-Unlike the two reminders above, `/api/cron/weekly-summary`'s target time is
-fully predictable (once a week, for users who've turned it on in Settings)
-rather than an unpredictable per-user window — so this doesn't need
-frequent polling, just a single weekly trigger (Monday morning, server
-local time). The route itself is still safe to call more than once (it
-tracks `lastWeeklySummarySentAt` and won't re-send within the same week),
-so an occasional manual re-run or a missed/retried trigger isn't a problem:
-
-```powershell
-$secret = "YOUR_CRON_SECRET"
-
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-Command `"Invoke-RestMethod -Method Post -Uri 'https://moopata.mcnkth.com/api/cron/weekly-summary' -Headers @{Authorization='Bearer $secret'}`""
-$trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 8am
-Register-ScheduledTask -TaskName "MooPaTaWeeklySummary" -Action $action -Trigger $trigger -RunLevel Highest
-```
+`CRON_SECRET`/`VAPID_PUBLIC_KEY`/`NEXT_PUBLIC_VAPID_PUBLIC_KEY`/
+`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT` in `.env` are no longer read by anything
+— safe to leave them there (harmless unused vars) or delete them, either way.
 
 ## 10. Deploying updates later
 

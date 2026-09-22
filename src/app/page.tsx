@@ -46,12 +46,6 @@ export default async function HomePage({
       desc: t("features.diary.desc"),
     },
     {
-      icon: ["M10 3.5c-2 0-3.5 1.5-3.5 3.5v2.3L5 12h10l-1.5-2.7V7c0-2-1.5-3.5-3.5-3.5Z", "M8.5 14a1.5 1.5 0 0 0 3 0"],
-      color: "#8b5cf6",
-      title: t("features.reminders.title"),
-      desc: t("features.reminders.desc"),
-    },
-    {
       icon: ["M10 3v10m0 0 3.5-3.5M10 13l-3.5-3.5M4 15v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1"],
       color: "#f43f5e",
       title: t("features.shareCard.title"),

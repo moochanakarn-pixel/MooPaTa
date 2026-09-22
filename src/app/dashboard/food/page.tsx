@@ -177,11 +177,6 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
         targetMl={waterTargetMl}
         viewDate={viewDate}
         isToday={viewDate === todayDate}
-        reminderSchedule={{
-          start: user?.waterReminderStart ?? "09:00",
-          end: user?.waterReminderEnd ?? "22:00",
-          intervalMin: user?.waterReminderIntervalMin ?? 60,
-        }}
       />
 
       <FoodLogView

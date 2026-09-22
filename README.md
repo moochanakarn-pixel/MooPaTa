@@ -75,8 +75,6 @@ Server ผ่าน nssm, ที่ใช้งานจริงตอนนี
 - รัน `npx prisma migrate deploy` ตอน deploy แทน `migrate dev`
 - อัปเดต `APP_BASE_URL`, `GOOGLE_REDIRECT_URI` และ Authorized redirect URI บน Google Cloud Console
   ให้เป็นโดเมนจริง (ต้องเป็น HTTPS)
-- ตั้ง `CRON_SECRET` สำหรับ endpoint แจ้งเตือนน้ำ/อาหารเสริม (`/api/cron/water-reminder`,
-  `/api/cron/whey-reminder`) — ดูตัวอย่าง scheduled task ใน DEPLOY-WINDOWS.md/DEPLOY.md
 
 ## โครงสร้างไฟล์สำคัญ
 

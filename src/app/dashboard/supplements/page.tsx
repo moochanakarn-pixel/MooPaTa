@@ -4,7 +4,6 @@ import { getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { SupplementList, type SupplementItem } from "./supplement-list";
-import { WheyReminderToggle } from "./whey-reminder-toggle";
 
 export default async function SupplementsPage() {
   const userId = await getSessionUserId();
@@ -15,14 +14,11 @@ export default async function SupplementsPage() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const [supplements, user] = await Promise.all([
-    db.supplement.findMany({
-      where: { userId, active: true },
-      orderBy: { createdAt: "asc" },
-      include: { logs: { where: { takenAt: { gte: todayStart } }, take: 1 } },
-    }),
-    db.user.findUnique({ where: { id: userId }, select: { wheyReminderEnabled: true } }),
-  ]);
+  const supplements = await db.supplement.findMany({
+    where: { userId, active: true },
+    orderBy: { createdAt: "asc" },
+    include: { logs: { where: { takenAt: { gte: todayStart } }, take: 1 } },
+  });
 
   const items: SupplementItem[] = supplements.map((s) => ({
     id: s.id,
@@ -46,10 +42,6 @@ export default async function SupplementsPage() {
 
       <h1 className="mb-1 text-xl font-bold">{t("title")}</h1>
       <p className="mb-8 text-sm text-neutral-500">{t("subtitle")}</p>
-
-      <div className="mb-8">
-        <WheyReminderToggle initialEnabled={user?.wheyReminderEnabled ?? false} />
-      </div>
 
       <SupplementList items={items} />
     </main>

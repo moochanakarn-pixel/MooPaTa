@@ -263,7 +263,6 @@
       "records": { "title": "Stats and records", "desc": "PRs across every sport, plus a daily streak" },
       "chartsHeatmap": { "title": "Charts and heatmap", "desc": "See your consistency going back years" },
       "diary": { "title": "Log food, water, weight", "desc": "Automatically calculates the calories and macros you should get" },
-      "reminders": { "title": "Water + supplement reminders", "desc": "On-time reminders, even on a busy day" },
       "shareCard": { "title": "Share a nice-looking card", "desc": "A summary of your activity or nutrition, ready to post" }
     },
     "connectError": "Connection failed ({error}) — try again",
@@ -480,15 +479,6 @@
     },
     "macroPreferences": {
       "heading": "Adjust macro split"
-    },
-    "weeklySummary": {
-      "heading": "Weekly summary",
-      "desc": "A recap of last week's activity and food logging, every Monday morning",
-      "enable": "Turn on",
-      "disable": "Turn off",
-      "saving": "Saving...",
-      "needsPush": "You need to turn on notifications on the <link>food diary page</link> first before you can get this one",
-      "saveError": "Save failed, try again"
     },
     "healthFlags": {
       "heading": "Health flags",

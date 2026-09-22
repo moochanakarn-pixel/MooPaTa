@@ -64,10 +64,6 @@ Fill in `.env` for production:
 - `TOKEN_ENCRYPTION_KEY` / `SESSION_SECRET` — new values, `openssl rand -hex 32` each (don't reuse the ones from local dev)
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` — from an OAuth 2.0 Client ID
   created in Google Cloud Console (APIs & Services → Credentials)
-- `CRON_SECRET` — new value, `openssl rand -hex 32`
-- `VAPID_PUBLIC_KEY` / `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (same value, both vars) / `VAPID_PRIVATE_KEY` — for the water-reminder
-  push notifications. Generate once with `npx web-push generate-vapid-keys`.
-  `VAPID_SUBJECT` is a `mailto:` address push services may use to contact you about the key.
 
 ## 5. Build and run with PM2
 
@@ -109,28 +105,12 @@ sudo certbot --nginx -d yourdomain.com
 
 Certbot rewrites the Nginx config for HTTPS and sets up auto-renewal.
 
-## 7. Water-reminder push notifications
+## 7. Push notifications — removed
 
-One crontab entry, polling `/api/cron/water-reminder` every 15 minutes. Each
-user has their own configurable window and frequency (set via the toggle on
-the food page — start/end time + how often), so this endpoint just checks,
-per user, whether "now" falls in their window and enough time has passed
-since their last reminder; only users who've turned reminders on get a push:
-
-```
-*/15 * * * * curl -s -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" "https://yourdomain.com/api/cron/water-reminder" >> /home/moopata/cron-water.log 2>&1
-```
-
-## 7b. Post-workout whey reminder
-
-Another crontab entry, polling `/api/cron/whey-reminder` every 15 minutes.
-Fires 30-60 minutes after a logged activity ends for users who've turned
-it on (toggle on the supplements page) — a separate opt-in from the water
-reminder above:
-
-```
-*/15 * * * * curl -s -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" "https://yourdomain.com/api/cron/whey-reminder" >> /home/moopata/cron-whey.log 2>&1
-```
+Water/whey/weekly-summary push reminders (and their `/api/cron/*` routes,
+`CRON_SECRET`, `VAPID_*` env vars) were removed entirely — see CLAUDE.md.
+If you set up any crontab entries polling those routes, remove them; the
+routes now 404.
 
 ## 8. Deploying updates later
 
@@ -149,13 +129,10 @@ pm2 restart moopata
 - **Google redirects back with `error=invalid_state`**: `APP_BASE_URL` / `GOOGLE_REDIRECT_URI`
   don't match what's configured in the Google Cloud Console OAuth client, or you're mixing http/https.
 - **502 from Nginx**: check `pm2 logs moopata` — usually a missing/wrong env var.
-- **Cron reminder doing nothing**: check `cat /home/moopata/cron-water.log` (or `cron-whey.log`);
-  a 401 means `CRON_SECRET` doesn't match between the crontab command and `.env`.
 - **Cloudflare shows "too many redirects"**: SSL/TLS mode is on **Flexible** —
   switch it to **Full** (see step 1).
-- **"Today" starts/ends at the wrong time, or water/whey reminders fire at the
-  wrong hour**: the server's OS timezone isn't Thai time and `TZ` isn't set in
-  `.env` — every "today" boundary and reminder-schedule check runs on the
+- **"Today" starts/ends at the wrong time**: the server's OS timezone isn't
+  Thai time and `TZ` isn't set in `.env` — every "today" boundary runs on the
   server process's own local time, with no per-user timezone anywhere. Set
   `TZ="Asia/Bangkok"` in `.env` (see `.env.example`) and restart PM2. To
   confirm it's taking effect: `TZ=Asia/Bangkok node -e "console.log(new Date().toString())"`

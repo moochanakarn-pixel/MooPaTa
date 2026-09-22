@@ -27,11 +27,9 @@ export async function createAuthToken(userId: string, type: AuthTokenType, ttlMs
 // Validates + marks used in one step (never returns the same token as
 // valid twice) — returns the userId it belonged to, or null if the token
 // is unknown, wrong type, expired, or already used. The claim itself is a
-// single conditional UPDATE (only succeeds while usedAt is still null),
-// same atomic-claim shape as src/app/api/cron/water-reminder/route.ts
-// uses for its own send-once guarantee — so two near-simultaneous uses of
-// the same link (a double click, a mail client prefetching it) can't both
-// win.
+// single conditional UPDATE (only succeeds while usedAt is still null) —
+// so two near-simultaneous uses of the same link (a double click, a mail
+// client prefetching it) can't both win.
 export async function consumeAuthToken(rawToken: string, type: AuthTokenType): Promise<string | null> {
   const tokenHash = hashToken(rawToken);
   const token = await db.authToken.findUnique({ where: { tokenHash } });
