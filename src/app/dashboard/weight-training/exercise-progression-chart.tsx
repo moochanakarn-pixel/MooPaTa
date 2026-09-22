@@ -25,7 +25,7 @@ export function ExerciseProgressionChart({
   color: string;
   formatValue: (v: number) => string;
 }) {
-  const t = useTranslations("records");
+  const t = useTranslations("weightTraining");
 
   // Needs at least two sessions to show a trend at all — a single data
   // point has nothing to compare it against.

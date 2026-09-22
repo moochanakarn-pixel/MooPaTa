@@ -7,18 +7,15 @@ import { getSessionUserId } from "@/lib/session";
 import {
   activitySpeedValue,
   activityTypeLabel,
-  formatActivityDate,
   formatDistanceKm,
   formatDuration,
   formatElevationM,
   type FormatLang,
   type UnitSystem,
 } from "@/lib/format";
-import { estimateOneRepMaxKg, getExerciseStats } from "@/lib/exercise-stats";
 import { computePrProgression } from "@/lib/pr-progression";
 import { ActivityIcon } from "../activity-icon";
 import { PrProgressionChart } from "./pr-progression-chart";
-import { ExerciseProgressionChart } from "./exercise-progression-chart";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -93,7 +90,7 @@ export default async function RecordsPage() {
   ]);
   const lang: FormatLang = locale === "en" ? "en" : "th";
 
-  const [grouped, history, exerciseStats] = await Promise.all([
+  const [grouped, history] = await Promise.all([
     db.activity.groupBy({
       by: ["type"],
       where: { userId },
@@ -106,15 +103,7 @@ export default async function RecordsPage() {
       orderBy: { startedAt: "asc" },
       select: { type: true, startedAt: true, distanceMeters: true, avgSpeedMs: true },
     }),
-    getExerciseStats(userId),
   ]);
-
-  // Only exercises with an actual weight logged have a meaningful PR — a
-  // bodyweight-only exercise (weightKg never given) has nothing numeric to
-  // rank, so prWeightKg stays null for it and it's left out of this list.
-  const prList = exerciseStats
-    .filter((s) => s.prWeightKg !== null)
-    .sort((a, b) => a.name.localeCompare(b.name, "th"));
 
   const records: TypeRecord[] = await Promise.all(
     grouped.map(async (g) => {
@@ -274,61 +263,25 @@ export default async function RecordsPage() {
                   />
                 </div>
               )}
+
+              {/* WeightTraining never has distance/pace/elevation, so this
+                  card is otherwise just an activity count — the exercise-
+                  level PR list + progression charts that used to fill that
+                  gap right here now live on their own page instead (a
+                  dedicated weight-training overview also has session
+                  history, not just PRs), reached from this link. */}
+              {r.type === "WeightTraining" && (
+                <Link
+                  href="/dashboard/weight-training"
+                  className="mt-3 block border-t border-neutral-800/60 pt-3 text-center text-xs text-[#fc4c02] hover:underline"
+                >
+                  {t("weightTrainingLink")}
+                </Link>
+              )}
             </div>
             );
           })}
           </div>
-
-          {prList.length > 0 && (
-            <div className="mt-8">
-              <h2 className="mb-4 font-medium">{t("exercisePrTitle")}</h2>
-              <div className="space-y-2">
-                {prList.map((s) => {
-                  // Session-over-session trend — only weighted sessions
-                  // have a numeric point to plot (a bodyweight-only session
-                  // for this name in between two weighted ones just isn't
-                  // part of the weight trend at all).
-                  const progressionPoints = s.history
-                    .filter((h): h is typeof h & { maxWeightKg: number } => h.maxWeightKg !== null)
-                    .map((h) => ({ ms: h.atMs, value: h.maxWeightKg }));
-                  return (
-                    <div
-                      key={s.name}
-                      className="rounded-xl border border-neutral-800/80 bg-neutral-900/40 px-4 py-3 transition hover:border-neutral-700 hover:bg-neutral-900/70"
-                    >
-                      <Link href={`/dashboard/activity/${s.prActivityId}`} className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-neutral-200">{s.name}</p>
-                          <p className="text-xs text-neutral-500">{formatActivityDate(new Date(s.prAtMs), lang)}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold tabular-nums text-neutral-100">
-                            {s.prWeightKg} {t("kg")} × {s.prReps}
-                          </p>
-                          {/* At exactly 1 rep the PR set already is the 1RM — an
-                              "estimate" line would just repeat the number above.
-                              prWeightKg is only possibly null before the filter
-                              above (bodyweight-only exercises, excluded from
-                              this list already) — re-checked here because that
-                              filter doesn't narrow the array's element type. */}
-                          {s.prWeightKg !== null && s.prReps > 1 && (
-                            <p className="text-xs tabular-nums text-neutral-500">
-                              {t("oneRepMaxEstimate", { value: Math.round(estimateOneRepMaxKg(s.prWeightKg, s.prReps)) })}
-                            </p>
-                          )}
-                        </div>
-                      </Link>
-                      <ExerciseProgressionChart
-                        points={progressionPoints}
-                        color="#8b5cf6"
-                        formatValue={(v) => `${v > 0 ? "+" : ""}${v.toFixed(1)} ${t("kg")}`}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </>
       )}
     </main>

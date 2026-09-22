@@ -707,10 +707,7 @@
     "distancePrTrend": "Distance PR trend",
     "pacePrTrend": "Pace PR trend",
     "speedPrTrend": "Speed PR trend",
-    "exercisePrTitle": "Exercise PRs",
-    "oneRepMaxEstimate": "~{value} kg (est. 1RM)",
-    "weightTrend": "Weight trend (last {count} sessions)",
-    "kg": "kg"
+    "weightTrainingLink": "See full weight-training history & PRs"
   },
   "compare": {
     "title": "Compare activities",
@@ -1011,6 +1008,10 @@
     "subtitle": "Your recent sessions — see what you did last time and how heavy, so you can plan this session.",
     "emptyState": "No weight training logged yet — log an activity with exercises to see a summary here.",
     "sessionExerciseCount": "{count} exercises",
-    "recordsLink": "See PRs and per-exercise weight trends on the Records page"
+    "recentSessionsTitle": "Recent sessions",
+    "exercisePrTitle": "Exercise PRs",
+    "oneRepMaxEstimate": "~{value} kg (est. 1RM)",
+    "weightTrend": "Weight trend (last {count} sessions)",
+    "kg": "kg"
   }
 }

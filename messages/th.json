@@ -707,10 +707,7 @@
     "distancePrTrend": "แนวโน้ม PR ระยะทาง",
     "pacePrTrend": "แนวโน้ม PR เพซ",
     "speedPrTrend": "แนวโน้ม PR ความเร็ว",
-    "exercisePrTitle": "PR ท่าออกกำลังกาย",
-    "oneRepMaxEstimate": "~{value} กก. (1RM ประมาณ)",
-    "weightTrend": "เทรนด์น้ำหนัก ({count} ครั้งล่าสุด)",
-    "kg": "กก."
+    "weightTrainingLink": "ดูประวัติและ PR ท่าเวทเทรนนิ่งแบบเต็ม"
   },
   "compare": {
     "title": "เทียบกิจกรรม",
@@ -1011,6 +1008,10 @@
     "subtitle": "ประวัติการเล่นล่าสุด — ดูว่าครั้งก่อนเล่นท่าไหน ยกหนักแค่ไหน จะได้วางแผนครั้งนี้ต่อได้",
     "emptyState": "ยังไม่มีการบันทึกเวทเทรนนิ่ง — บันทึกกิจกรรมที่มีท่าเวทเพื่อดูสรุปตรงนี้",
     "sessionExerciseCount": "{count} ท่า",
-    "recordsLink": "ดู PR และแนวโน้มน้ำหนักแต่ละท่าที่หน้าสถิติสูงสุด"
+    "recentSessionsTitle": "ประวัติการเล่นล่าสุด",
+    "exercisePrTitle": "PR ท่าออกกำลังกาย",
+    "oneRepMaxEstimate": "~{value} กก. (1RM ประมาณ)",
+    "weightTrend": "เทรนด์น้ำหนัก ({count} ครั้งล่าสุด)",
+    "kg": "กก."
   }
 }
