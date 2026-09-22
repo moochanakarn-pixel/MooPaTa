@@ -195,6 +195,11 @@ describe("parseActivityText", () => {
     expect(parsed.exercises[0].notes).toBeNull();
   });
 
+  it("keeps a literal '|' inside the note instead of splitting it into a dropped extra column", () => {
+    const parsed = parseActivityText("สควอท | 1 | 10 | 60 | 8 | ทำได้ดี | ยกง่าย");
+    expect(parsed.exercises[0].notes).toBe("ทำได้ดี | ยกง่าย");
+  });
+
   it("reads เคเดนซ์เฉลี่ย (avgCadence) in Thai and English", () => {
     expect(parseActivityText("เคเดนซ์เฉลี่ย: 168").avgCadence).toBe(168);
     expect(parseActivityText("Cadence: 90").avgCadence).toBe(90);

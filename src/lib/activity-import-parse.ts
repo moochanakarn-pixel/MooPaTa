@@ -193,9 +193,15 @@ function parseExerciseSetLine(
   const reps = firstNumber(cells[2]);
   const weightKg = cells[3] !== undefined ? firstNumber(cells[3]) : null;
   const rpe = cells[4] !== undefined ? firstNumber(cells[4]) : null;
+  // Notes is free text (not a fixed-format number like the columns before
+  // it), so a literal "|" typed inside it — e.g. copied from a handwritten
+  // note that itself used a pipe — would otherwise split into an extra
+  // cell and silently vanish if we only read cells[5]. It's always the
+  // last column the prompt asks for, so rejoin everything from there
+  // onward instead of taking a single fixed index.
   // Same "-" placeholder convention as every other optional field in this
   // parser (NOTES_LINE, BEST_PACE_LINE) — not literal note text.
-  const rawNotes = cells[5] !== undefined ? cells[5].trim() : "";
+  const rawNotes = cells.slice(5).join(" | ").trim();
   const notes = rawNotes && rawNotes !== "-" ? rawNotes.slice(0, 500) : null;
   if (!name || reps === null) return null;
   return { name, reps: Math.round(reps), weightKg, rpe: rpe !== null ? Math.round(rpe * 2) / 2 : null, notes };
