@@ -71,7 +71,11 @@ export function BodyMetricTrendChart({
 
   const first = points[0];
   const latest = points[points.length - 1];
-  const delta = latest.value - first.value;
+  // Round before comparing to zero (not after) — same reasoning as
+  // WeightTrendChart's deltaKg: tiny noise between two readings would
+  // otherwise pass the raw !== 0 sign check but round to a misleading
+  // "-0.0"/"+0.0" once formatValue's default 1-decimal display kicks in.
+  const delta = Math.round((latest.value - first.value) * 10) / 10;
 
   const linePath = points
     .map((p, i) => {

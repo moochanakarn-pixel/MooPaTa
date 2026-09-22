@@ -51,7 +51,11 @@ export function NutritionPeriodComparison({
   const numberLocale = locale === "en" ? "en-US" : "th-TH";
   const calDiff = Math.round(thisWeek.calories - lastWeek.calories);
   const proteinDiff = Math.round(thisWeek.proteinG - lastWeek.proteinG);
-  const waterDiff = Math.round(thisWeek.waterMl - lastWeek.waterMl);
+  // Rounded to the same 0.1L precision the badge displays (not to whole ml)
+  // before deciding its color — a 40ml diff would otherwise round to "0.0"
+  // for display while still being colored as an increase from the raw,
+  // finer-grained value.
+  const waterDiffL = Math.round((thisWeek.waterMl - lastWeek.waterMl) / 100) / 10;
 
   return (
     <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
@@ -72,7 +76,7 @@ export function NutritionPeriodComparison({
         <Metric
           value={t("litersValue", { value: (thisWeek.waterMl / 1000).toFixed(1) })}
           label={t("totalWater")}
-          delta={{ text: t("litersValue", { value: formatSignedCount(Math.round(waterDiff / 100) / 10) }), tone: tone(waterDiff) }}
+          delta={{ text: t("litersValue", { value: formatSignedCount(waterDiffL) }), tone: tone(waterDiffL) }}
           vsLastWeek={t("vsLastWeek")}
         />
       </div>

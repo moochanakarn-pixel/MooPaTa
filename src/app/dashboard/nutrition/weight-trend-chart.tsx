@@ -45,7 +45,11 @@ export function WeightTrendChart({ points }: { points: WeightPoint[] }) {
 
   const first = points[0];
   const latest = points[points.length - 1];
-  const deltaKg = latest.weightKg - first.weightKg;
+  // Round before comparing to zero (not after) — tiny scale-to-scale noise
+  // (e.g. 0.04kg) would otherwise pass the raw !== 0 sign check but round to
+  // a misleading "-0.0"/"+0.0" for display. Same convention as
+  // weekly-summary.ts and dashboard/page.tsx's weightDeltaKg.
+  const deltaKg = Math.round((latest.weightKg - first.weightKg) * 10) / 10;
 
   const linePath = points
     .map((p, i) => {
