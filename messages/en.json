@@ -1002,6 +1002,7 @@
     "recentSessionsTitle": "Recent sessions",
     "exercisePrTitle": "Exercise PRs",
     "oneRepMaxEstimate": "~{value} kg (est. 1RM)",
+    "prAchievedOn": "PR on {date}",
     "weightTrend": "Weight trend (last {count} sessions)",
     "kg": "kg"
   }

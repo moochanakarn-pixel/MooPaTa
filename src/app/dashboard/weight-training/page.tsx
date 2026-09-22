@@ -62,6 +62,7 @@ export default async function WeightTrainingPage() {
       name: s.name,
       prActivityId: s.prActivityId,
       prAtMs: s.prAtMs,
+      latestAtMs: s.latestAtMs,
       prWeightKg: s.prWeightKg,
       prReps: s.prReps,
       // At exactly 1 rep the PR set already is the 1RM — an "estimate"

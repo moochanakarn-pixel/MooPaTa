@@ -22,6 +22,14 @@ export interface PrListItem {
   name: string;
   prActivityId: string;
   prAtMs: number;
+  // Date of this exercise's most recently logged session — NOT necessarily
+  // the same session as the PR (prAtMs) above. This list is sorted by this
+  // field (see page.tsx), so the date shown under the name has to match it
+  // — showing prAtMs there instead reads as "sorted wrong" once an exercise
+  // has since been trained again below its own PR weight (a deload, a
+  // lighter day), because the visible date wouldn't track the visible
+  // order at all.
+  latestAtMs: number;
   prWeightKg: number;
   prReps: number;
   // Pre-computed server-side (Math.round(estimateOneRepMaxKg(...))) —
@@ -130,7 +138,7 @@ export function WeightTrainingTabs({ sessions, prItems }: { sessions: SessionSum
               <Link href={`/dashboard/activity/${s.prActivityId}`} className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-neutral-200">{s.name}</p>
-                  <p className="text-xs text-neutral-500">{formatActivityDate(new Date(s.prAtMs), lang)}</p>
+                  <p className="text-xs text-neutral-500">{formatActivityDate(new Date(s.latestAtMs), lang)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold tabular-nums text-neutral-100">
@@ -138,6 +146,12 @@ export function WeightTrainingTabs({ sessions, prItems }: { sessions: SessionSum
                   </p>
                   {s.oneRepMaxEstimate !== null && (
                     <p className="text-xs tabular-nums text-neutral-500">{t("oneRepMaxEstimate", { value: s.oneRepMaxEstimate })}</p>
+                  )}
+                  {/* The PR date only needs calling out when it's NOT the
+                      most recent session (shown above already) — otherwise
+                      this would just repeat the same date twice. */}
+                  {s.prAtMs !== s.latestAtMs && (
+                    <p className="text-[11px] text-neutral-600">{t("prAchievedOn", { date: formatActivityDate(new Date(s.prAtMs), lang) })}</p>
                   )}
                 </div>
               </Link>

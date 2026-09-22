@@ -1002,6 +1002,7 @@
     "recentSessionsTitle": "ประวัติการเล่นล่าสุด",
     "exercisePrTitle": "PR ท่าออกกำลังกาย",
     "oneRepMaxEstimate": "~{value} กก. (1RM ประมาณ)",
+    "prAchievedOn": "PR เมื่อ {date}",
     "weightTrend": "เทรนด์น้ำหนัก ({count} ครั้งล่าสุด)",
     "kg": "กก."
   }
