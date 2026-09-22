@@ -20,6 +20,7 @@ import {
 import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
 import { WeightLogCard, type WeightLogEntry } from "./weight-log-card";
 import { CalorieTrendChart, type CalorieDayBucket } from "./calorie-trend-chart";
+import { MacroWeekTable, type MacroWeekDay } from "./macro-week-table";
 import { CalorieRing } from "./calorie-ring";
 import { NutritionPeriodComparison } from "./nutrition-period-comparison";
 import { ProgressPhotosCard, type ProgressPhotoAngleState } from "./progress-photos-card";
@@ -29,6 +30,7 @@ import { PHOTO_ANGLES } from "@/lib/progress-photo-types";
 import { QuickDownloadSheet } from "../quick-download-sheet";
 
 const TREND_DAYS = 14;
+const MACRO_TABLE_DAYS = 7;
 const STREAK_DAYS_BACK = 60;
 
 // Local calendar date, matching todayStart's own use of local getters below
@@ -275,9 +277,21 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
   const baseTargets = computeTargets(profile, latestBodyComposition, macroPrefs);
 
   const caloriesByDay = new Map<string, number>();
+  // Same grouping as caloriesByDay above, but keeping the full per-macro
+  // breakdown instead of collapsing to a single calories number — needed
+  // for MacroWeekTable below, which shows carb/protein/fat side by side
+  // rather than just calories.
+  const macrosByDay = new Map<string, { carbG: number; proteinG: number; fatG: number }>();
   for (const log of trendFoodLogs) {
     const key = dayKey(log.loggedAt);
-    caloriesByDay.set(key, (caloriesByDay.get(key) ?? 0) + macrosForGrams(log.food, log.grams).calories);
+    const m = macrosForGrams(log.food, log.grams);
+    caloriesByDay.set(key, (caloriesByDay.get(key) ?? 0) + m.calories);
+    const prevMacros = macrosByDay.get(key) ?? { carbG: 0, proteinG: 0, fatG: 0 };
+    macrosByDay.set(key, {
+      carbG: prevMacros.carbG + m.carbG,
+      proteinG: prevMacros.proteinG + m.proteinG,
+      fatG: prevMacros.fatG + m.fatG,
+    });
   }
   // Separate from caloriesByDay above — that one is calories *eaten* (from
   // FoodLog), this groups *burned* per-activity duration+calories pairs so
@@ -328,6 +342,28 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
       label: d.toLocaleDateString(numberLocale, { day: "numeric", month: "short" }),
       calories: caloriesByDay.get(key) ?? 0,
       targetCalories: dayTarget.targetCalories,
+    };
+  });
+
+  // Newest first (today at index 0) — unlike trendDays above (oldest→newest,
+  // built for a left-to-right chart), a table reads top-to-bottom and
+  // "today" is what a user checking in wants to see without scrolling past
+  // 6 older rows first. trendStart already covers 14 days back, well past
+  // the 7 this table needs, so no separate query.
+  const macroTableDays: MacroWeekDay[] = Array.from({ length: MACRO_TABLE_DAYS }, (_, i) => {
+    const d = new Date(todayStart);
+    d.setDate(d.getDate() - i);
+    const key = dayKey(d);
+    const dayTarget = applyActivityBonus(baseTargets, activitiesByDay.get(key) ?? []);
+    const eaten = macrosByDay.get(key) ?? { carbG: 0, proteinG: 0, fatG: 0 };
+    return {
+      label: d.toLocaleDateString(numberLocale, { day: "numeric", month: "short" }),
+      carbG: eaten.carbG,
+      proteinG: eaten.proteinG,
+      fatG: eaten.fatG,
+      targetCarbG: dayTarget.carbG,
+      targetProteinG: dayTarget.proteinG,
+      targetFatG: dayTarget.fatG,
     };
   });
 
@@ -461,6 +497,10 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
 
       <div className="mb-6">
         <CalorieTrendChart days={trendDays} />
+      </div>
+
+      <div className="mb-6">
+        <MacroWeekTable days={macroTableDays} />
       </div>
 
       <NutritionPeriodComparison

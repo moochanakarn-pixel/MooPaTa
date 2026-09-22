@@ -320,6 +320,15 @@
       "targetKcal": "target {kcal} kcal",
       "dashedLineNote": "Dashed line = that day's target"
     },
+    "macroWeekTable": {
+      "title": "Daily macros (last 7 days)",
+      "date": "Date",
+      "carb": "Carb",
+      "protein": "Protein",
+      "fat": "Fat",
+      "unitG": "g",
+      "legend": "Orange numbers = over that day's target"
+    },
     "weightLogCard": {
       "title": "Weight trend",
       "needMoreLogs": "Log your weight at least twice to see a trend chart",
