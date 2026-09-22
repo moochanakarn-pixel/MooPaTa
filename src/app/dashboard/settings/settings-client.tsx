@@ -181,10 +181,19 @@ export function ActivityGoalsInput({ initialGoals, unit }: { initialGoals: Activ
 
   return (
     <div className="space-y-3">
+      {/* flex-wrap on both rows below — label/select (w-28) + input (w-24) +
+          unit + button(s), all fixed-width and none shrinking, add up to
+          wider than a narrow phone's available width (~300px after the
+          page's own padding). Without wrap, the button(s) at the end just
+          overflow past the screen edge instead of dropping to a second
+          line — a real user hit this (screenshot, "ปุ่มล้น" = button
+          overflowing) on the "เพิ่มเป้าหมายใหม่" row specifically, since a
+          longer activity name like "ปั่นจักรยาน" leaves the least room left
+          over for its trailing "เพิ่ม" button. */}
       {goals.length > 0 && (
         <div className="space-y-2">
           {goals.map((g) => (
-            <div key={g.activityType} className="flex items-center gap-2">
+            <div key={g.activityType} className="flex flex-wrap items-center gap-2">
               <span className="w-28 flex-none truncate text-sm text-neutral-300">{typeLabel(g.activityType)}</span>
               <input
                 type="number"
@@ -214,7 +223,7 @@ export function ActivityGoalsInput({ initialGoals, unit }: { initialGoals: Activ
       )}
 
       {availableTypes.length > 0 && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <select
             value={newType}
             onChange={(e) => setNewType(e.target.value)}
