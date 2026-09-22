@@ -1481,9 +1481,9 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     คนละแบบ แต่นับเข้าเป้าเดียวกันเป๊ะ) เป็นบั๊กคลาสเดียวกับที่ `TypeBreakdown`/`MonthHighlights`'s
     "เร็วที่สุด" เคยแก้ไปแล้วสำหรับการเทียบ/รวมข้ามประเภท
     - **`activityType` เป็น free-text string เหมือน `Activity.type` เอง ไม่ใช่ enum FK** — ตั้งเป้าได้
-      เฉพาะ 8 ประเภทที่ `src/lib/activity-types.ts`'s `LOGGABLE_ACTIVITY_TYPES` กำหนดไว้ (Run/Ride/
-      Walk/Swim/WeightTraining/Football/Badminton/Workout — รายชื่อเดียวกับ dropdown ประเภทกิจกรรมที่
-      หน้าบันทึกกิจกรรมใช้ ดึงมาจากไฟล์เดียวกันกันไม่ให้ 2 จุดนี้ drift ออกจากกัน) validate ที่
+      เฉพาะ 4 ประเภทที่มีระยะทางจริงตาม `src/lib/activity-types.ts`'s `DISTANCE_ACTIVITY_TYPES`
+      (Run/Ride/Walk/Swim — subset ของ `LOGGABLE_ACTIVITY_TYPES` ที่ dropdown บันทึกกิจกรรมใช้ทั้ง 8
+      ประเภท ดูข้อ "ตัดประเภทไม่มีระยะทางออกจากตัวเลือกตั้งเป้า" ด้านล่างสำหรับที่มา) validate ที่
       `POST /api/settings/goal` เท่านั้น (schema เองไม่ได้บังคับ เผื่อกิจกรรมเก่าจาก Strava ที่มี type
       แปลก ๆ เช่น `TrailRun`/`Hike` ไม่ต้องมีเป้าให้ตั้งอยู่แล้ว ไม่ใช่ประเภทที่ผู้ใช้เลือกบันทึกเองได้)
     - **Migration `20260922035631_activity_goals` มี backfill ในตัว** — user ที่เคยตั้ง
@@ -1497,7 +1497,9 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     - **`POST /api/settings/goal` เปลี่ยนจากรับ `{goalKm}` เป็น `{activityType, goalKm}`** —
       `goalKm: null` ลบเป้าของประเภทนั้นทิ้ง (`activityGoal.deleteMany`) ไม่ใช่ null ลบเป้าเดียวทั้งหมด
       แบบเดิม, ไม่ null คือ `upsert` (สร้างใหม่หรือแก้ของเดิม) ตาม unique constraint
-      `[userId, activityType]` — validate `activityType` ต้องอยู่ใน `LOGGABLE_ACTIVITY_TYPES` ก่อนเสมอ
+      `[userId, activityType]` — validate `activityType` ต้องอยู่ใน `DISTANCE_ACTIVITY_TYPES` ก่อนเสมอ
+      ตอนกำลังสร้าง/แก้เป้า (ดูข้อ "ตัดประเภทไม่มีระยะทางออกจากตัวเลือกตั้งเป้า" ด้านล่างสำหรับรายละเอียด
+      เต็มว่าทำไมถึงตัดจาก 8 ประเภทเหลือ 4 ในรอบถัดมา)
     - **`ActivityGoalsInput` (`settings-client.tsx`, เดิมชื่อ `GoalInput`)** — แต่ละเป้าที่ตั้งไว้แล้ว
       โชว์เป็นแถวแก้ไขได้ (ชื่อประเภท + ช่องกรอกตัวเลข pre-fill ค่าเดิม + ปุ่มบันทึก/ลบ) ต่อด้วยแถว
       "เพิ่มเป้าหมายใหม่" (dropdown เฉพาะประเภทที่ยังไม่มีเป้า + ช่องกรอก + ปุ่มเพิ่ม) ซ่อนแถวเพิ่มไปเลย
@@ -1523,6 +1525,32 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
       — และทดสอบเพิ่ม/ลบเป้าจริงผ่าน Playwright (เพิ่ม "เดิน" ที่หน้าตั้งค่า → เห็นในลิสต์ทันที, ลบ
       "ปั่นจักรยาน" → หายจากทั้งหน้าตั้งค่าและหน้าแรกทันทีหลัง navigate ใหม่) — `npx tsc --noEmit`,
       `npm run build`, `npm run test` (203 เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
+    - **ตัดประเภทไม่มีระยะทางออกจากตัวเลือกตั้งเป้า** — ผู้ใช้ deploy ขึ้น production แล้วรายงานว่า
+      "เวทหน่วยเป็นกม.มันแปลกๆ" — สาเหตุคือ migration backfill ด้านบน (เดาประเภทจากกีฬาที่บันทึกบ่อย
+      ที่สุด) ดันไปเดาได้ `WeightTraining` สำหรับ user คนนี้ (เพราะบันทึกเวทเทรนนิ่งบ่อยกว่ากีฬาอื่น)
+      กลายเป็นเป้าหมาย "เวทเทรนนิ่ง ... กม./เดือน" ที่ไม่มีความหมายเลย เพราะเวทเทรนนิ่ง/ฟุตบอล/แบดมินตัน/
+      ออกกำลังกายทั่วไปไม่มีทางมีระยะทางที่กรอกจริงในแอพนี้อยู่แล้ว (`computeAvgSpeedMs`'s comment ก็บอก
+      ไว้อยู่แล้วว่าเวทเทรนนิ่งไม่มีระยะทาง) — เพิ่ม `DISTANCE_ACTIVITY_TYPES` (`src/lib/activity-types.ts`,
+      subset ของ `LOGGABLE_ACTIVITY_TYPES` เหลือแค่ Run/Ride/Walk/Swim) ใช้แทนที่ทั้งสองจุด:
+      - **`ActivityGoalsInput`'s "เพิ่มเป้าหมายใหม่" dropdown** — เหลือแค่ 4 ตัวเลือกนี้ ไม่ใช่ 8 ตัวเลือก
+        เดิม (แต่ยังโชว์/แก้ไข/ลบเป้าที่ตั้งไว้ผิดประเภทอยู่แล้วได้ตามปกติ — เกณฑ์นี้จำกัดแค่ตัวเลือกตอน
+        "เพิ่มใหม่" ไม่ได้ซ่อนของเดิม เพราะต้องให้ผู้ใช้ลบเป้าที่ผิดออกได้)
+      - **`POST /api/settings/goal`** — เช็ค `DISTANCE_ACTIVITY_TYPES` เฉพาะตอน `goalKm !== null`
+        (กำลังจะสร้าง/แก้เป้า) เท่านั้น ไม่เช็คตอนลบ (`goalKm: null`) เพื่อให้ยังลบเป้าที่ตั้งผิดประเภท
+        ไว้แต่เดิม (จาก backfill หรือจุดอื่นในอนาคต) ได้เสมอแม้ประเภทนั้นจะไม่อยู่ในลิสต์ที่อนุญาตสร้าง
+        ใหม่แล้วก็ตาม
+      - **`scripts/cleanup-non-distance-activity-goals-2026-09-22.mjs`** — ลบ `ActivityGoal` แถวที่มี
+        `activityType` นอกเหนือจาก 4 ประเภทนี้ทิ้งทั้งหมด (ไม่ reassign ให้ประเภทอื่นเพราะเป้าหมายเดิม
+        ไม่เคยผูกกับประเภทไว้จริง ๆ ตั้งแต่แรก ไม่มีทางรู้ว่าผู้ใช้ตั้งใจเป้าของกีฬาไหนจริง — ลบแล้วให้
+        ผู้ใช้ตั้งใหม่เองที่หน้าตั้งค่าถ้าต้องการ ตรงไปตรงมากว่าเดาผิดซ้ำสอง) safe to re-run — ต้องรัน
+        บน production หลัง deploy โค้ดรอบนี้ (ตามที่ผู้ใช้เจอเคสนี้จริงจาก backfill ของ migration ก่อนหน้า)
+      - ทดสอบจริงด้วยการ seed `ActivityGoal` แถวปลอม (`activityType: "WeightTraining"`) ตรงผ่าน Prisma
+        แล้ว: (1) เปิดหน้าตั้งค่าจริง ยืนยันแถวเดิมยังโชว์+ลบได้ปกติ แต่ dropdown "เพิ่มเป้าหมายใหม่"
+        เหลือแค่ 4 ตัวเลือก, (2) ยิง `POST /api/settings/goal` ขอสร้างเป้า Football ตรง ๆ ได้ `400
+        invalid_activity_type`, (3) ยิงลบเป้า WeightTraining เดิมผ่าน API เดียวกันยังได้ `200 ok`
+        ตามปกติ, (4) รัน cleanup script เห็น log "Deleting goal: ... activityType=WeightTraining" แล้ว
+        แถวหายจริง รันซ้ำรอบสองได้ "nothing to clean up" ยืนยัน idempotent — `npx tsc --noEmit`,
+        `npm run build`, `npm run test` (203 เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
   - **ไม่มีการ์ด "สรุปกิจกรรมทั้งหมด" (ยอดสะสมตลอดกาล) อยู่บนหน้าแรกแล้ว** — ลบออกเพราะเป็นตัวเลข
     เดียวกับที่หน้า "สถิติสูงสุด" (`/dashboard/records`) โชว์อยู่แล้วเป๊ะ (มีปุ่มลัดไปหน้านั้นอยู่
     เหนือขึ้นไปนิดเดียว) แถมเป็นยอดสะสมตลอดกาลที่ไม่ actionable ไม่ควรเป็นสิ่งแรกที่เห็นก่อน

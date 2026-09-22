@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import type { UnitSystem } from "@/lib/format";
 import type { AppLocale } from "@/lib/locale";
-import { LOGGABLE_ACTIVITY_TYPES, type LoggableActivityType } from "@/lib/activity-types";
+import { DISTANCE_ACTIVITY_TYPES, type DistanceActivityType, type LoggableActivityType } from "@/lib/activity-types";
 
 export function UnitToggle({ initial }: { initial: UnitSystem }) {
   const t = useTranslations("settings.unitToggle");
@@ -126,15 +126,23 @@ export function ActivityGoalsInput({ initialGoals, unit }: { initialGoals: Activ
   );
   const [savingType, setSavingType] = useState<string | null>(null);
 
+  // Only the types that genuinely have a distance concept in this app can
+  // be picked for a new goal — WeightTraining/Football/Badminton/Workout
+  // are stationary or GPS-untracked here, so a "กม./เดือน" target for them
+  // reads as nonsensical rather than just unused (see
+  // DISTANCE_ACTIVITY_TYPES's comment). A goal already configured for one
+  // of those (e.g. from the old monthlyGoalKm backfill guessing wrong) can
+  // still be edited/removed below — this list only narrows what's offered
+  // for a *new* goal, not what's already there.
   const configuredTypes = new Set(goals.map((g) => g.activityType));
-  const availableTypes = LOGGABLE_ACTIVITY_TYPES.filter((v) => !configuredTypes.has(v));
+  const availableTypes = DISTANCE_ACTIVITY_TYPES.filter((v) => !configuredTypes.has(v));
   const [newType, setNewType] = useState<string>(availableTypes[0] ?? "");
   const [newValue, setNewValue] = useState("");
   // Keep the "add" dropdown's selection valid as the available list shrinks
   // (a type just got configured) or grows (one was deleted) — a stale
   // selection would silently resubmit for a type no longer offered.
   useEffect(() => {
-    if (availableTypes.length > 0 && !availableTypes.includes(newType as LoggableActivityType)) {
+    if (availableTypes.length > 0 && !availableTypes.includes(newType as DistanceActivityType)) {
       setNewType(availableTypes[0]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
