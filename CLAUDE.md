@@ -37,6 +37,7 @@
 | `FoodLog` | หนึ่งรายการที่กินจริง (อ้าง `Food` + grams + เวลา + มื้อ) — ไม่เคยถูกลบทิ้งเวลาลบอาหารออกจากคลัง |
 | `ProviderConnection` | OAuth token ของ Google sign-in (เข้ารหัส AES-256-GCM ด้วย `src/lib/crypto.ts`) — แถว `provider: STRAVA` เก่ายังอยู่ในข้อมูลของบัญชีที่เคยเชื่อมไว้ แต่ไม่มีการเชื่อมใหม่/sync ใหม่แล้ว |
 | `Activity` / `ActivityDetail` / `Exercise` / `ExerciseSet` | กิจกรรมออกกำลังกาย — ของเก่า normalize มาจาก Strava (`provider: STRAVA`, เก็บไว้เฉย ๆ ไม่ sync ต่อแล้ว), ของใหม่ทั้งหมดเป็น `provider: MANUAL` ที่ผู้ใช้พิมพ์เอง + รายละเอียดเก่าที่เคยโหลดแบบ lazy จาก Strava (splits/streams/weather, เฉพาะ activity เก่า) + ท่าเวทสำหรับ activity แบบ manual (`Exercise` = ชื่อท่า, แต่ละท่ามี `ExerciseSet[]` เก็บ reps/น้ำหนัก/RPE แยกทีละเซ็ท รองรับพีระมิด/drop set ที่แต่ละเซ็ทไม่เท่ากัน) — `Activity.rpe` กับ `ExerciseSet.rpe` เป็น RPE คนละความหมายกัน (ดู "### 6. อื่น ๆ" ด้านล่าง) |
+| `ActivityGoal` | เป้าหมายระยะทางรายเดือนต่อประเภทกิจกรรม (`userId`+`activityType`+`goalKm`, unique ต่อคู่) — แทนที่ `User.monthlyGoalKm` เดิม (เป้าเดียวรวมทุกกีฬา) ดู "### 6. อื่น ๆ"'s "เป้าหมายรายเดือนแยกตามประเภทกิจกรรม" |
 | `WaterLog` / `WeightLog` | บันทึกน้ำ/น้ำหนักรายครั้ง — log น้ำหนักใหม่จะอัปเดต `User.weightKg` ด้วย |
 | `BodyCompositionLog` | ผลตรวจ InBody/เครื่องวัดองค์ประกอบร่างกายแบบเป็นครั้ง ๆ (ไม่ใช่ทุกวัน) — เฉพาะ `weightKg` บังคับ ที่เหลือ optional ตาม field ที่เครื่องแต่ละรุ่นมี |
 | `PushSubscription` | Web Push subscription ต่ออุปกรณ์ (มีแถว = เปิดแจ้งเตือนสำหรับเครื่องนั้น) |
@@ -1432,11 +1433,59 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
       `HealthSummary`'s `weightDeltaKg !== 0` เช็คยังทำงานถูกต้องกับ `-0` (JS's `-0 !== 0` เป็น `false`
       อยู่แล้ว ไม่ต้องเช็คพิเศษ) — ทดสอบจริงด้วยการ seed weight log 2 ครั้งต่างกัน -0.04 กก. เปิดหน้าแรกจริง
       ยืนยัน badge ไม่โผล่เลย (เทียบกับก่อนแก้ที่จะโชว์ "-0.0" สีเขียว)
-    - **ข้อสังเกตที่ 4 ที่พบระหว่าง audit เดียวกัน — จงใจไม่แก้**: `GoalProgress` รวมระยะทางทุกประเภท
-      กิจกรรมเข้าเป็นเป้าหมายเดียว (`monthlyGoalKm`) ไม่แยกตามประเภท — ไม่ได้แก้เพราะอาจเป็นพฤติกรรมที่
-      ตั้งใจไว้แต่แรก (เป้าหมายระยะทางรวมทุกกีฬา ไม่ใช่เป้าเฉพาะกีฬาเดียว) ต่างจาก 3 จุดข้างบนที่เป็นบั๊ก
-      ชัดเจน (เทียบข้ามประเภทแบบไม่แฟร์/คอลัมน์ตายเปล่า/แสดงผลเพี้ยนจาก rounding) — รอผู้ใช้ยืนยันก่อนว่า
-      อยากเปลี่ยนจริงมั้ยถ้าต้องการ
+    - **ข้อสังเกตที่ 4 ที่พบระหว่าง audit เดียวกัน — ผู้ใช้ขอให้แก้ต่อทันที**: `GoalProgress` เดิมรวม
+      ระยะทางทุกประเภทกิจกรรมเข้าเป็นเป้าหมายเดียว (`User.monthlyGoalKm`) ไม่แยกตามประเภท เป็นบั๊กคลาส
+      เดียวกับ 3 จุดข้างบน (เทียบ/รวมข้ามประเภทกิจกรรมแบบไม่แฟร์) — ดูหัวข้อ **"เป้าหมายรายเดือนแยกตาม
+      ประเภทกิจกรรม"** ด้านล่างสำหรับรายละเอียดการแก้เต็มรูปแบบ (เปลี่ยน schema จริง ไม่ใช่แค่ UI)
+  - **เป้าหมายรายเดือนแยกตามประเภทกิจกรรม (`ActivityGoal` model)** — แทนที่ `User.monthlyGoalKm`
+    (ตัวเลขเดียวรวมทุกกีฬา) ด้วยตาราง `ActivityGoal` (`userId` + `activityType` + `goalKm`, unique
+    ต่อคู่ `[userId, activityType]`) ให้ตั้งเป้าแยกได้ต่อประเภท (เช่น วิ่ง 50 กม./เดือน, ปั่นจักรยาน
+    100 กม./เดือน) — เดิมเป้าหมายเดียวรวมทุกกีฬาทำให้เทียบกันไม่ได้ (วิ่ง 20 กม. กับปั่น 20 กม. ใช้แรง
+    คนละแบบ แต่นับเข้าเป้าเดียวกันเป๊ะ) เป็นบั๊กคลาสเดียวกับที่ `TypeBreakdown`/`MonthHighlights`'s
+    "เร็วที่สุด" เคยแก้ไปแล้วสำหรับการเทียบ/รวมข้ามประเภท
+    - **`activityType` เป็น free-text string เหมือน `Activity.type` เอง ไม่ใช่ enum FK** — ตั้งเป้าได้
+      เฉพาะ 8 ประเภทที่ `src/lib/activity-types.ts`'s `LOGGABLE_ACTIVITY_TYPES` กำหนดไว้ (Run/Ride/
+      Walk/Swim/WeightTraining/Football/Badminton/Workout — รายชื่อเดียวกับ dropdown ประเภทกิจกรรมที่
+      หน้าบันทึกกิจกรรมใช้ ดึงมาจากไฟล์เดียวกันกันไม่ให้ 2 จุดนี้ drift ออกจากกัน) validate ที่
+      `POST /api/settings/goal` เท่านั้น (schema เองไม่ได้บังคับ เผื่อกิจกรรมเก่าจาก Strava ที่มี type
+      แปลก ๆ เช่น `TrailRun`/`Hike` ไม่ต้องมีเป้าให้ตั้งอยู่แล้ว ไม่ใช่ประเภทที่ผู้ใช้เลือกบันทึกเองได้)
+    - **Migration `20260922035631_activity_goals` มี backfill ในตัว** — user ที่เคยตั้ง
+      `monthlyGoalKm` ไว้ (ตัวเลขเดียว ไม่รู้ว่าเป็นเป้าของกีฬาไหน) จะได้ `ActivityGoal` 1 แถวอัตโนมัติ
+      แทนที่จะหายเงียบ ๆ — เดาประเภทจากกีฬาที่บันทึกบ่อยที่สุดในประวัติทั้งหมดของ user นั้น (best-effort
+      เพราะเป้าเดิมไม่เคยผูกกับประเภทไว้จริง ๆ) fallback เป็น `'Run'` ถ้า user มีเป้าแต่ไม่เคยบันทึก
+      กิจกรรมเลย — ทดสอบจริงด้วยการสร้าง scratch database แยก (`moopata_migtest`), apply migration ทุก
+      ตัวยกเว้นตัวนี้, seed user 3 แบบตรงผ่าน SQL ดิบ (มี 2 Ride+1 Run มาก่อน → ควรได้ Ride, มีเป้าแต่ไม่มี
+      กิจกรรมเลย → ควรได้ Run fallback, ไม่มีเป้าเลย → ไม่ควรมีแถวใหม่) แล้ว apply migration ตัวนี้ต่อ
+      ยืนยัน backfill ได้ผลตรงทั้ง 3 เคสเป๊ะ ก่อนลบ scratch database ทิ้ง
+    - **`POST /api/settings/goal` เปลี่ยนจากรับ `{goalKm}` เป็น `{activityType, goalKm}`** —
+      `goalKm: null` ลบเป้าของประเภทนั้นทิ้ง (`activityGoal.deleteMany`) ไม่ใช่ null ลบเป้าเดียวทั้งหมด
+      แบบเดิม, ไม่ null คือ `upsert` (สร้างใหม่หรือแก้ของเดิม) ตาม unique constraint
+      `[userId, activityType]` — validate `activityType` ต้องอยู่ใน `LOGGABLE_ACTIVITY_TYPES` ก่อนเสมอ
+    - **`ActivityGoalsInput` (`settings-client.tsx`, เดิมชื่อ `GoalInput`)** — แต่ละเป้าที่ตั้งไว้แล้ว
+      โชว์เป็นแถวแก้ไขได้ (ชื่อประเภท + ช่องกรอกตัวเลข pre-fill ค่าเดิม + ปุ่มบันทึก/ลบ) ต่อด้วยแถว
+      "เพิ่มเป้าหมายใหม่" (dropdown เฉพาะประเภทที่ยังไม่มีเป้า + ช่องกรอก + ปุ่มเพิ่ม) ซ่อนแถวเพิ่มไปเลย
+      ถ้าตั้งครบทั้ง 8 ประเภทแล้ว — เรียก `useTranslations("logActivity")` เป็น hook ที่สองคู่กับ
+      `useTranslations("settings.goalInput")` เพื่อ reuse ชื่อประเภทกิจกรรม (`typeRun`/`typeRide`/...)
+      แทนสร้าง label ซ้ำใน `settings` namespace (pattern เดียวกับที่ `compare-view.tsx` reuse
+      `activityDetail.stats`) — ไม่เรียก `router.refresh()` หลังบันทึก/ลบเหมือน `UnitToggle`/
+      `LocaleToggle` เพราะไม่มี component อื่นบนหน้าตั้งค่าที่ต้องพึ่งค่านี้ (ต่างจาก unit/locale ที่กระทบ
+      การแสดงผลของฟอร์มอื่นทั้งหน้า) — อัปเดต local state ตรง ๆ จาก response ของ fetch แทน
+    - **หน้าแรก (`dashboard/page.tsx`)** คำนวณระยะทางเดือนนี้แยกตามประเภทจาก `thisMonthActivities`
+      (query เดิมที่ `MonthHighlights`/`TypeBreakdown` ใช้อยู่แล้ว ไม่เพิ่ม query ใหม่) แล้ว map เข้ากับ
+      `activityGoal.findMany` (query ใหม่ 1 ตัว) ได้ array `ActivityGoalProgress[]` ส่งให้ `GoalProgress`
+      — component นี้ไม่รับ `lang` prop จาก page (server component) แล้ว เรียก `useLocale()` เองข้างใน
+      แทน (pattern เดียวกับ `month-highlights.tsx`/`type-breakdown.tsx` ที่เป็น client component ที่
+      self-determine locale ได้เอง ไม่ต้อง prop-drill จาก server parent)
+    - **การ์ดสรุปผลประจำวัน** (`daily-summary/route.tsx`'s "goal" field) เปลี่ยนจากบาร์เดียว+ตัวเลขใหญ่
+      เป็นลิสต์บาร์แยกทีละประเภทที่มีเป้า (label ประเภท + บาร์ + ตัวเลข ต่อแถว ในการ์ดเดียวกัน) — query
+      เปลี่ยนจาก `db.activity.aggregate` (sum เดียว) เป็น `db.activity.groupBy({ by: ["type"] })` เฉพาะ
+      ตอน `activityGoals.length > 0` (เช็คจาก query `ActivityGoal` ก่อน ไม่ใช่แค่ `fields.includes
+      ("goal")` เหมือน `needGoal` เดิมที่เช็คแค่ `!!user.monthlyGoalKm`) — ทดสอบจริงด้วยการ seed user ที่
+      มี 2 เป้า (วิ่ง 50 กม. ทำได้ 20 กม. = 40%, ปั่นจักรยาน 100 กม. ทำได้ 120 กม. = เกินเป้า clamp
+      100% สีเขียว) curl การ์ดจริง (`?fields=goal`) ได้ PNG ถูกต้อง เห็นทั้งสองแถวแยกกันชัดเจน ไม่ crash
+      — และทดสอบเพิ่ม/ลบเป้าจริงผ่าน Playwright (เพิ่ม "เดิน" ที่หน้าตั้งค่า → เห็นในลิสต์ทันที, ลบ
+      "ปั่นจักรยาน" → หายจากทั้งหน้าตั้งค่าและหน้าแรกทันทีหลัง navigate ใหม่) — `npx tsc --noEmit`,
+      `npm run build`, `npm run test` (203 เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
   - **ไม่มีการ์ด "สรุปกิจกรรมทั้งหมด" (ยอดสะสมตลอดกาล) อยู่บนหน้าแรกแล้ว** — ลบออกเพราะเป็นตัวเลข
     เดียวกับที่หน้า "สถิติสูงสุด" (`/dashboard/records`) โชว์อยู่แล้วเป๊ะ (มีปุ่มลัดไปหน้านั้นอยู่
     เหนือขึ้นไปนิดเดียว) แถมเป็นยอดสะสมตลอดกาลที่ไม่ actionable ไม่ควรเป็นสิ่งแรกที่เห็นก่อน

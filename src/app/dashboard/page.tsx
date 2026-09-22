@@ -10,7 +10,7 @@ import { ActivityFilters } from "./activity-filters";
 import { ActivityHeatmap, buildHeatmapDays, computeStreaks } from "./activity-heatmap";
 import { ActivityListView, type ActivityRow } from "./activity-list-view";
 import { CollapsibleSection } from "./collapsible-section";
-import { GoalProgress } from "./goal-progress";
+import { GoalProgress, type ActivityGoalProgress } from "./goal-progress";
 import { HealthSummary } from "./health-summary";
 import { MonthHighlights } from "./month-highlights";
 import { OnboardingCard, type OnboardingStep } from "./onboarding-card";
@@ -84,6 +84,7 @@ export default async function DashboardPage({
 
   const [
     user,
+    activityGoals,
     activityTypes,
     activities,
     stats,
@@ -101,6 +102,7 @@ export default async function DashboardPage({
     totalWaterLogCount,
   ] = await Promise.all([
       db.user.findUnique({ where: { id: userId } }),
+      db.activityGoal.findMany({ where: { userId }, orderBy: { activityType: "asc" } }),
       db.activity.findMany({ where: { userId }, select: { type: true }, distinct: ["type"] }),
       db.activity.findMany({
         where: { userId, ...activityFilter },
@@ -220,6 +222,19 @@ export default async function DashboardPage({
       return acc;
     }, {})
   ).sort((a, b) => b.durationSec - a.durationSec);
+
+  // distanceMeters this month per activity type, for the per-type goal bars
+  // below — computed from the same thisMonthActivities rows TypeShare/
+  // MonthHighlights already use, so no extra query.
+  const monthDistanceByType = new Map<string, number>();
+  for (const a of thisMonthActivities) {
+    monthDistanceByType.set(a.type, (monthDistanceByType.get(a.type) ?? 0) + (a.distanceMeters ?? 0));
+  }
+  const activityGoalProgress: ActivityGoalProgress[] = activityGoals.map((g) => ({
+    activityType: g.activityType,
+    goalKm: g.goalKm,
+    distanceMeters: monthDistanceByType.get(g.activityType) ?? 0,
+  }));
 
   const heatmapDays = buildHeatmapDays(heatmapRows);
   const streaks = computeStreaks(heatmapDays);
@@ -357,13 +372,9 @@ export default async function DashboardPage({
           </div>
         )}
 
-        {user?.monthlyGoalKm && (
+        {activityGoalProgress.length > 0 && (
           <div className="mb-6">
-            <GoalProgress
-              thisMonthDistanceMeters={thisMonthAgg._sum.distanceMeters ?? 0}
-              goalKm={user.monthlyGoalKm}
-              unit={unit}
-            />
+            <GoalProgress goals={activityGoalProgress} unit={unit} />
           </div>
         )}
 

@@ -6,7 +6,7 @@ import { getLatestBodyComposition } from "@/lib/body-composition";
 import { db } from "@/lib/db";
 import { computeTargets, isProfileComplete } from "@/lib/nutrition";
 import { getSessionUserId } from "@/lib/session";
-import { DeleteAccountButton, GoalInput, LocaleToggle, UnitToggle } from "./settings-client";
+import { ActivityGoalsInput, DeleteAccountButton, LocaleToggle, UnitToggle } from "./settings-client";
 import { NutritionProfileForm } from "./nutrition-profile-form";
 import { MacroPreferencesForm } from "./macro-preferences-form";
 import { HealthFlagsForm } from "./health-flags-form";
@@ -22,8 +22,9 @@ export default async function SettingsPage({
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
-  const [user, googleConnection, t, tCommon, locale] = await Promise.all([
+  const [user, activityGoals, googleConnection, t, tCommon, locale] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
+    db.activityGoal.findMany({ where: { userId }, orderBy: { activityType: "asc" } }),
     db.providerConnection.findFirst({ where: { userId, provider: "GOOGLE" } }),
     getTranslations("settings"),
     getTranslations("common"),
@@ -137,7 +138,10 @@ export default async function SettingsPage({
           <h2 className="font-medium">{t("monthlyGoal.heading")}</h2>
         </div>
         <p className="mb-4 text-sm text-neutral-500">{t("monthlyGoal.desc")}</p>
-        <GoalInput initialGoalKm={user?.monthlyGoalKm ?? null} unit={user?.unitSystem ?? "METRIC"} />
+        <ActivityGoalsInput
+          initialGoals={activityGoals.map((g) => ({ activityType: g.activityType, goalKm: g.goalKm }))}
+          unit={user?.unitSystem ?? "METRIC"}
+        />
       </section>
 
       <section className="mb-8 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">

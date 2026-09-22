@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { parseActivityText } from "@/lib/activity-import-parse";
+import { LOGGABLE_ACTIVITY_TYPES } from "@/lib/activity-types";
 import { estimateCalories, type Intensity } from "@/lib/calorie-estimate";
 import type { ExerciseStat, WorkoutSession } from "@/lib/exercise-stats";
 import { formatActivityDate, type FormatLang } from "@/lib/format";
@@ -186,16 +187,7 @@ export function LogActivityForm({
   const t = useTranslations("logActivity");
   const locale = useLocale();
   const lang: FormatLang = locale === "en" ? "en" : "th";
-  const TYPES = [
-    { value: "Run", label: t("typeRun") },
-    { value: "Ride", label: t("typeRide") },
-    { value: "Walk", label: t("typeWalk") },
-    { value: "Swim", label: t("typeSwim") },
-    { value: "WeightTraining", label: t("typeWeightTraining") },
-    { value: "Football", label: t("typeFootball") },
-    { value: "Badminton", label: t("typeBadminton") },
-    { value: "Workout", label: t("typeWorkout") },
-  ];
+  const TYPES = LOGGABLE_ACTIVITY_TYPES.map((value) => ({ value, label: t(`type${value}`) }));
   const INTENSITIES = [
     { value: "LOW", label: t("intensityLow") },
     { value: "MODERATE", label: t("intensityModerate") },

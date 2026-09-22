@@ -106,13 +106,20 @@ export async function GET(req: NextRequest) {
   }
 
   const needStreak = fields.includes("streak");
-  const needGoal = fields.includes("goal") && !!user.monthlyGoalKm;
   const needHeatmap = fields.includes("heatmap");
   const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
   const weekStart = new Date(dayStart);
   weekStart.setDate(weekStart.getDate() - 6);
 
-  const [foodLogs, waterAgg, activities, weightLogs, streakFoodLogs, monthDistanceAgg, weekFoodLogs] = await Promise.all([
+  // Whether the "goal" block is even requested is only known after this
+  // query — unlike the other conditional queries below, which key off a
+  // boolean computed from fields alone, needGoal also needs to know if the
+  // user has any ActivityGoal rows at all (fields.includes("goal") isn't
+  // enough by itself, same as the old `!!user.monthlyGoalKm` check).
+  const activityGoals = fields.includes("goal") ? await db.activityGoal.findMany({ where: { userId } }) : [];
+  const needGoal = activityGoals.length > 0;
+
+  const [foodLogs, waterAgg, activities, weightLogs, streakFoodLogs, monthDistanceByType, weekFoodLogs] = await Promise.all([
     db.foodLog.findMany({ where: { userId, loggedAt: { gte: dayStart, lte: dayEnd } }, include: { food: true } }),
     db.waterLog.aggregate({ where: { userId, loggedAt: { gte: dayStart, lte: dayEnd } }, _sum: { ml: true } }),
     db.activity.findMany({ where: { userId, startedAt: { gte: dayStart, lte: dayEnd } }, orderBy: { startedAt: "asc" } }),
@@ -124,8 +131,12 @@ export async function GET(req: NextRequest) {
         })
       : Promise.resolve([]),
     needGoal
-      ? db.activity.aggregate({ where: { userId, startedAt: { gte: monthStart, lte: dayEnd } }, _sum: { distanceMeters: true } })
-      : Promise.resolve({ _sum: { distanceMeters: null } }),
+      ? db.activity.groupBy({
+          by: ["type"],
+          where: { userId, startedAt: { gte: monthStart, lte: dayEnd } },
+          _sum: { distanceMeters: true },
+        })
+      : Promise.resolve([]),
     needHeatmap
       ? db.foodLog.findMany({ where: { userId, loggedAt: { gte: weekStart, lte: dayEnd } }, select: { loggedAt: true } })
       : Promise.resolve([]),
@@ -178,8 +189,16 @@ export async function GET(req: NextRequest) {
   const [latestWeight, prevWeight] = weightLogs;
   const weightDelta = latestWeight && prevWeight ? latestWeight.weightKg - prevWeight.weightKg : null;
 
-  const monthDistanceM = monthDistanceAgg._sum.distanceMeters ?? 0;
-  const goalPct = user.monthlyGoalKm ? Math.max(0, Math.min(100, (monthDistanceM / 1000 / user.monthlyGoalKm) * 100)) : 0;
+  const monthDistanceMapByType = new Map(monthDistanceByType.map((row) => [row.type, row._sum.distanceMeters ?? 0]));
+  const goalRows = activityGoals.map((g) => {
+    const distanceM = monthDistanceMapByType.get(g.activityType) ?? 0;
+    return {
+      activityType: g.activityType,
+      goalKm: g.goalKm,
+      distanceM,
+      pct: Math.max(0, Math.min(100, (distanceM / 1000 / g.goalKm) * 100)),
+    };
+  });
   const weekDots = needHeatmap ? buildWeekDots(weekFoodLogs.map((l) => l.loggedAt), date) : [];
 
   const dateLabel =
@@ -384,12 +403,20 @@ export async function GET(req: NextRequest) {
       node: (
         <div key="goal" style={cardStyle}>
           <span style={{ ...titleStyle, textShadow }}>{t.monthlyGoalTitle}</span>
-          <div style={{ display: "flex", height: 24, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden", marginTop: 22 }}>
-            <div style={{ display: "flex", width: `${goalPct}%`, background: "linear-gradient(90deg, #fc4c02, #ff8a3d)" }} />
-          </div>
-          <div style={{ display: "flex", marginTop: 18, alignItems: "baseline", gap: 8 }}>
-            <span style={{ fontSize: 34, fontWeight: 700, color: "white", textShadow }}>{formatDistanceKm(monthDistanceM, user.unitSystem, lang)}</span>
-            <span style={{ fontSize: 24, color: "#9c9c97", textShadow }}>/ {formatDistanceKm((user.monthlyGoalKm ?? 0) * 1000, user.unitSystem, lang)}</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 26, marginTop: 22 }}>
+            {goalRows.map((g) => (
+              <div key={g.activityType} style={{ display: "flex", flexDirection: "column" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                  <span style={{ fontSize: 27, fontWeight: 700, color: "white", textShadow }}>{activityTypeLabel(g.activityType, lang)}</span>
+                  <span style={{ fontSize: 24, color: "#9c9c97", textShadow }}>
+                    {formatDistanceKm(g.distanceM, user.unitSystem, lang)} / {formatDistanceKm(g.goalKm * 1000, user.unitSystem, lang)}
+                  </span>
+                </div>
+                <div style={{ display: "flex", height: 20, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                  <div style={{ display: "flex", width: `${g.pct}%`, background: "linear-gradient(90deg, #fc4c02, #ff8a3d)" }} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       ),

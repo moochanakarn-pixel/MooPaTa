@@ -28,7 +28,6 @@ model User {
   // app started Thai-only; a new EN-preferring signup gets seeded from the
   // moopata_locale cookie at signup time instead (see src/lib/locale.ts).
   locale        Locale     @default(TH)
-  monthlyGoalKm Float? // distance goal for the current calendar month, always stored in km
   createdAt     DateTime   @default(now())
 
   // Email+password login — optional, alongside (not instead of) Strava.
@@ -106,6 +105,7 @@ model User {
 
   connections         ProviderConnection[]
   activities          Activity[]
+  activityGoals       ActivityGoal[]
   foods               Food[]
   foodLogs            FoodLog[]
   waterLogs           WaterLog[]
@@ -376,6 +376,28 @@ model Activity {
 
   @@unique([provider, providerActId])
   @@index([userId, startedAt])
+}
+
+// Per-activity-type monthly distance goal (e.g. "50km running this month",
+// "100km cycling this month") — replaces the old single User.monthlyGoalKm
+// field, which couldn't express different targets per sport and made the
+// dashboard's monthly-goal progress bar mix distances across activity types
+// the same unfair way MonthHighlights' old "fastest" card and TypeBreakdown's
+// old distance-based split both did (see CLAUDE.md's "แก้ 3 จุดแสดงผลที่
+// หน้าแรก" and TypeBreakdown's own comment) — cross-type distance comparisons
+// read as meaningful but aren't, since different sports cover very different
+// distances for the same effort. `activityType` is a free-text string (same
+// convention as Activity.type) rather than an enum FK, matching every other
+// activity-type field in the app.
+model ActivityGoal {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityType String
+  goalKm       Float
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, activityType])
 }
 
 // One strength-training movement logged within a manually-entered activity

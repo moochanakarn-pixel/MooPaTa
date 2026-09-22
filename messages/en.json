@@ -48,9 +48,10 @@
       "noSupplements": "No items yet"
     },
     "goalProgress": {
-      "title": "This month's goal",
+      "title": "This month's goals",
       "reached": "Goal reached 🎉",
-      "progressPct": "{pct}% · adjust your goal at",
+      "progressPct": "{pct}%",
+      "adjustGoals": "Adjust your goals at",
       "settingsLink": "Settings"
     },
     "monthHighlights": {
@@ -460,15 +461,17 @@
     },
     "monthlyGoal": {
       "heading": "Monthly goal",
-      "desc": "Set a monthly distance goal to see a progress bar on the home page. Leave blank for no goal."
+      "desc": "Set a monthly distance goal per activity type (e.g. 50km running, 100km cycling) to see a progress bar for each on the home page. No goal set for a type means no bar for it."
     },
     "goalInput": {
       "km": "km",
       "mile": "mi",
       "perMonth": "{unit} / month",
-      "placeholder": "No goal set",
+      "placeholder": "Amount",
       "saving": "Saving...",
-      "save": "Save"
+      "save": "Save",
+      "remove": "Remove",
+      "add": "Add"
     },
     "nutritionProfile": {
       "heading": "Nutrition profile",
