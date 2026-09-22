@@ -328,7 +328,8 @@
       "fat": "ไขมัน",
       "unitG": "ก.",
       "legend": "ตัวเลขสีส้ม = เกินเป้าหมายวันนั้น",
-      "bonusNote": "+{carb} คาร์บ/+{protein} โปรตีน จาก {duration}"
+      "bonusNote": "+{carb} คาร์บ/+{protein} โปรตีน จาก {duration}",
+      "bonusNoteWithCalories": "+{carb} คาร์บ/+{protein} โปรตีน จาก {duration} · {kcal} kcal"
     },
     "weightLogCard": {
       "title": "แนวโน้มน้ำหนัก",

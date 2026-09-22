@@ -19,6 +19,11 @@ export interface MacroWeekDay {
   carbBonusG: number;
   proteinBonusG: number;
   bonusDurationLabel: string | null;
+  // null when no activity that day had a calories figure entered (it's an
+  // optional field) — distinct from having genuinely burned 0, so the
+  // caption below only appends "· N kcal" when there's a real number,
+  // never a misleading "· 0 kcal".
+  caloriesBurned: number | null;
 }
 
 // One macro's cell for one day — "eaten/target", eaten colored amber when
@@ -96,7 +101,14 @@ export function MacroWeekTable({ days }: { days: MacroWeekDay[] }) {
                         {/* bonusDurationLabel is only null when carbBonusG/proteinBonusG are both
                             0 (no logged activity that day) — hasBonus above already excludes that
                             case, so this is always a real duration string here. */}
-                        {t("bonusNote", { carb: d.carbBonusG, protein: d.proteinBonusG, duration: d.bonusDurationLabel ?? "" })}
+                        {d.caloriesBurned !== null
+                          ? t("bonusNoteWithCalories", {
+                              carb: d.carbBonusG,
+                              protein: d.proteinBonusG,
+                              duration: d.bonusDurationLabel ?? "",
+                              kcal: Math.round(d.caloriesBurned),
+                            })
+                          : t("bonusNote", { carb: d.carbBonusG, protein: d.proteinBonusG, duration: d.bonusDurationLabel ?? "" })}
                       </td>
                     </tr>
                   )}

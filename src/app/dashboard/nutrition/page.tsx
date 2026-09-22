@@ -359,6 +359,13 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
     const dayTarget = applyActivityBonus(baseTargets, dayActivities);
     const eaten = macrosByDay.get(key) ?? { carbG: 0, proteinG: 0, fatG: 0 };
     const dayDurationSec = dayActivities.reduce((sum, a) => sum + a.durationSec, 0);
+    // null (not 0) when nobody entered a calories figure that day — calories
+    // is an optional field on Activity, and a day where every logged
+    // activity skipped it is different from one that genuinely burned 0,
+    // same distinction activityIntensityMultiplier already makes internally
+    // (null calories -> neutral multiplier, not "zero intensity").
+    const caloriesEntries = dayActivities.map((a) => a.calories).filter((c): c is number => c !== null);
+    const dayCaloriesBurned = caloriesEntries.length > 0 ? caloriesEntries.reduce((sum, c) => sum + c, 0) : null;
     return {
       label: d.toLocaleDateString(numberLocale, { day: "numeric", month: "short" }),
       carbG: eaten.carbG,
@@ -373,6 +380,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
       carbBonusG: dayTarget.carbBonusG,
       proteinBonusG: dayTarget.proteinBonusG,
       bonusDurationLabel: dayDurationSec > 0 ? formatDuration(dayDurationSec, lang) : null,
+      caloriesBurned: dayCaloriesBurned,
     };
   });
 
