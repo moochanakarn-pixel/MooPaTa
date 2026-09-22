@@ -215,13 +215,20 @@ export function LogActivityForm({
   // stored value, so nothing here needs to react to that switch.
   const initialMaxSpeedMs = initial?.maxSpeedMs ? Number(initial.maxSpeedMs) : null;
   const initialPaceUnit = initial ? paceUnitMeters(initial.type) : null;
+  // Round the total seconds once, up front, then derive min/sec from that
+  // single integer — rounding them separately (as this used to) lets sec
+  // round up to 60 without carrying into min, prefilling the edit form
+  // with an invalid pace like "5 min 60 sec" (same bug class fixed in
+  // src/lib/format.ts's formatPace).
+  const initialBestPaceTotalSec =
+    initialMaxSpeedMs && initialPaceUnit ? Math.round(initialPaceUnit / initialMaxSpeedMs) : null;
   const [bestPaceMin, setBestPaceMin] = useState(() => {
-    if (!initialMaxSpeedMs || !initialPaceUnit) return "";
-    return String(Math.floor(initialPaceUnit / initialMaxSpeedMs / 60));
+    if (initialBestPaceTotalSec === null) return "";
+    return String(Math.floor(initialBestPaceTotalSec / 60));
   });
   const [bestPaceSec, setBestPaceSec] = useState(() => {
-    if (!initialMaxSpeedMs || !initialPaceUnit) return "";
-    return String(Math.round((initialPaceUnit / initialMaxSpeedMs) % 60));
+    if (initialBestPaceTotalSec === null) return "";
+    return String(initialBestPaceTotalSec % 60);
   });
   const [bestSpeedKmh, setBestSpeedKmh] = useState(() => {
     if (!initialMaxSpeedMs || initialPaceUnit) return "";
@@ -326,9 +333,11 @@ export function LogActivityForm({
       const effectiveType = parsed.type && TYPES.some((opt) => opt.value === parsed.type) ? parsed.type : type;
       const effectivePaceUnit = paceUnitMeters(effectiveType);
       if (effectivePaceUnit !== null) {
-        const totalSec = effectivePaceUnit / parsed.maxSpeedMs;
+        // Round total seconds first, then derive min/sec from that one
+        // integer — see initialBestPaceTotalSec's comment above.
+        const totalSec = Math.round(effectivePaceUnit / parsed.maxSpeedMs);
         setBestPaceMin(String(Math.floor(totalSec / 60)));
-        setBestPaceSec(String(Math.round(totalSec % 60)));
+        setBestPaceSec(String(totalSec % 60));
       } else {
         setBestSpeedKmh(String(Math.round(parsed.maxSpeedMs * 3.6 * 10) / 10));
       }

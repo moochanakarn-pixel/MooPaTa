@@ -119,8 +119,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     heroValue = distance.value;
     heroUnit = distance.unitLabel;
   } else {
-    const h = Math.floor(activity.durationSec / 3600);
-    const m = Math.round((activity.durationSec % 3600) / 60);
+    // Round total minutes first, then derive h/m from that one integer —
+    // rounding them separately let m round up to 60 without carrying into h
+    // (same bug class fixed in src/lib/format.ts's formatDuration).
+    const totalMin = Math.round(activity.durationSec / 60);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
     heroValue = h > 0 ? `${h}:${String(m).padStart(2, "0")}` : String(m);
     heroUnit = h > 0 ? t.hoursUnit : t.minutesUnit;
   }
