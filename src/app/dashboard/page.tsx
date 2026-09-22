@@ -329,6 +329,21 @@ export default async function DashboardPage({
               />
             ),
           },
+          {
+            href: "/dashboard/weight-training",
+            label: t("shortcuts.weightTraining"),
+            // Same violet as WeightTraining's activity-colors.ts accent (LIFT)
+            color: "text-violet-400",
+            icon: (
+              <path
+                d="M4 10h12M6 7v6M14 7v6M2.5 8.5v3M17.5 8.5v3"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            ),
+          },
         ].map((item) => (
           <Link
             key={item.href}

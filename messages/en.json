@@ -122,7 +122,8 @@
     "shortcuts": {
       "records": "Records",
       "compare": "Compare",
-      "achievements": "Achievements"
+      "achievements": "Achievements",
+      "weightTraining": "Weight training"
     },
     "moreStatsTitle": "More stats and trends",
     "recentActivities": "Recent activities",
@@ -1004,5 +1005,12 @@
     "wheyTurnOff": "Turn off",
     "wheyTurnOn": "Turn on",
     "wheyNeedSubscription": "You need to turn on notifications on the <link>food diary page</link> first before you can get this reminder."
+  },
+  "weightTraining": {
+    "title": "Weight Training Summary",
+    "subtitle": "Your recent sessions — see what you did last time and how heavy, so you can plan this session.",
+    "emptyState": "No weight training logged yet — log an activity with exercises to see a summary here.",
+    "sessionExerciseCount": "{count} exercises",
+    "recordsLink": "See PRs and per-exercise weight trends on the Records page"
   }
 }
