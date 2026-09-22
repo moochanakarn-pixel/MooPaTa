@@ -25,6 +25,7 @@ describe("parseExercises", () => {
           { reps: 8, weightKg: 60, rpe: null },
           { reps: 8, weightKg: 60, rpe: null },
         ],
+        notes: null,
       },
     ]);
   });
@@ -49,8 +50,16 @@ describe("parseExercises", () => {
 
   it("leaves weightKg null for a bodyweight set", () => {
     expect(parseExercises([{ name: "แพลงก์", sets: [{ reps: 1 }] }])).toEqual([
-      { name: "แพลงก์", sets: [{ reps: 1, weightKg: null, rpe: null }] },
+      { name: "แพลงก์", sets: [{ reps: 1, weightKg: null, rpe: null }], notes: null },
     ]);
+  });
+
+  it("trims and keeps a per-exercise note, and truncates one over the column limit", () => {
+    const withNote = parseExercises([{ name: "สควอท", sets: [{ reps: 8 }], notes: "  รอบหน้าลดน้ำหนักลงนิดหน่อย  " }]);
+    expect(withNote![0].notes).toBe("รอบหน้าลดน้ำหนักลงนิดหน่อย");
+
+    const tooLong = parseExercises([{ name: "สควอท", sets: [{ reps: 8 }], notes: "a".repeat(600) }]);
+    expect(tooLong![0].notes).toHaveLength(500);
   });
 
   it("keeps each set's own RPE", () => {

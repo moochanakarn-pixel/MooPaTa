@@ -51,6 +51,7 @@ export default async function EditActivityPage({ params }: { params: { id: strin
     notes: activity.notes ?? "",
     exercises: activity.exercises.map((ex) => ({
       name: ex.name,
+      notes: ex.notes ?? "",
       sets: ex.sets.map((s) => ({
         reps: String(s.reps),
         weightKg: s.weightKg !== null ? String(s.weightKg) : "",

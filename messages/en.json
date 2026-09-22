@@ -798,6 +798,7 @@
     "notesPlaceholder": "Anything else from your watch app with no dedicated field — e.g. Training Effect, VO2max, heart rate zones, muscles worked",
 
     "exercisesHint": "Exercises (optional) — for weight training/calisthenics, add each exercise with its sets/reps/weight",
+    "exerciseNotesPlaceholder": "Note for this exercise (optional) — e.g. increase weight next time, too heavy today, adjust form",
     "setRpeGuideTitle": "What does each set's RPE mean?",
     "repeatDayTitle": "Repeat from a previous day — pick one",
     "repeatDayLabel": "{date} — {count} exercises",

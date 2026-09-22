@@ -23,6 +23,11 @@ export interface ParsedSet {
 export interface ParsedExercise {
   name: string;
   sets: ParsedSet[];
+  // Free-text reflection on this exercise specifically (how it felt, what
+  // to adjust next time) — see Exercise.notes's schema comment. Optional,
+  // silently truncated at MAX_NOTES_LENGTH like Activity.notes below,
+  // rather than rejecting the whole request over a too-long note.
+  notes: string | null;
 }
 
 // A row with a non-numeric or out-of-range value fails the *whole* request
@@ -53,7 +58,7 @@ export function parseExercises(value: unknown): ParsedExercise[] | null {
       if (rpe !== null && Number.isNaN(rpe)) return null;
       sets.push({ reps, weightKg, rpe });
     }
-    parsed.push({ name, sets });
+    parsed.push({ name, sets, notes: optionalNotes(r.notes) });
   }
   return parsed;
 }

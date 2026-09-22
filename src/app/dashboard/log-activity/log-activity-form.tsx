@@ -61,11 +61,11 @@ const AI_PROMPT_TEMPLATE = `อ่านค่าจากรูปสรุป�
 ระดับความเหนื่อย: [RPE 1-10 ถ้ารูปมีบอกไว้]
 หมายเหตุ: [สรุปข้อมูลอื่นที่มีในรูปแต่ไม่ตรงกับหัวข้อด้านบนเป็นประโยคสั้นๆ บรรทัดเดียว เช่น Training Effect, VO2max, โซนหัวใจ, กล้ามเนื้อที่ใช้ — ถ้าไม่มีข้อมูลอื่นเหลือให้ใส่ "-"]
 
-ถ้าเป็นเวทเทรนนิ่ง ให้ใส่รายการท่าต่อท้ายด้วย หนึ่งบรรทัดต่อหนึ่งเซ็ทที่ทำจริง (ถ้าท่าเดียวกันทำหลายเซ็ทที่ตัวเลขต่างกัน ให้แยกคนละบรรทัด อย่ารวมเป็นค่าเดียว) รูปแบบ "ชื่อท่า | เซ็ทที่ | ครั้ง | น้ำหนัก(กก.) | RPE" (คอลัมน์ RPE ใส่แค่ถ้ารูปบอกไว้ ไม่งั้นเว้นว่าง — ถ้ารูปไม่ได้บอกน้ำหนักที่ยกไว้เลย เช่นนาฬิกาที่นับได้แค่จำนวนครั้งจากการเคลื่อนไหว ให้เว้นคอลัมน์น้ำหนักว่างไว้เช่นกัน):
+ถ้าเป็นเวทเทรนนิ่ง ให้ใส่รายการท่าต่อท้ายด้วย หนึ่งบรรทัดต่อหนึ่งเซ็ทที่ทำจริง (ถ้าท่าเดียวกันทำหลายเซ็ทที่ตัวเลขต่างกัน ให้แยกคนละบรรทัด อย่ารวมเป็นค่าเดียว) รูปแบบ "ชื่อท่า | เซ็ทที่ | ครั้ง | น้ำหนัก(กก.) | RPE | หมายเหตุ" (คอลัมน์ RPE ใส่แค่ถ้ารูปบอกไว้ ไม่งั้นเว้นว่าง — ถ้ารูปไม่ได้บอกน้ำหนักที่ยกไว้เลย เช่นนาฬิกาที่นับได้แค่จำนวนครั้งจากการเคลื่อนไหว ให้เว้นคอลัมน์น้ำหนักว่างไว้เช่นกัน — คอลัมน์หมายเหตุใส่แค่ถ้ารูปมีข้อความจดไว้สำหรับท่านั้นจริง ๆ เช่นภาพถ่ายสมุดบันทึกที่เขียนความรู้สึก/สิ่งที่ควรปรับไว้เอง ไม่ต้องเดาเติมเอง ใส่ที่แถวไหนของท่านั้นก็ได้แถวเดียวพอ ไม่ต้องซ้ำทุกแถว):
 ท่า:
-ดันไหล่ดัมเบล | 1 | 15 | 5 | 8
-ดันไหล่ดัมเบล | 2 | 14 | 5 | 8
-ดันไหล่ดัมเบล | 3 | 10 | 4 | 9`;
+ดันไหล่ดัมเบล | 1 | 15 | 5 | 8 |
+ดันไหล่ดัมเบล | 2 | 14 | 5 | 8 |
+ดันไหล่ดัมเบล | 3 | 10 | 4 | 9 | รอบหน้าเพิ่มน้ำหนัก`;
 
 // Which distance a "best pace" is expressed per, by activity type — Run
 // reads per km, Swim per 100m (swimmers don't talk in km/h or km pace), and
@@ -97,6 +97,12 @@ interface ExerciseRow {
   id: number;
   name: string;
   sets: SetRow[];
+  // Free-text reflection on this exercise specifically (how it felt, what
+  // to adjust next time) — see Exercise.notes's schema comment. Deliberately
+  // never prefilled from history (useLastTime/useWorkoutSession below both
+  // leave it untouched/empty) since it's this session's own take, not a
+  // template to repeat.
+  notes: string;
 }
 
 let nextRowId = 1;
@@ -108,7 +114,7 @@ function emptyExerciseRow(): ExerciseRow {
   // one and making everyone tap "เพิ่มเซ็ท" twice just to reach a normal
   // working set count; each one is still fully editable/removable on its
   // own since reps/weight no longer have to match across sets.
-  return { id: nextRowId++, name: "", sets: [emptySetRow(), emptySetRow(), emptySetRow()] };
+  return { id: nextRowId++, name: "", sets: [emptySetRow(), emptySetRow(), emptySetRow()], notes: "" };
 }
 
 // Turns a set-history shape (ExerciseSetSummary from exercise-stats.ts, or
@@ -159,7 +165,7 @@ export interface LogActivityInitial {
   maxSpeedMs: string;
   rpe: string;
   notes: string;
-  exercises: { name: string; sets: { reps: string; weightKg: string; rpe: string }[] }[];
+  exercises: { name: string; notes: string; sets: { reps: string; weightKg: string; rpe: string }[] }[];
 }
 
 // Same form for both logging a new activity and editing an existing
@@ -241,6 +247,7 @@ export function LogActivityForm({
       initial?.exercises.map((e) => ({
         id: nextRowId++,
         name: e.name,
+        notes: e.notes,
         sets: e.sets.map((s) => ({ id: nextRowId++, ...s })),
       })) ?? []
   );
@@ -354,6 +361,7 @@ export function LogActivityForm({
         ...parsed.exercises.map((e) => ({
           id: nextRowId++,
           name: e.name,
+          notes: e.notes ?? "",
           sets: e.sets.map((s) => ({
             id: nextRowId++,
             reps: String(s.reps),
@@ -422,7 +430,9 @@ export function LogActivityForm({
   // "confirm before applying, never silently overwrite in-progress input"
   // rule as useLastTime above.
   function useWorkoutSession(session: WorkoutSession) {
-    setExercises(session.exercises.map((ex) => ({ id: nextRowId++, name: ex.name, sets: toSetRows(ex.sets) })));
+    // Notes deliberately left blank (not copied from the repeated session)
+    // — see ExerciseRow's comment on why.
+    setExercises(session.exercises.map((ex) => ({ id: nextRowId++, name: ex.name, notes: "", sets: toSetRows(ex.sets) })));
   }
 
   async function save() {
@@ -480,6 +490,7 @@ export function LogActivityForm({
         notes: notes.trim() || undefined,
         exercises: namedExercises.map((r) => ({
           name: r.name.trim(),
+          notes: r.notes.trim() || undefined,
           sets: r.sets.map((s) => ({
             reps: Number(s.reps),
             weightKg: s.weightKg.trim() || undefined,
@@ -867,6 +878,16 @@ export function LogActivityForm({
                   >
                     {t("addSet")}
                   </button>
+                  <div className="mt-2">
+                    <textarea
+                      value={r.notes}
+                      onChange={(e) => updateExercise(r.id, { notes: e.target.value })}
+                      placeholder={t("exerciseNotesPlaceholder")}
+                      maxLength={500}
+                      rows={1}
+                      className={`${INPUT_CLASS} resize-y text-xs`}
+                    />
+                  </div>
                 </div>
                 );
               })}

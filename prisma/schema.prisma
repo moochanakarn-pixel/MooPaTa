@@ -412,6 +412,11 @@ model Exercise {
   id    String @id @default(cuid())
   name  String
   order Int // preserves the order entered in the form
+  // Free-text reflection on THIS exercise specifically — how it felt, what
+  // to adjust next time, form cues — as opposed to Activity.notes (whole
+  // session) or ExerciseSet.rpe (a single number per set). Same nullable/
+  // VARCHAR(500)/silently-truncated convention as Activity.notes.
+  notes String? @db.VarChar(500)
 
   activityId String
   activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)

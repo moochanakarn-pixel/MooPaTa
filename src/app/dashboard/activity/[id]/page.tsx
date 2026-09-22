@@ -251,6 +251,7 @@ export default async function ActivityDetailPage({ params }: { params: { id: str
                     </div>
                   ))}
                 </div>
+                {ex.notes && <p className="mt-2 text-sm italic text-neutral-500">{ex.notes}</p>}
               </div>
             ))}
           </div>

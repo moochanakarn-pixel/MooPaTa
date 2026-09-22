@@ -15,7 +15,7 @@ interface SetSummary {
 export interface SessionSummary {
   activityId: string;
   startedAtMs: number;
-  exercises: { name: string; sets: SetSummary[] }[];
+  exercises: { name: string; notes: string | null; sets: SetSummary[] }[];
 }
 
 export interface PrListItem {
@@ -110,6 +110,7 @@ export function WeightTrainingTabs({ sessions, prItems }: { sessions: SessionSum
                     <div key={`${ex.name}-${i}`} className="text-sm">
                       <p className="text-neutral-300">{ex.name}</p>
                       <p className="tabular-nums text-neutral-500">{formatSetsCompact(ex.sets, tLog)}</p>
+                      {ex.notes && <p className="mt-0.5 text-xs italic text-neutral-500">{ex.notes}</p>}
                     </div>
                   ))}
                 </div>

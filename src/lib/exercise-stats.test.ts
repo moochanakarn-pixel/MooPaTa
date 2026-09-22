@@ -187,13 +187,14 @@ describe("getRecentWorkoutSessions", () => {
         exercises: [
           {
             name: "ดันไหล่ดัมเบล",
+            notes: "รอบหน้าเพิ่มน้ำหนัก",
             sets: [
               { reps: 15, weightKg: 5, rpe: 8 },
               { reps: 14, weightKg: 5, rpe: 8 },
               { reps: 10, weightKg: 4, rpe: 9 },
             ],
           },
-          { name: "สควอท", sets: [{ reps: 8, weightKg: 60, rpe: null }] },
+          { name: "สควอท", notes: null, sets: [{ reps: 8, weightKg: 60, rpe: null }] },
         ],
       },
     ]);
@@ -205,13 +206,14 @@ describe("getRecentWorkoutSessions", () => {
         exercises: [
           {
             name: "ดันไหล่ดัมเบล",
+            notes: "รอบหน้าเพิ่มน้ำหนัก",
             sets: [
               { reps: 15, weightKg: 5, rpe: 8 },
               { reps: 14, weightKg: 5, rpe: 8 },
               { reps: 10, weightKg: 4, rpe: 9 },
             ],
           },
-          { name: "สควอท", sets: [{ reps: 8, weightKg: 60, rpe: null }] },
+          { name: "สควอท", notes: null, sets: [{ reps: 8, weightKg: 60, rpe: null }] },
         ],
       },
     ]);

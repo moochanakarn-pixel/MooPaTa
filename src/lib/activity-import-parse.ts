@@ -44,7 +44,16 @@ export interface ParsedActivity {
   // distinct rows sharing one exercise name instead of one row with a
   // "sets" count and a single reps/weight assumed uniform across all of
   // them. See parseExerciseSetLine's comment for the row format.
-  exercises: { name: string; sets: { reps: number; weightKg: number | null; rpe: number | null }[] }[];
+  exercises: {
+    name: string;
+    // Free-text reflection on this specific exercise (see Exercise.notes's
+    // schema comment) — only ever comes from a photographed handwritten
+    // log the user already wrote it in themselves, same reasoning as
+    // per-set RPE below: a watch screenshot has no way to know how an
+    // exercise felt, so the prompt tells the AI not to invent one.
+    notes: string | null;
+    sets: { reps: number; weightKg: number | null; rpe: number | null }[];
+  }[];
 }
 
 // "[\d,]*" (rather than plain "\d*") lets the integer part carry thousands
@@ -150,17 +159,24 @@ function matchType(line: string): string | null {
   return /ทั่วไป|workout|ออกกำลังกาย/i.test(line) ? "Workout" : null;
 }
 
-// A "ชื่อท่า | เซ็ทที่ | ครั้ง | น้ำหนัก | RPE" row from the exercise list the
-// prompt asks for — same pipe-table convention as the food import, minus
-// the header-detection complexity (fixed column order here, since it's a
-// format MooPaTa itself dictates in the prompt rather than something an AI
-// free-forms on its own). One row per set actually performed, not one row
-// per exercise — cells[1] (the set number) is purely informational for
-// whoever's reading the raw text; this parser only uses row order, not
-// that value, to build each exercise's sets array. RPE (cells[4]) is
-// optional — the AI is told to skip it when a screenshot doesn't show a
-// per-set exertion reading, which is the common case.
-function parseExerciseSetLine(line: string): { name: string; reps: number; weightKg: number | null; rpe: number | null } | null {
+// A "ชื่อท่า | เซ็ทที่ | ครั้ง | น้ำหนัก | RPE | หมายเหตุ" row from the exercise
+// list the prompt asks for — same pipe-table convention as the food import,
+// minus the header-detection complexity (fixed column order here, since
+// it's a format MooPaTa itself dictates in the prompt rather than
+// something an AI free-forms on its own). One row per set actually
+// performed, not one row per exercise — cells[1] (the set number) is
+// purely informational for whoever's reading the raw text; this parser
+// only uses row order, not that value, to build each exercise's sets
+// array. RPE (cells[4]) and notes (cells[5]) are both optional — the AI is
+// told to skip RPE when a screenshot doesn't show a per-set exertion
+// reading (the common case), and to only fill notes from a source that
+// already had handwritten text for that exercise (see ParsedActivity's
+// comment) rather than inventing one — an exercise's note only needs to
+// show up on ONE of its rows (see parseActivityText's grouping below),
+// not repeated on every set.
+function parseExerciseSetLine(
+  line: string
+): { name: string; reps: number; weightKg: number | null; rpe: number | null; notes: string | null } | null {
   if (!line.includes("|")) return null;
   const cells = line.split("|").map((c) => c.trim());
   // Drop only a leading/trailing empty cell — markdown table rows are
@@ -177,8 +193,12 @@ function parseExerciseSetLine(line: string): { name: string; reps: number; weigh
   const reps = firstNumber(cells[2]);
   const weightKg = cells[3] !== undefined ? firstNumber(cells[3]) : null;
   const rpe = cells[4] !== undefined ? firstNumber(cells[4]) : null;
+  // Same "-" placeholder convention as every other optional field in this
+  // parser (NOTES_LINE, BEST_PACE_LINE) — not literal note text.
+  const rawNotes = cells[5] !== undefined ? cells[5].trim() : "";
+  const notes = rawNotes && rawNotes !== "-" ? rawNotes.slice(0, 500) : null;
   if (!name || reps === null) return null;
-  return { name, reps: Math.round(reps), weightKg, rpe: rpe !== null ? Math.round(rpe * 2) / 2 : null };
+  return { name, reps: Math.round(reps), weightKg, rpe: rpe !== null ? Math.round(rpe * 2) / 2 : null, notes };
 }
 
 export function parseActivityText(text: string): ParsedActivity {
@@ -209,7 +229,10 @@ export function parseActivityText(text: string): ParsedActivity {
   // whether the AI's rows for it are consecutive or interleaved with
   // another exercise's — a Map preserves the order each name first
   // appeared in, which is what result.exercises ends up ordered by.
-  const exercisesByName = new Map<string, { name: string; sets: { reps: number; weightKg: number | null; rpe: number | null }[] }>();
+  const exercisesByName = new Map<
+    string,
+    { name: string; notes: string | null; sets: { reps: number; weightKg: number | null; rpe: number | null }[] }
+  >();
 
   for (const line of lines) {
     const setRow = parseExerciseSetLine(line);
@@ -217,10 +240,14 @@ export function parseActivityText(text: string): ParsedActivity {
       const key = setRow.name.toLowerCase();
       let ex = exercisesByName.get(key);
       if (!ex) {
-        ex = { name: setRow.name, sets: [] };
+        ex = { name: setRow.name, notes: null, sets: [] };
         exercisesByName.set(key, ex);
       }
       ex.sets.push({ reps: setRow.reps, weightKg: setRow.weightKg, rpe: setRow.rpe });
+      // Only one row for this exercise needs a note filled in (the prompt
+      // says so) — last non-empty one wins if the AI happens to repeat it
+      // on more than one row.
+      if (setRow.notes !== null) ex.notes = setRow.notes;
       continue;
     }
 

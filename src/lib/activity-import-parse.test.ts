@@ -78,12 +78,13 @@ describe("parseActivityText", () => {
     expect(parsed.exercises).toEqual([
       {
         name: "ดันไหล่ดัมเบล",
+        notes: null,
         sets: [
           { reps: 12, weightKg: 20, rpe: null },
           { reps: 12, weightKg: 20, rpe: null },
         ],
       },
-      { name: "สควอท", sets: [{ reps: 8, weightKg: 60, rpe: null }] },
+      { name: "สควอท", notes: null, sets: [{ reps: 8, weightKg: 60, rpe: null }] },
     ]);
   });
 
@@ -96,6 +97,7 @@ describe("parseActivityText", () => {
     expect(parsed.exercises).toEqual([
       {
         name: "ดันไหล่ดัมเบล",
+        notes: null,
         sets: [
           { reps: 15, weightKg: 5, rpe: null },
           { reps: 14, weightKg: 5, rpe: null },
@@ -113,6 +115,7 @@ describe("parseActivityText", () => {
     expect(parsed.exercises).toEqual([
       {
         name: "ดันไหล่ดัมเบล",
+        notes: null,
         sets: [
           { reps: 15, weightKg: 5, rpe: 8 },
           { reps: 10, weightKg: 4, rpe: 9 },
@@ -129,6 +132,7 @@ describe("parseActivityText", () => {
     expect(parsed.exercises).toEqual([
       {
         name: "ดันไหล่ดัมเบล",
+        notes: null,
         sets: [
           { reps: 15, weightKg: 5, rpe: 7.5 },
           { reps: 10, weightKg: 4, rpe: 8 },
@@ -144,14 +148,18 @@ describe("parseActivityText", () => {
 ดันไหล่ดัมเบล | 2 | 10 | 20`;
     const parsed = parseActivityText(text);
     expect(parsed.exercises).toEqual([
-      { name: "ดันไหล่ดัมเบล", sets: [{ reps: 12, weightKg: 20, rpe: null }, { reps: 10, weightKg: 20, rpe: null }] },
-      { name: "สควอท", sets: [{ reps: 8, weightKg: 60, rpe: null }] },
+      {
+        name: "ดันไหล่ดัมเบล",
+        notes: null,
+        sets: [{ reps: 12, weightKg: 20, rpe: null }, { reps: 10, weightKg: 20, rpe: null }],
+      },
+      { name: "สควอท", notes: null, sets: [{ reps: 8, weightKg: 60, rpe: null }] },
     ]);
   });
 
   it("leaves weightKg null for a bodyweight exercise row with no weight column", () => {
     const parsed = parseActivityText("แพลงก์ | 1 | 30");
-    expect(parsed.exercises).toEqual([{ name: "แพลงก์", sets: [{ reps: 30, weightKg: null, rpe: null }] }]);
+    expect(parsed.exercises).toEqual([{ name: "แพลงก์", notes: null, sets: [{ reps: 30, weightKg: null, rpe: null }] }]);
   });
 
   it("does not shift RPE into weightKg for a bodyweight set with a blank weight column but an RPE value (regression)", () => {
@@ -160,12 +168,31 @@ describe("parseActivityText", () => {
     // weight column here, shifting "9" from the RPE column into weightKg
     // and losing the RPE entirely.
     const parsed = parseActivityText("ดึงข้อ | 1 | 8 |  | 9");
-    expect(parsed.exercises).toEqual([{ name: "ดึงข้อ", sets: [{ reps: 8, weightKg: null, rpe: 9 }] }]);
+    expect(parsed.exercises).toEqual([{ name: "ดึงข้อ", notes: null, sets: [{ reps: 8, weightKg: null, rpe: 9 }] }]);
   });
 
   it("still strips a genuine leading/trailing pipe from markdown table padding", () => {
     const parsed = parseActivityText("| ดันไหล่ดัมเบล | 1 | 15 | 5 | 8 |");
-    expect(parsed.exercises).toEqual([{ name: "ดันไหล่ดัมเบล", sets: [{ reps: 15, weightKg: 5, rpe: 8 }] }]);
+    expect(parsed.exercises).toEqual([{ name: "ดันไหล่ดัมเบล", notes: null, sets: [{ reps: 15, weightKg: 5, rpe: 8 }] }]);
+  });
+
+  it("reads an optional 6th-column note, filed against the exercise once even if only one row has it", () => {
+    const text = `ท่า:
+สควอท | 1 | 15 | 60 | 8
+สควอท | 2 | 14 | 60 | 8
+สควอท | 3 | 10 | 65 | 9 | รอบหน้าเพิ่มน้ำหนัก`;
+    const parsed = parseActivityText(text);
+    expect(parsed.exercises[0].notes).toBe("รอบหน้าเพิ่มน้ำหนัก");
+  });
+
+  it("treats a bare '-' in the notes column as no note, same as every other optional field", () => {
+    const parsed = parseActivityText("สควอท | 1 | 10 | 60 | 8 | -");
+    expect(parsed.exercises[0].notes).toBeNull();
+  });
+
+  it("leaves notes null when the row has no 6th column at all", () => {
+    const parsed = parseActivityText("สควอท | 1 | 10 | 60 | 8");
+    expect(parsed.exercises[0].notes).toBeNull();
   });
 
   it("reads เคเดนซ์เฉลี่ย (avgCadence) in Thai and English", () => {
@@ -194,7 +221,7 @@ describe("parseActivityText", () => {
     // an explicitly empty cell: firstNumber finds no digit in "--" either
     // way, so no special-casing was actually needed here.
     const parsed = parseActivityText("สควอทบาร์เบล | 1 | 10 | --");
-    expect(parsed.exercises).toEqual([{ name: "สควอทบาร์เบล", sets: [{ reps: 10, weightKg: null, rpe: null }] }]);
+    expect(parsed.exercises).toEqual([{ name: "สควอทบาร์เบล", notes: null, sets: [{ reps: 10, weightKg: null, rpe: null }] }]);
   });
 
   describe("best pace/speed (maxSpeedMs)", () => {

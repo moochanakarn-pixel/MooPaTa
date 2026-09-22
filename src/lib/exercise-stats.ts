@@ -177,7 +177,7 @@ export async function getExerciseStats(userId: string, excludeActivityId?: strin
 export interface WorkoutSession {
   activityId: string;
   startedAtMs: number;
-  exercises: { name: string; sets: ExerciseSetSummary[] }[];
+  exercises: { name: string; notes: string | null; sets: ExerciseSetSummary[] }[];
 }
 
 // The DEFAULT_RECENT_SESSIONS most recently logged activities that have at
@@ -216,7 +216,7 @@ export async function getRecentWorkoutSessions(
       startedAt: true,
       exercises: {
         orderBy: { order: "asc" },
-        select: { name: true, sets: { orderBy: { order: "asc" }, select: { reps: true, weightKg: true, rpe: true } } },
+        select: { name: true, notes: true, sets: { orderBy: { order: "asc" }, select: { reps: true, weightKg: true, rpe: true } } },
       },
     },
   });
@@ -224,7 +224,7 @@ export async function getRecentWorkoutSessions(
   return activities.map((activity) => ({
     activityId: activity.id,
     startedAtMs: activity.startedAt.getTime(),
-    exercises: activity.exercises.map((ex) => ({ name: ex.name, sets: ex.sets })),
+    exercises: activity.exercises.map((ex) => ({ name: ex.name, notes: ex.notes, sets: ex.sets })),
   }));
 }
 
