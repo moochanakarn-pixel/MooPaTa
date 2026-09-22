@@ -798,7 +798,8 @@
 
     "exercisesHint": "ท่าออกกำลังกาย (ไม่บังคับ) — สำหรับเวทเทรนนิ่ง/แคลิสเธนิกส์ ใส่ทีละท่าพร้อมเซ็ท/ครั้ง/น้ำหนักที่ใช้",
     "setRpeGuideTitle": "RPE ของแต่ละเซ็ทหมายถึงอะไร?",
-    "repeatDayLabel": "ทำซ้ำทั้งวันจากครั้งก่อน ({date}) — {count} ท่า",
+    "repeatDayTitle": "ทำซ้ำจากครั้งก่อน — เลือกวันที่ต้องการ",
+    "repeatDayLabel": "{date} — {count} ท่า",
     "useThis": "ใช้ค่านี้",
     "exerciseNamePlaceholder": "ชื่อท่า เช่น ดันไหล่ดัมเบล",
     "removeExercise": "ลบท่านี้",

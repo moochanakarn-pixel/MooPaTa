@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { parseActivityText } from "@/lib/activity-import-parse";
 import { estimateCalories, type Intensity } from "@/lib/calorie-estimate";
-import type { ExerciseStat, LastWorkoutSession } from "@/lib/exercise-stats";
+import type { ExerciseStat, WorkoutSession } from "@/lib/exercise-stats";
 import { formatActivityDate, type FormatLang } from "@/lib/format";
 
 const INPUT_CLASS =
@@ -111,10 +111,10 @@ function emptyExerciseRow(): ExerciseRow {
 }
 
 // Turns a set-history shape (ExerciseSetSummary from exercise-stats.ts, or
-// the equivalent per-set entries on a LastWorkoutSession) into editable
+// the equivalent per-set entries on a WorkoutSession) into editable
 // SetRows with fresh ids — shared by useLastTime (one exercise) and
-// useLastWorkout (a whole session) below so the two "prefill from history"
-// paths can't drift apart on how a set turns into form state.
+// useWorkoutSession (a whole session) below so the two "prefill from
+// history" paths can't drift apart on how a set turns into form state.
 function toSetRows(sets: { reps: number; weightKg: number | null; rpe: number | null }[]): SetRow[] {
   return sets.map((s) => ({
     id: nextRowId++,
@@ -173,13 +173,13 @@ export function LogActivityForm({
   activityId,
   initial,
   exerciseStats = [],
-  lastWorkoutSession = null,
+  recentWorkoutSessions = [],
   userWeightKg = null,
 }: {
   activityId?: string;
   initial?: LogActivityInitial;
   exerciseStats?: ExerciseStat[];
-  lastWorkoutSession?: LastWorkoutSession | null;
+  recentWorkoutSessions?: WorkoutSession[];
   userWeightKg?: number | null;
 }) {
   const router = useRouter();
@@ -409,19 +409,19 @@ export function LogActivityForm({
     updateExercise(exerciseId, { sets: toSetRows(stat.latestSets) });
   }
 
-  // Prefills every exercise and every set from the last logged session in
+  // Prefills every exercise and every set from a picked previous session in
   // one tap, instead of adding each exercise row by hand and then hitting
   // "ใช้ค่านี้" once per row — worth it for anyone whose routine repeats
   // close to the same exercises/sets from one session to the next (a
-  // pattern the request that prompted this feature showed clearly). Only
-  // offered while the exercise list is still empty (see the button's own
-  // guard below) — same "confirm before applying, never silently
-  // overwrite in-progress input" rule as useLastTime above.
-  function useLastWorkout() {
-    if (!lastWorkoutSession) return;
-    setExercises(
-      lastWorkoutSession.exercises.map((ex) => ({ id: nextRowId++, name: ex.name, sets: toSetRows(ex.sets) }))
-    );
+  // pattern the request that prompted this feature showed clearly). Offers
+  // the last few sessions rather than only the single most recent one,
+  // since a routine that alternates (e.g. upper/lower split) means "last
+  // time" isn't always the right day to repeat — only shown while the
+  // exercise list is still empty (see the picker's own guard below), same
+  // "confirm before applying, never silently overwrite in-progress input"
+  // rule as useLastTime above.
+  function useWorkoutSession(session: WorkoutSession) {
+    setExercises(session.exercises.map((ex) => ({ id: nextRowId++, name: ex.name, sets: toSetRows(ex.sets) })));
   }
 
   async function save() {
@@ -734,22 +734,31 @@ export function LogActivityForm({
           {/* Only offered while the list is still empty — repeating an
               entire previous session only makes sense as a starting point,
               not something that should ever silently clobber rows the
-              user already added by hand. */}
-          {exercises.length === 0 && lastWorkoutSession && (
-            <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-neutral-800/50 px-3 py-2 text-xs text-neutral-400">
-              <span>
-                {t("repeatDayLabel", {
-                  date: formatActivityDate(new Date(lastWorkoutSession.startedAtMs), lang),
-                  count: lastWorkoutSession.exercises.length,
-                })}
-              </span>
-              <button
-                type="button"
-                onClick={useLastWorkout}
-                className="flex-none rounded border border-neutral-700 px-2 py-1 font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800"
-              >
-                {t("useThis")}
-              </button>
+              user already added by hand. Lists the last few sessions (not
+              just the single most recent one) so a routine that alternates
+              day to day can still be repeated from the right day. */}
+          {exercises.length === 0 && recentWorkoutSessions.length > 0 && (
+            <div className="mb-3 rounded-lg bg-neutral-800/50 px-3 py-2">
+              <p className="mb-1.5 text-xs font-medium text-neutral-400">{t("repeatDayTitle")}</p>
+              <div className="space-y-1.5">
+                {recentWorkoutSessions.map((session) => (
+                  <div key={session.activityId} className="flex items-center justify-between gap-2 text-xs text-neutral-400">
+                    <span>
+                      {t("repeatDayLabel", {
+                        date: formatActivityDate(new Date(session.startedAtMs), lang),
+                        count: session.exercises.length,
+                      })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => useWorkoutSession(session)}
+                      className="flex-none rounded border border-neutral-700 px-2 py-1 font-medium text-neutral-300 transition hover:border-neutral-600 hover:bg-neutral-800"
+                    >
+                      {t("useThis")}
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           {exercises.length > 0 && (

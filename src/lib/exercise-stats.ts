@@ -1,5 +1,9 @@
 import { db } from "./db";
 
+// How many recent whole-session "repeat from a previous day" options
+// getRecentWorkoutSessions offers by default — see its own comment below.
+const DEFAULT_RECENT_SESSIONS = 5;
+
 export interface ExerciseSetSummary {
   reps: number;
   weightKg: number | null;
@@ -170,31 +174,43 @@ export async function getExerciseStats(userId: string, excludeActivityId?: strin
   return Array.from(stats.values()).map(({ _latestExerciseId, _sessionMaxWeightKg, _sessionVolumeKg, ...rest }) => rest);
 }
 
-export interface LastWorkoutSession {
+export interface WorkoutSession {
   activityId: string;
   startedAtMs: number;
   exercises: { name: string; sets: ExerciseSetSummary[] }[];
 }
 
-// The most recently logged activity that has at least one exercise
-// attached — used by the "ทำซ้ำทั้งวันจากครั้งก่อน" button in
+// The DEFAULT_RECENT_SESSIONS most recently logged activities that have at
+// least one exercise attached — used by the "ทำซ้ำจากครั้งก่อน" picker in
 // log-activity-form.tsx, a one-tap way to prefill an entire workout (every
-// exercise, every set) instead of repeating "ใช้ค่านี้" once per exercise.
-// Unlike getExerciseStats (which folds by exercise *name* across many
-// sessions), this returns one whole *session* as-is, in the order its
-// exercises/sets were originally entered — that's the shape a "repeat this
-// day" action needs, not a per-name rollup.
+// exercise, every set) from whichever recent day the user picks, instead of
+// repeating "ใช้ค่านี้" once per exercise. Unlike getExerciseStats (which
+// folds by exercise *name* across many sessions), each entry here is one
+// whole *session* as-is, in the order its exercises/sets were originally
+// entered — that's the shape a "repeat this day" action needs, not a
+// per-name rollup.
+//
+// Originally just the single latest session (findFirst) — the user asked to
+// see the last 5 and pick which one to repeat instead, since a routine
+// doesn't always follow strictly from "whatever was logged most recently"
+// (e.g. an upper/lower split alternates, so "last time" is only right on
+// every other day).
 //
 // `excludeActivityId` — same reasoning as getExerciseStats: pass the
 // activity currently being edited so it never offers to "repeat" itself.
-export async function getLastWorkoutSession(userId: string, excludeActivityId?: string): Promise<LastWorkoutSession | null> {
-  const activity = await db.activity.findFirst({
+export async function getRecentWorkoutSessions(
+  userId: string,
+  excludeActivityId?: string,
+  limit = DEFAULT_RECENT_SESSIONS
+): Promise<WorkoutSession[]> {
+  const activities = await db.activity.findMany({
     where: {
       userId,
       exercises: { some: {} },
       ...(excludeActivityId ? { id: { not: excludeActivityId } } : {}),
     },
     orderBy: { startedAt: "desc" },
+    take: limit,
     select: {
       id: true,
       startedAt: true,
@@ -204,13 +220,12 @@ export async function getLastWorkoutSession(userId: string, excludeActivityId?: 
       },
     },
   });
-  if (!activity) return null;
 
-  return {
+  return activities.map((activity) => ({
     activityId: activity.id,
     startedAtMs: activity.startedAt.getTime(),
     exercises: activity.exercises.map((ex) => ({ name: ex.name, sets: ex.sets })),
-  };
+  }));
 }
 
 // Total weight actually moved across every logged set, all-time — Σ weight ×

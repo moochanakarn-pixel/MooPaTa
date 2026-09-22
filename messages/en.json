@@ -798,7 +798,8 @@
 
     "exercisesHint": "Exercises (optional) — for weight training/calisthenics, add each exercise with its sets/reps/weight",
     "setRpeGuideTitle": "What does each set's RPE mean?",
-    "repeatDayLabel": "Repeat the whole day from last time ({date}) — {count} exercises",
+    "repeatDayTitle": "Repeat from a previous day — pick one",
+    "repeatDayLabel": "{date} — {count} exercises",
     "useThis": "Use this",
     "exerciseNamePlaceholder": "Exercise name, e.g. Shoulder press",
     "removeExercise": "Remove this exercise",

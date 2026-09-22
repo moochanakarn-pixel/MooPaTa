@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
-import { getExerciseStats, getLastWorkoutSession } from "@/lib/exercise-stats";
+import { getExerciseStats, getRecentWorkoutSessions } from "@/lib/exercise-stats";
 import { getSessionUserId } from "@/lib/session";
 import { LogActivityForm } from "./log-activity-form";
 
@@ -10,11 +10,11 @@ export default async function LogActivityPage() {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
 
-  const [t, tc, exerciseStats, lastWorkoutSession, user] = await Promise.all([
+  const [t, tc, exerciseStats, recentWorkoutSessions, user] = await Promise.all([
     getTranslations("logActivity"),
     getTranslations("common"),
     getExerciseStats(userId),
-    getLastWorkoutSession(userId),
+    getRecentWorkoutSessions(userId),
     db.user.findUnique({ where: { id: userId }, select: { weightKg: true } }),
   ]);
 
@@ -33,7 +33,7 @@ export default async function LogActivityPage() {
       <h1 className="mb-1 text-xl font-bold">{t("title")}</h1>
       <p className="mb-8 text-sm text-neutral-500">{t("subtitle")}</p>
 
-      <LogActivityForm exerciseStats={exerciseStats} lastWorkoutSession={lastWorkoutSession} userWeightKg={user?.weightKg ?? null} />
+      <LogActivityForm exerciseStats={exerciseStats} recentWorkoutSessions={recentWorkoutSessions} userWeightKg={user?.weightKg ?? null} />
     </main>
   );
 }
