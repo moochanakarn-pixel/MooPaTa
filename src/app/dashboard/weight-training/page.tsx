@@ -80,11 +80,18 @@ export default async function WeightTrainingPage() {
                   <h2 className="font-medium text-neutral-100">{formatActivityDate(new Date(session.startedAtMs), lang)}</h2>
                   <span className="flex-none text-xs text-neutral-500">{t("sessionExerciseCount", { count: session.exercises.length })}</span>
                 </div>
-                <div className="space-y-1.5">
+                {/* Name and sets stack vertically (not side-by-side) —
+                    a long exercise name and a long multi-set summary
+                    (pyramids/drop sets easily run 5-6 sets) fighting over
+                    a single row's width on a narrow phone screen crushes
+                    the name into a tall, hard-to-read sliver. Full-width
+                    rows read cleanly regardless of how long either piece
+                    of text is. */}
+                <div className="space-y-2.5">
                   {session.exercises.map((ex, i) => (
-                    <div key={`${ex.name}-${i}`} className="flex items-start justify-between gap-3 text-sm">
-                      <span className="text-neutral-300">{ex.name}</span>
-                      <span className="text-right tabular-nums text-neutral-500">{formatSetsCompact(ex.sets, tLog)}</span>
+                    <div key={`${ex.name}-${i}`} className="text-sm">
+                      <p className="text-neutral-300">{ex.name}</p>
+                      <p className="tabular-nums text-neutral-500">{formatSetsCompact(ex.sets, tLog)}</p>
                     </div>
                   ))}
                 </div>
