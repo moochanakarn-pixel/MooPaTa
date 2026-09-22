@@ -51,9 +51,13 @@ export default async function WeightTrainingPage() {
   // Only exercises with an actual weight logged have a meaningful PR — a
   // bodyweight-only exercise (weightKg never given) has nothing numeric to
   // rank, so prWeightKg stays null for it and it's left out of this list.
+  // Sorted by most-recently-trained first (latestAtMs, not name) — this is
+  // a "what have I been working on" feed, not an alphabetical reference
+  // list, so whatever was just logged today should surface at the top
+  // instead of being buried wherever its name happens to fall alphabetically.
   const prItems = exerciseStats
     .filter((s): s is typeof s & { prWeightKg: number } => s.prWeightKg !== null)
-    .sort((a, b) => a.name.localeCompare(b.name, "th"))
+    .sort((a, b) => b.latestAtMs - a.latestAtMs)
     .map((s) => ({
       name: s.name,
       prActivityId: s.prActivityId,

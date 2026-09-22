@@ -68,6 +68,13 @@ export function ExerciseProgressionChart({
           </span>
         )}
       </div>
+      {/* The line's slope alone doesn't tell you the actual numbers without
+          axis labels (this chart has none, by design — it's a small trend
+          sparkline, not a full chart) — spelling out first → latest here
+          means the two endpoints are readable without eyeballing the chart. */}
+      <p className="mb-1 text-[11px] tabular-nums text-neutral-600">
+        {formatValue(points[0].value)} → {formatValue(points[points.length - 1].value)}
+      </p>
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="h-11 w-full" preserveAspectRatio="none">
         <path d={d} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
         {points.map((p, i) => {
