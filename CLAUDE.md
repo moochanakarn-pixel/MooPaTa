@@ -1544,6 +1544,29 @@ achievements, activity detail, weight-training) เข้าถึงผ่า�
       positive): หน้า records ไม่มีข้อความ "PR ท่าออกกำลังกาย" หลงเหลือเลย แต่มีลิงก์ใหม่ชี้ไปหน้าเวท,
       หน้าเวทเทรนนิ่งมีทั้ง "ประวัติการเล่นล่าสุด" และ "PR ท่าออกกำลังกาย" ครบ ไม่มี console error —
       `npx tsc --noEmit`, `npm run build`, `npm run test` (203 เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
+    - **"ประวัติการเล่นล่าสุด" กับ "PR ท่าออกกำลังกาย" เปลี่ยนจากต่อกันยาว ๆ เป็นแท็บสลับ** — ผู้ใช้เจอเอง
+      บน production หลัง deploy ว่าสองส่วนต่อกันยาวเกินไปเมื่อมีข้อมูลจริงครบ (10 ครั้งล่าสุด + PR หลายท่า)
+      เสนอให้แยกเป็นปุ่มกดสลับแทน — ตรงกับ pattern แท็บที่แอพมีอยู่แล้วหลายจุด (เช่น "กรอกเอง"/"นำเข้าจาก
+      AI" ที่ฟอร์มบันทึกกิจกรรม, `PortionGuideTabs`) เลยใช้ style เดียวกัน (`bg-[#fc4c02]` ตอน active,
+      `text-neutral-400` ตอนไม่ active) — **แยก page.tsx (Server Component, fetch ข้อมูล + คำนวณ
+      `estimateOneRepMaxKg`/`progressionPoints` ล่วงหน้า) ออกจาก `WeightTrainingTabs` (Client Component
+      ใหม่, `weight-training-tabs.tsx`) ที่ถือ tab state และ render ทั้งสองส่วน** — ต้องแยกเป็นสองไฟล์
+      เพราะ tab state (`useState`) ต้องเป็น Client Component แต่ `estimateOneRepMaxKg` มาจาก
+      `src/lib/exercise-stats.ts` ที่ import `./db` (Prisma client) ไว้ที่ module scope — ถ้าเรียกฟังก์ชัน
+      นี้ตรง ๆ จาก Client Component จะดึงโค้ดที่พึ่ง Node/Prisma เข้าไปอยู่ใน client bundle ด้วย (พังหรือ
+      บวมไฟล์โดยใช่เหตุ) เลยคำนวณค่านี้ (ปัดเศษแล้ว) ที่ page.tsx ก่อน ส่งเป็นตัวเลขธรรมดา
+      (`oneRepMaxEstimate: number | null`) ให้ Client Component แทนที่จะให้มันเรียกฟังก์ชันเอง — ส่วน
+      `formatActivityDate`/`FormatLang` จาก `@/lib/format` ปลอดภัย import ตรงจาก Client Component ได้
+      (ไฟล์นั้นไม่มี dependency ฝั่ง server เลย มีตัวอย่างอยู่แล้วหลายจุดในแอพ เช่น `period-comparison.tsx`)
+      — **ไม่โชว์แท็บเลยถ้าไม่มี PR data** (`prItems.length === 0`, เช่น user ที่เคยบันทึกแต่ bodyweight
+      exercise ล้วน ๆ ไม่มีน้ำหนักให้จัดอันดับเลย) fallback กลับไปแสดงแค่ลิสต์ประวัติเดี่ยว ๆ แบบก่อนมีแท็บ
+      (มีหัวข้อ `<h2>` "ประวัติการเล่นล่าสุด" ธรรมดาแทนปุ่มแท็บ) กันไม่ให้เห็นแท็บที่กดไปแล้วว่างเปล่า —
+      ค่า default คือแท็บ "ประวัติการเล่นล่าสุด" ตรงกับพฤติกรรมเดิมก่อนมีแท็บ (ไม่ auto-switch ไปแท็บ PR
+      แม้จะเพิ่งมี PR ใหม่) — ทดสอบจริงด้วย Playwright ทั้ง 2 เคส (user มี PR / user ไม่มี PR เลย มีแค่
+      ท่า Plank bodyweight) ยืนยัน: ค่า default ถูกต้อง, คลิกสลับแท็บไปมาได้ครบ (คลิก PR tab เห็นกราฟ+1RM,
+      คลิกกลับมา sessions tab เห็นประวัติเหมือนเดิม), user ไม่มี PR ไม่เห็นแท็บเลยสักปุ่ม เห็นแค่ลิสต์
+      ประวัติตรง ๆ, ทดสอบ EN locale เห็น "Recent sessions"/"Exercise PRs" ถูกต้อง, ไม่มี console error —
+      `npx tsc --noEmit`, `npm run build`, `npm run test` (207 เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
   - **แก้ 3 จุดแสดงผลที่หน้าแรกที่ดูไม่สมเหตุสมผล/ไม่มืออาชีพ** (พบจาก audit ตรวจหน้าแรกทั้งหน้าตามคำขอ
     ผู้ใช้ — ไม่ใช่ user report):
     - **การ์ด "เร็วที่สุดเดือนนี้" (`MonthHighlights`) เทียบข้ามประเภทกิจกรรมแบบไม่แฟร์** — เดิมหา
