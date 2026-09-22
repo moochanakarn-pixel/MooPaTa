@@ -297,65 +297,74 @@ export default async function DashboardPage({
 
       {showOnboarding && <OnboardingCard steps={onboardingSteps} />}
 
-      <div className="mb-6 -mx-6 flex gap-2 overflow-x-auto px-6 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
-        {[
-          {
-            href: "/dashboard/records",
-            label: t("shortcuts.records"),
-            color: "text-amber-400",
-            icon: (
-              <>
-                <path d="M5 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5V4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
-                <path d="M5 5H3a2 2 0 0 0 2 4M15 5h2a2 2 0 0 1-2 4M10 12v3m-2.5 0h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </>
-            ),
-          },
-          {
-            href: "/dashboard/compare",
-            label: t("shortcuts.compare"),
-            color: "text-sky-400",
-            icon: <path d="M6 4v12M6 4 3 7m3-3 3 3M14 16V4m0 12 3-3m-3 3-3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
-          },
-          {
-            href: "/dashboard/achievements",
-            label: t("shortcuts.achievements"),
-            color: "text-orange-400",
-            icon: (
-              <path
-                d="M10 3 8 8H4l3.2 3-1.2 5 4-2.7 4 2.7-1.2-5L16 8h-4L10 3Z"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinejoin="round"
-              />
-            ),
-          },
-          {
-            href: "/dashboard/weight-training",
-            label: t("shortcuts.weightTraining"),
-            // Same violet as WeightTraining's activity-colors.ts accent (LIFT)
-            color: "text-violet-400",
-            icon: (
-              <path
-                d="M4 10h12M6 7v6M14 7v6M2.5 8.5v3M17.5 8.5v3"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            ),
-          },
-        ].map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="flex flex-none items-center gap-1.5 rounded-xl border border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:bg-neutral-900 hover:text-white"
-          >
-            <svg viewBox="0 0 20 20" fill="none" className={`h-4 w-4 ${item.color}`}>
-              {item.icon}
-            </svg>
-            {item.label}
-          </Link>
-        ))}
+      <div className="relative mb-6 -mx-6 sm:mx-0">
+        <div className="flex gap-2 overflow-x-auto px-6 pb-1 sm:flex-wrap sm:px-0">
+          {[
+            {
+              href: "/dashboard/records",
+              label: t("shortcuts.records"),
+              color: "text-amber-400",
+              icon: (
+                <>
+                  <path d="M5 4h10v3a5 5 0 0 1-5 5 5 5 0 0 1-5-5V4Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+                  <path d="M5 5H3a2 2 0 0 0 2 4M15 5h2a2 2 0 0 1-2 4M10 12v3m-2.5 0h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </>
+              ),
+            },
+            {
+              href: "/dashboard/compare",
+              label: t("shortcuts.compare"),
+              color: "text-sky-400",
+              icon: <path d="M6 4v12M6 4 3 7m3-3 3 3M14 16V4m0 12 3-3m-3 3-3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
+            },
+            {
+              href: "/dashboard/achievements",
+              label: t("shortcuts.achievements"),
+              color: "text-orange-400",
+              icon: (
+                <path
+                  d="M10 3 8 8H4l3.2 3-1.2 5 4-2.7 4 2.7-1.2-5L16 8h-4L10 3Z"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinejoin="round"
+                />
+              ),
+            },
+            {
+              href: "/dashboard/weight-training",
+              label: t("shortcuts.weightTraining"),
+              // Same violet as WeightTraining's activity-colors.ts accent (LIFT)
+              color: "text-violet-400",
+              icon: (
+                <path
+                  d="M4 10h12M6 7v6M14 7v6M2.5 8.5v3M17.5 8.5v3"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ),
+            },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex flex-none items-center gap-1.5 rounded-xl border border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-sm font-medium text-neutral-300 transition hover:border-neutral-700 hover:bg-neutral-900 hover:text-white"
+            >
+              <svg viewBox="0 0 20 20" fill="none" className={`h-4 w-4 ${item.color}`}>
+                {item.icon}
+              </svg>
+              {item.label}
+            </Link>
+          ))}
+        </div>
+        {/* Hints that this row scrolls horizontally on mobile (sm:flex-wrap
+            switches to a normal wrapping row on desktop, so there's nothing to
+            hint at there) — without it, a phone whose screen happens to fit
+            exactly 3 of the 4 shortcuts shows what looks like a complete row,
+            with no indication the 4th ("เวทเทรนนิ่ง") is one swipe away. A real
+            user hit exactly this and couldn't find it at all. */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-neutral-950 to-transparent sm:hidden" />
       </div>
 
       <HealthSummary
