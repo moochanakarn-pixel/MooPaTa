@@ -159,6 +159,24 @@ function matchType(line: string): string | null {
   return /ทั่วไป|workout|ออกกำลังกาย/i.test(line) ? "Workout" : null;
 }
 
+// Strips a leading markdown list/heading marker ("1. ", "2) ", "- ", "* ",
+// "# "). Digits are only treated as a list marker when immediately followed
+// by one of the punctuation characters actually used to separate a number
+// from its label (".", ")", ":", "-") — never on bare whitespace or a
+// letter, same fix (and same reasoning) as meal-import-parse.ts's identical
+// helper: the old version (`/^[*#\-\d.]+/`) stripped any leading run of
+// those characters regardless of what came after, mangling a real exercise
+// name that starts with a number but no such punctuation — "21s Bicep Curl"
+// (a real lifting technique) became "s Bicep Curl". A genuine numbered line
+// like "1. Squat" still strips correctly since the punctuation is right
+// there. Duplicated rather than shared — only these two files need it.
+function stripListMarker(cell: string): string {
+  return cell
+    .replace(/^\d+[.):\-]\s*/, "")
+    .replace(/^[*#\-]+\s*/, "")
+    .trim();
+}
+
 // A "ชื่อท่า | เซ็ทที่ | ครั้ง | น้ำหนัก | RPE | หมายเหตุ" row from the exercise
 // list the prompt asks for — same pipe-table convention as the food import,
 // minus the header-detection complexity (fixed column order here, since
@@ -189,7 +207,7 @@ function parseExerciseSetLine(
   if (cells[0] === "") cells.shift();
   if (cells[cells.length - 1] === "") cells.pop();
   if (cells.length < 3) return null;
-  const name = cells[0].replace(/^[*#\-\d.]+/, "").trim();
+  const name = stripListMarker(cells[0]);
   const reps = firstNumber(cells[2]);
   const weightKg = cells[3] !== undefined ? firstNumber(cells[3]) : null;
   const rpe = cells[4] !== undefined ? firstNumber(cells[4]) : null;

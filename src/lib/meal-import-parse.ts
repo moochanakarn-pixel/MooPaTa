@@ -26,7 +26,16 @@ export interface ParsedMeal {
 }
 
 const HEADER_KEYWORDS = ["ส่วนประกอบ", "ปริมาณ", "kcal", "โปรตีน", "คาร์บ", "ไขมัน", "อาหาร", "รายการ"];
-const SKIP_LINE_PREFIXES = ["รวม", "สรุป", "คำนวณ"];
+// A totals/summary row the AI tends to append after the real table (e.g.
+// "รวม | | 850 | 45 | 90 | 20") isn't a dish to log — matched by exact name
+// only, same reasoning as HEADER_KEYWORDS.includes(name) below. A *prefix*
+// check here used to also reject any real dish/drink whose name happens to
+// start with the same characters — "รวมมิตร"/"รวมผัก"/"รวมทอด" (all common
+// Thai dish names using "รวม" as "mixed") got silently dropped from the
+// parsed result with no indication anything was skipped.
+const SKIP_LINE_LABELS = new Set([
+  "รวม", "รวมทั้งหมด", "รวมทั้งสิ้น", "สรุป", "สรุปรวม", "คำนวณ", "คำนวณรวม", "total", "sum",
+]);
 
 // Column positions for the macro fields, either detected from a header row
 // (see detectColumnIndices) or the fixed layout this parser originally
@@ -209,6 +218,25 @@ function cellGrams(cell: string): number | null {
   return (lo + hi) / 2;
 }
 
+// Strips a leading markdown list/heading marker ("1. ", "2) ", "- ", "* ",
+// "# ") and a trailing run of "*" (closing a bold "**Name**"). Digits are
+// only treated as a list marker when immediately followed by one of the
+// punctuation characters actually used to separate a number from its label
+// (".", ")", ":", "-") — never on bare whitespace or a letter. The old
+// version (`/^[*#\-\d.]+/`) stripped *any* leading run of those characters
+// regardless of what came after, so a real name that starts with a number
+// but no such punctuation — "21s Bicep Curl" (a real exercise name), "100
+// Plus" (a drink) — got silently mangled into "s Bicep Curl"/"Plus". A
+// genuine numbered line like "1. Squat" or "2) Bench Press" still strips
+// correctly since the punctuation is right there.
+function stripListMarker(cell: string): string {
+  return cell
+    .replace(/^\d+[.):\-]\s*/, "")
+    .replace(/^[*#\-]+\s*/, "")
+    .replace(/[*]+$/, "")
+    .trim();
+}
+
 // \b doesn't work after "มล" — \b needs a transition between a \w and
 // non-\w character, and Thai script characters aren't \w at all, so a
 // trailing \b silently fails to match right after Thai text every time. A
@@ -233,7 +261,6 @@ export function parseMealText(text: string): ParsedMeal {
   for (const line of lines) {
     // markdown table separator row, e.g. "|---|---|---|"
     if (/^[-|:\s]+$/.test(line)) continue;
-    if (SKIP_LINE_PREFIXES.some((p) => line.startsWith(p))) continue;
 
     const cells = splitCells(line);
 
@@ -260,7 +287,7 @@ export function parseMealText(text: string): ParsedMeal {
       continue;
     }
 
-    const name = cells[0].replace(/^[*#\-\d.]+|[*]+$/g, "").trim();
+    const name = stripListMarker(cells[0]);
     // Exact match only — a *substring* check here used to also reject any
     // real food/supplement name that happens to mention a macro word (e.g.
     // "เวย์ (โปรตีน 30g)"), silently dropping it as if it were a stray
@@ -268,6 +295,7 @@ export function parseMealText(text: string): ParsedMeal {
     // detectColumnIndices; this is only a safety net for one that slips
     // through as its own exact label.
     if (!name || HEADER_KEYWORDS.includes(name)) continue;
+    if (SKIP_LINE_LABELS.has(name.toLowerCase())) continue;
 
     const qty = rowColumns.grams !== null && cells[rowColumns.grams] !== undefined ? cellGrams(cells[rowColumns.grams]) : null;
     const kcal = cellNumber(cells[rowColumns.kcal]);

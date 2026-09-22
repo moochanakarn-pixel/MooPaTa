@@ -96,4 +96,35 @@ describe("parseMealText — rejecting non-data lines", () => {
     const text = "ข้าวผัด | 300 | 450 | 25 | 30 | 20\nรวม | - | 450 | 25 | 30 | 20";
     expect(parseMealText(text).items).toHaveLength(1);
   });
+
+  it("skips a 'รวมทั้งหมด' totals line variant too", () => {
+    const text = "ข้าวผัด | 300 | 450 | 25 | 30 | 20\nรวมทั้งหมด | - | 450 | 25 | 30 | 20";
+    expect(parseMealText(text).items).toHaveLength(1);
+  });
+
+  it("does NOT skip a real dish whose name merely starts with 'รวม' (regression)", () => {
+    // "รวมมิตร"/"รวมผัก" are common Thai dish names using "รวม" as "mixed" —
+    // a prefix check used to drop these silently as if they were a totals row.
+    const text = "รวมมิตร | 250 | 300 | 5 | 60 | 8\nข้าวผัด | 300 | 450 | 25 | 30 | 20";
+    expect(parseMealText(text).items.map((i) => i.name)).toEqual(["รวมมิตร", "ข้าวผัด"]);
+  });
+});
+
+describe("parseMealText — leading digits in a real name vs. a list marker", () => {
+  it("keeps the leading number of a real dish/drink name (regression)", () => {
+    // "100 Plus" is a drink brand — the old digit-stripping regex mangled
+    // any leading number regardless of what followed it.
+    const parsed = parseMealText("100 Plus | 325 | 140 | 0 | 35 | 0");
+    expect(parsed.items[0].name).toBe("100 Plus");
+  });
+
+  it("still strips a genuine markdown numbered-list marker", () => {
+    const text = "1. ข้าวผัด | 300 | 450 | 25 | 30 | 20\n2) ไข่ดาว | 50 | 90 | 6 | 1 | 7";
+    expect(parseMealText(text).items.map((i) => i.name)).toEqual(["ข้าวผัด", "ไข่ดาว"]);
+  });
+
+  it("still strips bold markdown asterisks around a name", () => {
+    const parsed = parseMealText("**เมนูพิเศษ** | 300 | 450 | 10 | 70 | 12");
+    expect(parsed.items[0].name).toBe("เมนูพิเศษ");
+  });
 });

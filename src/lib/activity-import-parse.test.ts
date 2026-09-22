@@ -200,6 +200,19 @@ describe("parseActivityText", () => {
     expect(parsed.exercises[0].notes).toBe("ทำได้ดี | ยกง่าย");
   });
 
+  it("keeps the leading digits of a real exercise name (regression)", () => {
+    // "21s" (twenty-ones) is a real lifting technique name — the old
+    // digit-stripping regex mangled any leading number regardless of what
+    // followed it, turning this into "s Bicep Curl".
+    const parsed = parseActivityText("21s Bicep Curl | 1 | 21 | 15 | 8");
+    expect(parsed.exercises[0].name).toBe("21s Bicep Curl");
+  });
+
+  it("still strips a genuine markdown numbered-list marker from an exercise name", () => {
+    const parsed = parseActivityText("1. Squat | 1 | 10 | 60 | 8");
+    expect(parsed.exercises[0].name).toBe("Squat");
+  });
+
   it("reads เคเดนซ์เฉลี่ย (avgCadence) in Thai and English", () => {
     expect(parseActivityText("เคเดนซ์เฉลี่ย: 168").avgCadence).toBe(168);
     expect(parseActivityText("Cadence: 90").avgCadence).toBe(90);
