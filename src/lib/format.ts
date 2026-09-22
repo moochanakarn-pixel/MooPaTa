@@ -7,8 +7,14 @@
 export type FormatLang = "th" | "en";
 
 export function formatDuration(sec: number, lang: FormatLang = "th"): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.round((sec % 3600) / 60);
+  // Round to the nearest whole minute FIRST, then split into h/m from that
+  // single integer — rounding h and m separately (as this used to) lets m
+  // round up to 60 without carrying into h (e.g. 7190s = 1h59m50s used to
+  // print "1h 60m" instead of "2h 0m"), the same class of bug formatPace/
+  // formatSwimPace had below and the formatSigned* variants already avoid.
+  const totalMin = Math.round(sec / 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
   if (lang === "en") return h > 0 ? `${h}h ${m}m` : `${m}m`;
   return h > 0 ? `${h} ชม. ${m} น.` : `${m} นาที`;
 }
@@ -45,8 +51,16 @@ export function formatPace(metersPerSec?: number | null, unit: UnitSystem = "MET
   if (!metersPerSec) return "-"; // pace is undefined (division by zero) at 0 speed, not just missing
   const perUnitMeters = unit === "IMPERIAL" ? METERS_PER_MILE : 1000;
   const secPerUnit = perUnitMeters / metersPerSec;
-  const m = Math.floor(secPerUnit / 60);
-  const s = Math.round(secPerUnit % 60);
+  // Round the total seconds first, then derive m/s from that one integer —
+  // rounding s on its own (this used to do `Math.round(secPerUnit % 60)`)
+  // can round up to 60 without carrying into m. A real 6:00/km pace stored
+  // as avgSpeedMs and read back through MySQL/Prisma came back as
+  // 359.99999999999994 (floating-point round-trip noise) often enough to
+  // hit this: floor(359.99.../60)=5, round(359.99...%60)=round(59.99...)=60,
+  // printing the invalid "5:60" instead of "6:00".
+  const totalSec = Math.round(secPerUnit);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
   return `${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? (lang === "en" ? "mi" : "ไมล์") : lang === "en" ? "km" : "กม."}`;
 }
 
@@ -60,8 +74,10 @@ export function formatSwimPace(metersPerSec?: number | null, unit: UnitSystem = 
   if (!metersPerSec) return "-";
   const perUnitMeters = unit === "IMPERIAL" ? YARDS_PER_100 : 100;
   const secPerUnit = perUnitMeters / metersPerSec;
-  const m = Math.floor(secPerUnit / 60);
-  const s = Math.round(secPerUnit % 60);
+  // Same round-total-first fix as formatPace above — see its comment.
+  const totalSec = Math.round(secPerUnit);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
   return `${m}:${s.toString().padStart(2, "0")} /${unit === "IMPERIAL" ? (lang === "en" ? "100yd" : "100 หลา") : lang === "en" ? "100m" : "100 ม."}`;
 }
 

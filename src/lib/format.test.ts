@@ -31,6 +31,18 @@ describe("formatPace", () => {
   it("uses miles for imperial", () => {
     expect(formatPace(1609.344 / 300, "IMPERIAL")).toBe("5:00 /ไมล์");
   });
+
+  // Regression: a real 6:00/km pace (5km in 30min), once stored as
+  // Activity.avgSpeedMs and read back through MySQL/Prisma, round-trips as
+  // 2.777777777777778 instead of the mathematically exact 2.7777... — close
+  // enough that 1000/metersPerSec lands on 359.99999999999994 (not exactly
+  // 360). The old code computed minutes and seconds by rounding each half
+  // separately (floor(359.99.../60)=5, round(359.99...%60)=60), producing
+  // the invalid "5:60 /กม." instead of "6:00 /กม." — found live on the
+  // Records page with real seeded data, not a synthetic edge case.
+  it("carries a rounded-up 60 seconds into the next minute instead of showing '5:60'", () => {
+    expect(formatPace(2.777777777777778)).toBe("6:00 /กม.");
+  });
 });
 
 describe("formatSwimPace", () => {
@@ -47,6 +59,14 @@ describe("formatSwimPace", () => {
   it("returns '-' for null and zero speed", () => {
     expect(formatSwimPace(null)).toBe("-");
     expect(formatSwimPace(0)).toBe("-");
+  });
+
+  // Same class of bug as formatPace's regression test above — a
+  // floating-point-noisy metersPerSec landing secPerUnit at
+  // 179.99999999999994 (just under an exact 3:00/100m) used to print
+  // "2:60 /100 ม." instead of "3:00 /100 ม.".
+  it("carries a rounded-up 60 seconds into the next minute instead of showing '2:60'", () => {
+    expect(formatSwimPace(100 / 179.99999999999997)).toBe("3:00 /100 ม.");
   });
 });
 
@@ -114,6 +134,19 @@ describe("formatDuration", () => {
 
   it("shows both hours and minutes at/above an hour", () => {
     expect(formatDuration(3600 + 15 * 60)).toBe("1 ชม. 15 น.");
+  });
+
+  // Regression: rounding h (floor) and m (round) from raw seconds
+  // separately let m round up to 60 without carrying into h — 7190s
+  // (1h59m50s) used to print "1 ชม. 60 น." instead of "2 ชม. 0 น.". Not a
+  // floating-point edge case, a plain integer one: any duration whose
+  // sub-hour remainder is 59m30s-59m59s hits it deterministically.
+  it("carries a rounded-up 60 minutes into the next hour instead of showing '1 ชม. 60 น.'", () => {
+    expect(formatDuration(3600 + 59 * 60 + 50)).toBe("2 ชม. 0 น.");
+  });
+
+  it("carries into a full hour from under an hour (0h -> 1h 0m, not '60 นาที')", () => {
+    expect(formatDuration(59 * 60 + 50)).toBe("1 ชม. 0 น.");
   });
 });
 
