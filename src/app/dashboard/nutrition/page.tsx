@@ -130,6 +130,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
     getLocale(),
   ]);
   const numberLocale = locale === "en" ? "en-US" : "th-TH";
+  const lang = locale === "en" ? "en" : "th";
 
   const user = await db.user.findUnique({ where: { id: userId } });
   if (!user) redirect("/");
@@ -354,8 +355,10 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
     const d = new Date(todayStart);
     d.setDate(d.getDate() - i);
     const key = dayKey(d);
-    const dayTarget = applyActivityBonus(baseTargets, activitiesByDay.get(key) ?? []);
+    const dayActivities = activitiesByDay.get(key) ?? [];
+    const dayTarget = applyActivityBonus(baseTargets, dayActivities);
     const eaten = macrosByDay.get(key) ?? { carbG: 0, proteinG: 0, fatG: 0 };
+    const dayDurationSec = dayActivities.reduce((sum, a) => sum + a.durationSec, 0);
     return {
       label: d.toLocaleDateString(numberLocale, { day: "numeric", month: "short" }),
       carbG: eaten.carbG,
@@ -364,6 +367,12 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
       targetCarbG: dayTarget.carbG,
       targetProteinG: dayTarget.proteinG,
       targetFatG: dayTarget.fatG,
+      // Same bonus values macroBonusNote shows for "today" elsewhere on this
+      // page — reused here per-day so the table can explain why some rows'
+      // targets are higher than others, not just leave it implicit.
+      carbBonusG: dayTarget.carbBonusG,
+      proteinBonusG: dayTarget.proteinBonusG,
+      bonusDurationLabel: dayDurationSec > 0 ? formatDuration(dayDurationSec, lang) : null,
     };
   });
 

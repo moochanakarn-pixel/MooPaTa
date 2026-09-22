@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { useTranslations } from "next-intl";
 
 export interface MacroWeekDay {
@@ -10,6 +11,14 @@ export interface MacroWeekDay {
   targetCarbG: number;
   targetProteinG: number;
   targetFatG: number;
+  // Same activity-bonus values the "เพิ่มจากกิจกรรมวันนี้" note above this
+  // table shows, but per historical day instead of just today — explains
+  // why some rows' targets are higher than others instead of leaving that
+  // implicit. Both 0 and bonusDurationLabel null on a day with no logged
+  // activity, so the caption line below simply doesn't render for it.
+  carbBonusG: number;
+  proteinBonusG: number;
+  bonusDurationLabel: string | null;
 }
 
 // One macro's cell for one day — "eaten/target", eaten colored amber when
@@ -58,14 +67,42 @@ export function MacroWeekTable({ days }: { days: MacroWeekDay[] }) {
             </tr>
           </thead>
           <tbody>
-            {days.map((d) => (
-              <tr key={d.label} className="border-b border-neutral-800/40 last:border-0">
-                <td className="py-2 pr-2 text-neutral-400">{d.label}</td>
-                <MacroCell eaten={d.carbG} target={d.targetCarbG} />
-                <MacroCell eaten={d.proteinG} target={d.targetProteinG} />
-                <MacroCell eaten={d.fatG} target={d.targetFatG} />
-              </tr>
-            ))}
+            {days.map((d, i) => {
+              // > 0 rather than checking bonusDurationLabel directly — a
+              // very short logged activity can round down to +0g for both
+              // macros (Math.round in activityMacroBonus), and a "+0
+              // คาร์บ/+0 โปรตีน" caption would just be noise, same
+              // no-meaningless-zero convention the rest of the app follows
+              // (e.g. the "+0 kcal" activity-bonus row elsewhere never
+              // renders either).
+              const hasBonus = d.carbBonusG > 0 || d.proteinBonusG > 0;
+              // The border between one day's block and the next belongs on
+              // whichever row is visually last in that block — the main row
+              // when there's no caption, the caption row when there is —
+              // and not at all after the very last day.
+              const isLastDay = i === days.length - 1;
+              const borderClass = isLastDay ? "" : "border-b border-neutral-800/40";
+              return (
+                <Fragment key={d.label}>
+                  <tr className={hasBonus ? "" : borderClass}>
+                    <td className="py-2 pr-2 text-neutral-400">{d.label}</td>
+                    <MacroCell eaten={d.carbG} target={d.targetCarbG} />
+                    <MacroCell eaten={d.proteinG} target={d.targetProteinG} />
+                    <MacroCell eaten={d.fatG} target={d.targetFatG} />
+                  </tr>
+                  {hasBonus && (
+                    <tr className={borderClass}>
+                      <td colSpan={4} className="pb-2 text-[10px] text-neutral-600">
+                        {/* bonusDurationLabel is only null when carbBonusG/proteinBonusG are both
+                            0 (no logged activity that day) — hasBonus above already excludes that
+                            case, so this is always a real duration string here. */}
+                        {t("bonusNote", { carb: d.carbBonusG, protein: d.proteinBonusG, duration: d.bonusDurationLabel ?? "" })}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

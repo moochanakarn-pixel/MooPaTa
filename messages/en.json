@@ -327,7 +327,8 @@
       "protein": "Protein",
       "fat": "Fat",
       "unitG": "g",
-      "legend": "Orange numbers = over that day's target"
+      "legend": "Orange numbers = over that day's target",
+      "bonusNote": "+{carb} carb/+{protein} protein from {duration}"
     },
     "weightLogCard": {
       "title": "Weight trend",
