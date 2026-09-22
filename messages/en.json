@@ -7,9 +7,6 @@
     "downloadFailed": "Failed to generate image. Try again.",
     "loadingPreview": "Loading preview...",
     "close": "Close",
-    "background": "Background",
-    "opaque": "Opaque",
-    "transparent": "Transparent",
     "share": "Share"
   },
   "bottomNav": {
@@ -686,12 +683,6 @@
       "styleGrid": "Stats grid",
       "styleHero": "Hero number",
       "styleList": "Exercise list",
-      "bgCard": "Card",
-      "bgTransparent": "Transparent (overlay on another photo)",
-      "detailPosition": "Detail position",
-      "posTop": "Top",
-      "posCenter": "Center",
-      "posBottom": "Bottom",
       "previewAlt": "Download preview",
       "downloadShort": "Download"
     }
@@ -982,7 +973,6 @@
     "dateToday": "Today",
     "dateYesterday": "Yesterday",
     "dateCustom": "Pick a date",
-    "transparentHint": "Overlay this on another background photo, e.g. an IG/Line story sticker.",
     "fieldsTitle": "What to show",
     "fieldsHint": "Drag the handle to reorder, tap the switch to turn a field on/off",
     "toggleAriaLabel": "Show {label}",

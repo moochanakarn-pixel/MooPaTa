@@ -357,9 +357,6 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
           previewLoadingLabel={tc("loadingPreview")}
           previewAlt={t("downloadThisMonth")}
           closeLabel={tc("close")}
-          backgroundLabel={tc("background")}
-          opaqueLabel={tc("opaque")}
-          transparentLabel={tc("transparent")}
           defaultLang={locale === "en" ? "en" : "th"}
           hrefBase="/api/share/nutrition"
         />

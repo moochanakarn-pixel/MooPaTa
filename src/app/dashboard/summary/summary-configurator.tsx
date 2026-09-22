@@ -25,18 +25,19 @@ const FIELD_LABEL_KEY: Record<string, string> = {
 };
 const DEFAULT_FIELDS: FieldOption[] = DEFAULT_FIELD_IDS.map((id) => ({ id, enabled: true }));
 
-// Remembers which fields are on/off, their order, and the background choice
-// across visits — these are the settings someone tends to land on once and
-// reuse every day, unlike date (always want "today" by default) or language
-// (deliberately never persisted, per the share-card ?lang= convention —
-// see CLAUDE.md's "### 4. Share cards"). Per-device only (`localStorage`,
-// not the DB) since it's a personal convenience, not something that needs
-// to follow the account across devices.
+// Remembers which fields are on/off and their order across visits — these
+// are the settings someone tends to land on once and reuse every day,
+// unlike date (always want "today" by default) or language (deliberately
+// never persisted, per the share-card ?lang= convention — see CLAUDE.md's
+// "### 4. Share cards"). Per-device only (`localStorage`, not the DB) since
+// it's a personal convenience, not something that needs to follow the
+// account across devices. Used to also remember the background choice, but
+// the card is always transparent now (see the module below) so there's
+// nothing left to store for that.
 const STORAGE_KEY = "moopata_summary_config_v1";
 interface StoredConfig {
   fieldOrder: string[];
   fieldEnabled: Record<string, boolean>;
-  transparent: boolean;
 }
 
 // Merges saved field order/enabled state onto the *current* DEFAULT_FIELD_IDS
@@ -86,11 +87,6 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
   const [customDate, setCustomDate] = useState(todayKey());
   const [fields, setFields] = useState<FieldOption[]>(DEFAULT_FIELDS);
   const [dragSrc, setDragSrc] = useState<number | null>(null);
-  // Same idea as the activity share card's ?bg=transparent option (its
-  // ShareActivityButton bottom sheet) — drop this card's own gradient so it
-  // can be dropped onto an IG/Line story photo too, instead of always
-  // carrying its own backdrop.
-  const [transparent, setTransparent] = useState(false);
   const [lang, setLang] = useState<Lang>(defaultLang);
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -105,10 +101,11 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
 
   const href = useMemo(() => {
     const enabled = fields.filter((f) => f.enabled).map((f) => f.id);
-    const params = new URLSearchParams({ date, fields: enabled.join(","), lang });
-    if (transparent) params.set("bg", "transparent");
+    // Always transparent now (see the module comment above) — no longer a
+    // user choice.
+    const params = new URLSearchParams({ date, fields: enabled.join(","), lang, bg: "transparent" });
     return `/api/share/daily-summary?${params.toString()}`;
-  }, [date, fields, transparent, lang]);
+  }, [date, fields, lang]);
 
   // Same reasoning as ShareActivityButton/QuickDownloadSheet's own version
   // of this — a plain `<a href download>` gives no feedback while this
@@ -220,7 +217,6 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
       if (!raw) return;
       const stored = JSON.parse(raw) as StoredConfig;
       setFields(applyStoredFields(stored));
-      if (typeof stored.transparent === "boolean") setTransparent(stored.transparent);
     } catch {
       // Private browsing, blocked storage, or corrupt JSON — just keep the
       // defaults already showing; this is a convenience, not a requirement.
@@ -232,13 +228,12 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
       const stored: StoredConfig = {
         fieldOrder: fields.map((f) => f.id),
         fieldEnabled: Object.fromEntries(fields.map((f) => [f.id, f.enabled])),
-        transparent,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
     } catch {
       // Same as above — best-effort only, never worth surfacing an error for.
     }
-  }, [fields, transparent]);
+  }, [fields]);
 
   const anyEnabled = fields.some((f) => f.enabled);
 
@@ -291,29 +286,6 @@ export function SummaryConfigurator({ defaultLang = "th" }: { defaultLang?: Lang
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-        <h2 className="mb-3 font-medium">{tc("background")}</h2>
-        <div className="flex gap-2 rounded-xl bg-neutral-900 p-1">
-          {(
-            [
-              [false, tc("opaque")],
-              [true, tc("transparent")],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={String(value)}
-              onClick={() => setTransparent(value)}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                transparent === value ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        {transparent && <p className="mt-3 text-xs text-neutral-500">{t("transparentHint")}</p>}
       </div>
 
       <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">

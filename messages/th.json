@@ -7,9 +7,6 @@
     "downloadFailed": "สร้างรูปไม่สำเร็จ ลองใหม่อีกครั้ง",
     "loadingPreview": "กำลังโหลดตัวอย่าง...",
     "close": "ปิด",
-    "background": "พื้นหลัง",
-    "opaque": "ทึบ",
-    "transparent": "โปร่งใส",
     "share": "แชร์"
   },
   "bottomNav": {
@@ -686,12 +683,6 @@
       "styleGrid": "กริดสถิติ",
       "styleHero": "ตัวเลขเด่น",
       "styleList": "รายการท่า",
-      "bgCard": "การ์ด",
-      "bgTransparent": "โปร่งใส (วางทับรูปอื่นได้)",
-      "detailPosition": "ตำแหน่งรายละเอียด",
-      "posTop": "บน",
-      "posCenter": "กลาง",
-      "posBottom": "ล่าง",
       "previewAlt": "ตัวอย่างรูปดาวน์โหลด",
       "downloadShort": "ดาวน์โหลด"
     }
@@ -982,7 +973,6 @@
     "dateToday": "วันนี้",
     "dateYesterday": "เมื่อวาน",
     "dateCustom": "เลือกวันที่",
-    "transparentHint": "เอาไปวางทับรูปพื้นหลังอื่นต่อได้ เช่น สติกเกอร์ใน IG/Line story",
     "fieldsTitle": "ข้อมูลที่จะแสดง",
     "fieldsHint": "ลากที่จุดซ้ายเพื่อจัดลำดับ กดสวิตช์เพื่อเปิด/ปิดรายการ",
     "toggleAriaLabel": "แสดง{label}",

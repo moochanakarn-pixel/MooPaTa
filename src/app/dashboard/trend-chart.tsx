@@ -42,9 +42,6 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
             previewLoadingLabel={tc("loadingPreview")}
             previewAlt={t("downloadThisWeek")}
             closeLabel={tc("close")}
-            backgroundLabel={tc("background")}
-            opaqueLabel={tc("opaque")}
-            transparentLabel={tc("transparent")}
             defaultLang={locale === "en" ? "en" : "th"}
             hrefBase="/api/share/period?range=week"
           />

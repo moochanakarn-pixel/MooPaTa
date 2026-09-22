@@ -4,17 +4,11 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { localDateKey } from "@/lib/streak";
 
-const BG_VALUES = ["card", "transparent"] as const;
-type Bg = (typeof BG_VALUES)[number];
-
 // "list" only makes sense for an activity that actually logged exercises —
 // filtered out of the options shown otherwise (see `hasExercises` below)
 // rather than left selectable to produce an empty/pointless card.
 const ALL_STYLE_VALUES = ["grid", "hero", "list"] as const;
 type Style = (typeof ALL_STYLE_VALUES)[number];
-
-const POSITION_VALUES = ["top", "center", "bottom"] as const;
-type Pos = (typeof POSITION_VALUES)[number];
 
 // Language names are shown in their own language, not translated — same
 // convention as every other language switcher in the app (see LocaleToggle).
@@ -27,12 +21,13 @@ type Lang = (typeof LANG_OPTIONS)[number]["value"];
 const STORAGE_KEY = "moopata_activity_share_config_v1";
 
 // A small sheet in front of the plain "download the PNG" link this replaced
-// — lets the user preview & pick a card style + transparent background (see
-// src/app/api/share/[id]/route.tsx's ?style/?bg) before saving, so a
-// story/reel background photo can go underneath it instead of the card
-// always carrying its own dark backdrop. ?pos picks where the details
-// block sits vertically — most useful together with a transparent
-// background, to leave the rest of the frame free for the photo underneath.
+// — lets the user preview & pick a card style (see
+// src/app/api/share/[id]/route.tsx's ?style) before saving. Background and
+// detail-position used to be user choices too (?bg/?pos) but were removed
+// to cut down on decisions in the sheet — the card always renders
+// transparent (?bg=transparent) with details centered (?pos=center) now, so
+// a story/reel background photo can go underneath it without anyone having
+// to pick that every time.
 // Named "Share..." from when it was first built, but there's no actual
 // navigator.share/OS share-sheet call anywhere here (or anywhere else in
 // the app) — every one of these buttons only ever produces a downloadable
@@ -57,25 +52,23 @@ export function ShareActivityButton({
   const t = useTranslations("activityDetail.share");
   const tc = useTranslations("common");
   const STYLE_LABEL: Record<Style, string> = { grid: t("styleGrid"), hero: t("styleHero"), list: t("styleList") };
-  const BG_LABEL: Record<Bg, string> = { card: t("bgCard"), transparent: t("bgTransparent") };
-  const POSITION_LABEL: Record<Pos, string> = { top: t("posTop"), center: t("posCenter"), bottom: t("posBottom") };
   const styleValues = hasExercises ? ALL_STYLE_VALUES : ALL_STYLE_VALUES.filter((v) => v !== "list");
   const [open, setOpen] = useState(false);
-  const [bg, setBg] = useState<Bg>("card");
   const [style, setStyle] = useState<Style>("grid");
-  const [pos, setPos] = useState<Pos>("center");
   const [lang, setLang] = useState<Lang>(defaultLang);
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
   const [canWebShare, setCanWebShare] = useState(false);
 
-  // Restores the last style/bg/pos chosen for *any* activity (same idea as
+  // Restores the last style chosen for *any* activity (same idea as
   // SummaryConfigurator's moopata_summary_config_v1 — one set of choices
   // people reuse every time, not something worth re-picking per activity).
   // `lang` is deliberately excluded, matching every other share surface's
   // documented behavior: it always defaults to the current UI language and
-  // is a one-off choice per download, never persisted.
+  // is a one-off choice per download, never persisted. bg/pos used to be
+  // stored here too but are no longer user choices (see the module comment)
+  // so there's nothing left to restore for them.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -87,8 +80,6 @@ export function ShareActivityButton({
       // a stored preference from a different (weight-training) activity
       // shouldn't silently request a pointless empty list card here.
       setStyle(restoredStyle === "list" && !hasExercises ? "grid" : restoredStyle);
-      if (typeof parsed.bg === "string" && BG_VALUES.includes(parsed.bg)) setBg(parsed.bg);
-      if (typeof parsed.pos === "string" && POSITION_VALUES.includes(parsed.pos)) setPos(parsed.pos);
     } catch {
       // Private browsing / blocked storage / corrupt JSON — just keep the
       // defaults, same as SummaryConfigurator's own silent fallback.
@@ -100,17 +91,19 @@ export function ShareActivityButton({
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ style, bg, pos }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ style }));
     } catch {
       // Same "just a convenience" tolerance as the read above.
     }
-  }, [style, bg, pos]);
+  }, [style]);
 
   useEffect(() => {
     setCanWebShare(typeof navigator !== "undefined" && "share" in navigator && "canShare" in navigator);
   }, []);
 
-  const href = `/api/share/${activityId}?bg=${bg}&style=${style}&pos=${pos}&lang=${lang}`;
+  // bg/pos are no longer user choices (see the module comment) — always
+  // transparent + centered.
+  const href = `/api/share/${activityId}?bg=transparent&style=${style}&pos=center&lang=${lang}`;
 
   function buildFilename() {
     // e.g. "moopata-run-2026-09-19.png" instead of the same generic name
@@ -308,44 +301,6 @@ export function ShareActivityButton({
                 </button>
               ))}
             </div>
-
-            <p className="mb-1.5 text-xs text-neutral-500">{tc("background")}</p>
-            <div className="mb-3 flex gap-2 rounded-xl bg-neutral-950 p-1">
-              {BG_VALUES.map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setBg(v)}
-                  className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition ${
-                    bg === v ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
-                  }`}
-                >
-                  {BG_LABEL[v]}
-                </button>
-              ))}
-            </div>
-
-            {/* Positioning the details block vertically is meaningless for
-                "list" — its height is exactly as tall as its content, always
-                starting from the top, so this whole section is hidden
-                rather than left selectable with no visible effect. */}
-            {style !== "list" && (
-              <>
-                <p className="mb-1.5 text-xs text-neutral-500">{t("detailPosition")}</p>
-                <div className="mb-4 flex gap-2 rounded-xl bg-neutral-950 p-1">
-                  {POSITION_VALUES.map((v) => (
-                    <button
-                      key={v}
-                      onClick={() => setPos(v)}
-                      className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition ${
-                        pos === v ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
-                      }`}
-                    >
-                      {POSITION_LABEL[v]}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
 
             {/* Checkerboard backdrop makes a transparent PNG's transparency
                 actually visible in the preview, instead of it just looking

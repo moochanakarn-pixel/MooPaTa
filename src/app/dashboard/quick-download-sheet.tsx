@@ -31,9 +31,6 @@ export function QuickDownloadSheet({
   previewLoadingLabel,
   previewAlt,
   closeLabel,
-  backgroundLabel,
-  opaqueLabel,
-  transparentLabel,
   defaultLang,
   hrefBase,
 }: {
@@ -48,9 +45,6 @@ export function QuickDownloadSheet({
   previewLoadingLabel: string;
   previewAlt: string;
   closeLabel: string;
-  backgroundLabel: string;
-  opaqueLabel: string;
-  transparentLabel: string;
   defaultLang: ShareLang;
   hrefBase: string;
 }) {
@@ -64,16 +58,11 @@ export function QuickDownloadSheet({
   useEffect(() => {
     setCanWebShare(typeof navigator !== "undefined" && "share" in navigator && "canShare" in navigator);
   }, []);
-  // Same ?bg=transparent option ShareActivityButton/SummaryConfigurator
-  // already offer for their own cards — period/nutrition (the routes this
-  // sheet fronts) gained the same backend support alongside this toggle.
-  // Not persisted/remembered across opens, matching `lang`'s own behavior
-  // here — only SummaryConfigurator's fuller page remembers choices
-  // (see its own comment on why: this sheet is a quick one-off action, not
-  // a page someone tunes once and revisits daily the same way).
-  const [transparent, setTransparent] = useState(false);
 
-  const href = `${hrefBase}${hrefBase.includes("?") ? "&" : "?"}lang=${lang}${transparent ? "&bg=transparent" : ""}`;
+  // Always transparent now — background used to be a user choice here too
+  // (like ShareActivityButton/SummaryConfigurator's own cards) but was
+  // removed to cut down on decisions in this sheet.
+  const href = `${hrefBase}${hrefBase.includes("?") ? "&" : "?"}lang=${lang}&bg=transparent`;
 
   // Fetches the PNG ourselves instead of a plain `<a href download>` — the
   // route behind `hrefBase` can be genuinely slow to render (real Satori/
@@ -223,21 +212,6 @@ export function QuickDownloadSheet({
                   }`}
                 >
                   {value === "th" ? "ไทย" : "English"}
-                </button>
-              ))}
-            </div>
-
-            <p className="mb-1.5 text-xs text-neutral-500">{backgroundLabel}</p>
-            <div className="mb-4 flex gap-2 rounded-xl bg-neutral-950 p-1">
-              {([false, true] as const).map((value) => (
-                <button
-                  key={String(value)}
-                  onClick={() => setTransparent(value)}
-                  className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition ${
-                    transparent === value ? "bg-[#fc4c02] text-white" : "text-neutral-400 hover:text-neutral-200"
-                  }`}
-                >
-                  {value ? transparentLabel : opaqueLabel}
                 </button>
               ))}
             </div>

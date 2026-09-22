@@ -731,6 +731,30 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     ชิดซ้ายเหมือนเดิมทุกตำแหน่ง — ทดสอบจริงด้วยการ seed กิจกรรมแบดมินตัน (HR เท่านั้น ไม่มีระยะทาง/ความเร็ว)
     แล้ว curl ทั้ง `?pos=top|center|bottom` ทั้งสไตล์ grid/hero ยืนยันภาพว่าโลโก้เคลื่อนไปพร้อมเนื้อหาทุกครั้ง
     และ `pos=top` (ค่าที่เคยเป็นเหมือนพฤติกรรมเดิมพอดี) ให้ผลเหมือนก่อนแก้เป๊ะ ไม่มี regression
+  - **`?bg`/`?pos` ไม่ใช่ตัวเลือกให้ผู้ใช้กดเลือกในชีทดาวน์โหลดแล้ว — ตัด choice ทิ้งทั้งหมด ใช้
+    `bg=transparent`/`pos=center` เสมอทุกจุด** — ผู้ใช้ขอลดจำนวนหัวข้อ/การตัดสินใจในชีทดาวน์โหลดลง
+    ("จะลดการทำงานให้น้อยลงได้รึเปล่า ทำกับทุกหน้าเลย") ตัดทั้งแถบ "พื้นหลัง" (ทึบ/โปร่งใส) และแถบ
+    "ตำแหน่งรายละเอียด" (บน/กลาง/ล่าง) ออกจากทุกจุดที่เคยมี: `ShareActivityButton` (ตัดทั้งสองแถบ, เหลือ
+    แค่ภาษา+สไตล์การ์ดให้เลือก), `SummaryConfigurator` (ตัดแถบพื้นหลัง — ไม่เคยมี `pos` อยู่แล้ว),
+    `QuickDownloadSheet` (ตัดแถบพื้นหลัง — ไม่เคยมี `pos` อยู่แล้วเช่นกัน คนละ 3 caller คือปุ่มดาวน์โหลด
+    สัปดาห์นี้/เดือนนี้ที่หน้าแรก กับสรุปโภชนาการเดือนนี้ที่หน้าเชิงลึก) — **API routes ทั้ง 4
+    (`/api/share/[id]`, `/daily-summary`, `/period`, `/nutrition`) ไม่ได้แก้เลย** ยังรับ `?bg=`/`?pos=`
+    เหมือนเดิมทุกอย่าง (backward-compatible) แค่ฝั่ง UI hardcode ค่าที่ส่งไปเป็น `bg=transparent`
+    (และ `pos=center` สำหรับ `[id]` ที่มีตัวเลือกนี้) เสมอแทนที่จะให้ผู้ใช้เลือก — เลือก transparent
+    ล้วนเพราะเป็นทางเลือกที่ "เอาไปใช้ต่อได้กว้างที่สุด" (วางทับรูปอื่นได้ ถ้าไม่อยากทับก็ยังเห็นพื้นหลัง
+    การ์ดโปร่งแสงของแต่ละบล็อกอยู่ดี ไม่ได้ดูว่างเปล่า) และ `center` เพราะเป็น default เดิมของทั้งสอง
+    component อยู่แล้ว ไม่ใช่ค่าที่ผู้ใช้ต้องเรียนรู้ใหม่ — `localStorage` persistence ตัดตามไปด้วย:
+    `ShareActivityButton`'s `moopata_activity_share_config_v1` เหลือจำแค่ `{style}` (เดิมจำ
+    `{style, bg, pos}`), `SummaryConfigurator`'s `moopata_summary_config_v1`'s `StoredConfig` ตัด field
+    `transparent` ออก (เหลือแค่ `fieldOrder`/`fieldEnabled`) — message key ที่ไม่มีจุดเรียกใช้แล้วก็ลบ
+    ออกจาก `messages/th.json`/`en.json` ไปด้วย (`common.background`/`opaque`/`transparent`,
+    `activityDetail.share.bgCard`/`bgTransparent`/`detailPosition`/`posTop`/`posCenter`/`posBottom`,
+    `summary.transparentHint`) — ทดสอบจริงด้วยการ seed กิจกรรมเวทเทรนนิ่ง, curl ทั้ง 4 หน้าที่มีชีท
+    (`/dashboard/activity/[id]`, `/dashboard/summary`, `/dashboard`, `/dashboard/nutrition`) ทั้ง TH/EN
+    ยืนยันไม่มีข้อความ "พื้นหลัง"/"ทึบ"/"โปร่งใส"/"ตำแหน่งรายละเอียด" หลงเหลือใน HTML เลย (รวมถึงใน
+    messages JSON ที่ฝังมากับ RSC payload สำหรับ hydration) และ curl ตรงไปที่ทั้ง 4 API route ยืนยันได้
+    PNG แบบ RGBA (โปร่งใสจริง) กลับมาปกติ — `npx tsc --noEmit`, `npm run build`, `npm run test` (197
+    เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
   - **สไตล์ `hero` เพิ่มจำนวนสถิติรองจาก "อย่างมาก 2 ตัวแรกที่เจอ" เป็น "อย่างมาก 4 ตัว (2×2)" +
     การันตีว่าถ้ามีแคลอรี่บันทึกไว้ต้องโชว์เสมอ** — ผู้ใช้รายงานว่ากิจกรรมที่ไม่มีระยะทาง/เพซ/ความเร็ว/
     เคเดนซ์เลย (เช่น แบดมินตัน มีแค่หัวใจเฉลี่ย/สูงสุด) พอเลือกสไตล์ `hero` แล้วข้อมูลน้อยมาก แถมขอเพิ่ม

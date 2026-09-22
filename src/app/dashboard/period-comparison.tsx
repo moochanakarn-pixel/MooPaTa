@@ -79,9 +79,6 @@ export function PeriodComparison({
           previewLoadingLabel={tc("loadingPreview")}
           previewAlt={t("downloadThisMonth")}
           closeLabel={tc("close")}
-          backgroundLabel={tc("background")}
-          opaqueLabel={tc("opaque")}
-          transparentLabel={tc("transparent")}
           defaultLang={locale === "en" ? "en" : "th"}
           hrefBase="/api/share/period?range=month"
         />
