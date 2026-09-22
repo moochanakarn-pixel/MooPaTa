@@ -186,6 +186,12 @@ export default async function DashboardPage({
     { calories: 0, proteinG: 0, carbG: 0, fatG: 0 }
   );
   const [latestWeightLog, previousWeightLog] = recentWeightLogs;
+  // Round before the zero-check (not after) — tiny scale-to-scale noise
+  // (e.g. 0.04kg) would otherwise round to "+0.0"/"-0.0" for display while
+  // still failing the !== 0 check that's supposed to hide the badge. Same
+  // rounding-before-comparing convention already used in weekly-summary.ts.
+  const rawWeightDeltaKg = latestWeightLog && previousWeightLog ? latestWeightLog.weightKg - previousWeightLog.weightKg : null;
+  const weightDeltaKg = rawWeightDeltaKg !== null ? Math.round(rawWeightDeltaKg * 10) / 10 : null;
   const supplementsTakenToday = activeSupplements.filter((s) => s.logs.length > 0).length;
   const hasAnyHealthData =
     healthTargets !== null || todayFoodLogs.length > 0 || (todayWaterAgg._sum.ml ?? 0) > 0 || recentWeightLogs.length > 0 || activeSupplements.length > 0;
@@ -333,7 +339,7 @@ export default async function DashboardPage({
         waterMl={todayWaterAgg._sum.ml ?? 0}
         waterTargetMl={healthTargets?.waterMl ?? null}
         latestWeightKg={latestWeightLog?.weightKg ?? null}
-        weightDeltaKg={latestWeightLog && previousWeightLog ? latestWeightLog.weightKg - previousWeightLog.weightKg : null}
+        weightDeltaKg={weightDeltaKg}
         supplementsTakenToday={supplementsTakenToday}
         supplementsTotal={activeSupplements.length}
       />

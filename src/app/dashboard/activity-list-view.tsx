@@ -55,6 +55,16 @@ export function ActivityListView({ activities, unit }: { activities: ActivityRow
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
+  // elevationGainM only ever exists on legacy provider:STRAVA activities
+  // (Strava sync is fully removed — nothing writes this field anymore, not
+  // the manual log form nor the AI-import parser) so for most users this
+  // column is permanently "-" all the way down. Hide it entirely once
+  // there's nothing real to show, instead of a column of dashes.
+  const hasElevationData = activities.some((a) => a.elevationGainM !== null);
+  const sortKeys = (["date", "distance", "duration", "pace", "elevation", "hr"] as SortKey[]).filter(
+    (key) => key !== "elevation" || hasElevationData
+  );
+
   function toggleSort(key: SortKey) {
     if (key === sortKey) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -122,7 +132,7 @@ export function ActivityListView({ activities, unit }: { activities: ActivityRow
             <thead>
               <tr className="border-b border-neutral-800/80 text-xs text-neutral-500">
                 <th className="px-4 py-3 text-left font-medium">{t("activity")}</th>
-                {(["date", "distance", "duration", "pace", "elevation", "hr"] as SortKey[]).map((key) => (
+                {sortKeys.map((key) => (
                   <th key={key} className="px-4 py-3 text-right font-medium">
                     <button
                       onClick={() => toggleSort(key)}
@@ -157,9 +167,11 @@ export function ActivityListView({ activities, unit }: { activities: ActivityRow
                     <td className="px-4 py-3 text-right font-medium tabular-nums">{formatDistanceKm(a.distanceMeters, unit)}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatDuration(a.durationSec)}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{activitySpeedValue(a.type, a.avgSpeedMs, unit)}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      {a.elevationGainM ? formatElevationM(a.elevationGainM, unit) : "-"}
-                    </td>
+                    {hasElevationData && (
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        {a.elevationGainM ? formatElevationM(a.elevationGainM, unit) : "-"}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-right tabular-nums">
                       {a.avgHeartRate ? `${Math.round(a.avgHeartRate)} bpm` : "-"}
                     </td>

@@ -28,7 +28,19 @@ export function MonthHighlights({ activities, unit }: { activities: HighlightAct
   const longest = activities.reduce((best, a) =>
     (a.distanceMeters ?? 0) > (best?.distanceMeters ?? 0) ? a : best
   );
-  const fastest = activities.reduce((best, a) => ((a.avgSpeedMs ?? 0) > (best?.avgSpeedMs ?? 0) ? a : best));
+  // "fastest" only makes sense compared within the same activity type — a
+  // bike ride's km/h will almost always beat a run's regardless of effort,
+  // so comparing raw avgSpeedMs across types would nearly always crown
+  // whichever type is naturally faster, not the most impressive effort.
+  // Restrict the comparison to the type most logged this month (the user's
+  // main sport that month) so it's an apples-to-apples "fastest of your own
+  // dominant activity" instead — same principle TypeBreakdown already
+  // applies by comparing duration/calories instead of raw distance.
+  const typeCounts = new Map<string, number>();
+  for (const a of activities) typeCounts.set(a.type, (typeCounts.get(a.type) ?? 0) + 1);
+  const dominantType = [...typeCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  const sameTypeActivities = activities.filter((a) => a.type === dominantType);
+  const fastest = sameTypeActivities.reduce((best, a) => ((a.avgSpeedMs ?? 0) > (best?.avgSpeedMs ?? 0) ? a : best));
   const highestClimb = activities.reduce((best, a) =>
     (a.elevationGainM ?? 0) > (best?.elevationGainM ?? 0) ? a : best
   );
