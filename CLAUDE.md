@@ -461,13 +461,20 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
     (ปุ่มดาวน์โหลดสรุปสัปดาห์นี้ที่หน้าแรก): ยืนยันว่ากดครั้งแรกปุ่มเปลี่ยนเป็น "กำลังสร้างรูป..." +
     `disabled` ทันที, กดซ้ำระหว่างนั้นไม่ทำให้จำนวน network request ไปที่ route เพิ่มขึ้นเลย (นับจาก
     `page.on("request")`), ได้ `download` event แค่ครั้งเดียวพร้อมชื่อไฟล์ถูกต้อง, และ sheet ปิดเองหลัง
-    โหลดสำเร็จ — **หมายเหตุที่พบระหว่างเทสแต่ไม่ใช่บั๊กที่แก้รอบนี้**: preview `<img>` เดิม (ก่อนแก้ปุ่ม
-    ดาวน์โหลด) fire request ไปที่ route เดียวกัน **2 ครั้ง** ตอนสลับ style/bg (เห็นจาก
-    `page.on("request")` เหมือนกัน) — น่าจะเป็น artifact ของ service worker (แอพเป็น PWA มี service
-    worker) ที่ intercept แล้ว forward request ต่อ ทำให้ Playwright เห็นเป็น 2 request layer แยกกันทั้งที่
-    เป็น network round-trip เดียว ไม่ใช่ preview เรียก Satori render จริง 2 รอบ — ไม่กระทบไฟล์ที่ดาวน์โหลด
-    เลย (คนละกลไกกับปุ่มดาวน์โหลดที่แก้ในข้อนี้) ยังไม่ได้ไล่ยืนยัน root cause ให้ชัดเจน 100% เก็บไว้เป็น
-    จุดสังเกตเผื่อมีใครเจอปัญหาที่เกี่ยวข้องในอนาคต
+    โหลดสำเร็จ — **หมายเหตุเก่าที่เคยพบระหว่างเทสว่า preview `<img>` fire request ไปที่ route เดียวกัน
+    2 ครั้งตอนสลับ style/bg สงสัยว่าเป็น artifact ของ service worker — ไล่ยืนยันแล้วว่าไม่ใช่และไม่พบซ้ำ
+    (`git log -- public/sw.js` เทียบวันที่: commit ที่กัน `/api/*` ไม่ให้ service worker intercept
+    [`c6ad4e0`, 2026-08-24] มาก่อนหน้า commit ที่เจอบั๊กนี้ [`34be314`, 2026-09-18] เกือบเดือนอยู่แล้ว
+    แปลว่าตอนที่เห็นปรากฏการณ์นี้ `sw.js` ก็กัน `/api/*` อยู่แล้ว ทฤษฎี "service worker intercept แล้ว
+    forward" ไม่มีทางเป็นสาเหตุได้ตั้งแต่ต้น) — ทดสอบซ้ำด้วย Playwright จริง (`page.on("request")`
+    ตัวเดียวกับที่ใช้ตอนเจอครั้งแรก, เปิด service worker จริง + reload ให้หน้าถูก `navigator.
+    serviceWorker.controller` คุมอยู่แน่ ๆ ก่อนเปิดชีท) ทั้งตอนเปิดชีทครั้งแรกและตอนสลับสไตล์การ์ด
+    (grid → hero) เจอ request ไปที่ `/api/share/[id]` แค่ **ครั้งเดียว** ทุกรอบ ไม่ใช่ 2 — และ
+    `request.serviceWorker()` ที่ Playwright รายงานกลับมาเป็น `null`/false เสมอ ยืนยันในระดับ network
+    layer จริง (ไม่ใช่แค่ DevTools UI) ว่า service worker ไม่ได้แตะ request พวกนี้เลยด้วยซ้ำ ตรงกับที่
+    `sw.js`'s comment บอกไว้ว่าตั้งใจกัน `/api/*` ทั้งหมด — สรุป: ปรากฏการณ์เดิมไม่ reproduce แล้วในโค้ด
+    ปัจจุบัน (อาจจะเป็น artifact เฉพาะของรันเทสรอบนั้นครั้งเดียว ไม่ใช่บั๊กที่มีอยู่จริงและคงอยู่) ไม่ต้อง
+    แก้อะไรเพิ่ม
   - **ข้อความ "สร้างรูปไม่สำเร็จ" ค้างข้ามการปิด-เปิด sheet ใหม่** — บั๊กที่พบจาก code review รอบ audit
     หน้าดาวน์โหลดทั้งหมด (ไม่ใช่ user report) ของ `ShareActivityButton`/`QuickDownloadSheet` — `downloading`/
     `downloadFailed` เป็น state ของ component หลัก (`ShareActivityButton`/`QuickDownloadSheet` เอง) ไม่ใช่
@@ -902,13 +909,30 @@ achievements, activity detail) เข้าถึงผ่านลิงก์�
       `activityDetail.stats` เลยเพราะข้อความต่างกันหมด (เช่น "เพซเร็วที่สุด"/"ระยะทางไกลที่สุด" เป็นสถิติ
       แบบ "สูงสุดตลอดกาล" คนละความหมายกับ stat แบบ "ค่าเฉลี่ยของกิจกรรมนี้" ที่ `activityDetail.stats`
       ใช้) เก็บเป็น key ของตัวเองใน namespace `records` ทั้งหมด
-    - **`formatElevationM(lang)` ไม่ได้ถูกเรียกสำหรับค่า elevation-gain delta ทั้งที่หน้า records/
-      compare** — ทั้งสองจุด (`records/page.tsx`'s `maxElevationGainM`, `compare-view.tsx`'s
-      `elevationDiff`) ต่อ string "ม." เข้ากับตัวเลขดิบตรง ๆ (ไม่ผ่าน `formatElevationM`, ซึ่งจะแปลงเป็น
-      ฟุตถ้า `unit === "IMPERIAL"`) ของเดิมก่อนรอบนี้แล้ว — **ไม่ใช่บั๊กที่แก้รอบนี้** (ไม่ได้อยู่ใน scope
-      "แปลข้อความ UI" ของงานนี้ แค่เปลี่ยน "ม." ให้ตอบสนอง `lang` ผ่าน key `records.meters`/
-      `compare.meters` เพื่อให้ EN เห็น "m" แทน แต่ค่าที่โชว์ยังเป็นเมตรดิบเหมือนเดิมไม่ว่า
-      `unitSystem` จะเป็นอะไร — ถ้ามีคน report ว่าเลขไต่ระดับผิดหน่วยตอนตั้ง imperial ให้ดู 2 จุดนี้ก่อน)
+    - **`formatElevationM(lang)` เดิมไม่ได้ถูกเรียกสำหรับค่า elevation-gain delta ที่หน้า records/
+      compare — แก้แล้วในรอบถัดมา** (ตอนแปล UI รอบนี้ตั้งใจปล่อยไว้เพราะนอก scope "แปลข้อความ UI"
+      แค่เปลี่ยน "ม." ให้ตอบสนอง `lang` ผ่าน key `records.meters`/`compare.meters` แต่ยังโชว์เมตรดิบ
+      เหมือนเดิมไม่ว่า `unitSystem` จะเป็นอะไร) ทั้งสองจุด (`records/page.tsx`'s `maxElevationGainM`,
+      `compare-view.tsx`'s `elevationDiff`) เคยต่อ string "ม."/"m" เข้ากับตัวเลขดิบตรง ๆ ไม่ผ่าน
+      `formatElevationM` เลย ทำให้ user ที่ตั้ง `unitSystem: IMPERIAL` เห็นตัวเลขเป็นเมตรแต่ติดป้าย
+      หน่วยเป็นฟุต (เช่น ไต่ระดับจริง 500 ม. โชว์เป็น "500 ft" ทั้งที่ควรเป็น "1640 ft") — แก้โดยเพิ่ม
+      **`formatSignedElevation(diffMeters, unit, lang)`** (`src/lib/format.ts`, เคียงกับ
+      `formatElevationM` และ `formatSignedDistance` ที่มีอยู่แล้ว — แปลงเป็นฟุตก่อนใส่เครื่องหมาย
+      +/− เหมือน `formatSignedDistance` ทำกับระยะทาง) แล้ว: `records/page.tsx` เปลี่ยน
+      `` `${Math.round(r.maxElevationGainM)} ${t("meters")}` `` เป็น
+      `formatElevationM(r.maxElevationGainM, unit, lang)` (คง ternary เดิมที่ซ่อนแถวทั้งแถวถ้าค่าเป็น
+      falsy — `RecordRow` return `null` เมื่อ `value === "-"` — ไม่เปลี่ยนพฤติกรรมตรงนี้ แค่สลับตัว
+      formatter), `compare-view.tsx` เปลี่ยน delta เป็น `formatSignedElevation(elevationDiff, unit,
+      lang)` — ทั้งสองจุด `unit`/`lang` มีอยู่ในสโคปอยู่แล้วจากตัว formatter อื่นข้างเคียง ไม่ต้องส่ง
+      prop ใหม่เพิ่ม — คีย์ `records.meters`/`compare.meters` กลายเป็น orphaned เลยลบออกจาก
+      `messages/th.json`/`en.json` ไปด้วย (คนละคีย์กับ `activityDetail.detailPanel.meters` ที่ยังใช้
+      อยู่ที่หน้ารายละเอียดกิจกรรมสำหรับ splits/laps ของกิจกรรมเก่าที่ sync จาก Strava — ไม่แตะ) — เพิ่ม
+      เทส `formatElevationM`/`formatSignedElevation` ใน `format.test.ts` (ยืนยันแปลงเป็นฟุตถูกต้อง,
+      `null`/`undefined` คืน "-" แต่ `0` ไม่ใช่ "-", เครื่องหมาย +/− ถูกต้อง) — ทดสอบจริงด้วยการ seed
+      user `unitSystem: IMPERIAL` + กิจกรรม hike 2 ครั้ง (ไต่ระดับ 500 ม./300 ม.) เปิดทั้งสองหน้าจริง
+      ผ่าน curl ยืนยันเห็น "1640 ฟุต" (ไม่ใช่ "500 ฟุต") ที่หน้าสถิติสูงสุด และ "-656 ฟุต" ที่หน้า
+      เปรียบเทียบ (200 ม. × 3.28084 ≈ 656) แล้วสลับ `unitSystem` กลับเป็น `METRIC` ยืนยัน regression-
+      check ว่ายังโชว์ "500 ม."/"-200 ม." เหมือนเดิมไม่กระทบ
     - ทดสอบจริงผ่าน MariaDB: seed user + 3 กิจกรรมวิ่ง (4/5/6 กม., ระยะห่างกันคนละสัปดาห์ เพื่อให้
       `distanceProgression`/`speedProgression` มี ≥3 จุดจริง ปลด `PrProgressionChart` ออกมาโชว์ได้) +
       2 กิจกรรมเวทเทรนนิ่งที่มีท่า Bench Press คนละน้ำหนัก (60→70 กก.) เพื่อให้ `ExerciseProgressionChart`

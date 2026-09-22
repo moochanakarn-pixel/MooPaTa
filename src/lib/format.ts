@@ -103,6 +103,13 @@ export function formatElevationM(meters?: number | null, unit: UnitSystem = "MET
 
 // --- Signed deltas, for comparing one activity against another ---
 
+export function formatSignedElevation(diffMeters: number, unit: UnitSystem = "METRIC", lang: FormatLang = "th"): string {
+  const sign = diffMeters > 0 ? "+" : diffMeters < 0 ? "-" : "";
+  const value = unit === "IMPERIAL" ? Math.abs(diffMeters) * 3.28084 : Math.abs(diffMeters);
+  const unitLabel = unit === "IMPERIAL" ? (lang === "en" ? "ft" : "ฟุต") : lang === "en" ? "m" : "ม.";
+  return `${sign}${Math.round(value)} ${unitLabel}`;
+}
+
 export function formatSignedDistance(diffMeters: number, unit: UnitSystem = "METRIC", lang: FormatLang = "th"): string {
   const sign = diffMeters > 0 ? "+" : diffMeters < 0 ? "-" : "";
   const value = unit === "IMPERIAL" ? Math.abs(diffMeters) / METERS_PER_MILE : Math.abs(diffMeters) / 1000;

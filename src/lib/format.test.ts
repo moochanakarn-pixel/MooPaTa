@@ -5,7 +5,9 @@ import {
   cadenceUnitLabel,
   formatDistanceKm,
   formatDuration,
+  formatElevationM,
   formatPace,
+  formatSignedElevation,
   formatSignedPace,
   formatSignedSwimPace,
   formatSpeedKmh,
@@ -112,6 +114,36 @@ describe("formatDuration", () => {
 
   it("shows both hours and minutes at/above an hour", () => {
     expect(formatDuration(3600 + 15 * 60)).toBe("1 ชม. 15 น.");
+  });
+});
+
+describe("formatElevationM / formatSignedElevation", () => {
+  it("formats metric and imperial (converts to feet)", () => {
+    expect(formatElevationM(500)).toBe("500 ม.");
+    expect(formatElevationM(500, "IMPERIAL")).toBe("1640 ฟุต");
+    expect(formatElevationM(500, "IMPERIAL", "en")).toBe("1640 ft");
+  });
+
+  it("returns '-' for null/undefined only, not zero", () => {
+    expect(formatElevationM(null)).toBe("-");
+    expect(formatElevationM(undefined)).toBe("-");
+    expect(formatElevationM(0)).toBe("0 ม.");
+  });
+
+  // Regression: records/page.tsx and compare-view.tsx used to append a
+  // raw "ม."/"m" string straight onto the meter value for the delta,
+  // ignoring `unit` entirely — an IMPERIAL user saw a number of meters
+  // mislabeled as feet.
+  it("converts the delta to feet under IMPERIAL, not just relabels meters", () => {
+    expect(formatSignedElevation(100, "IMPERIAL")).toBe("+328 ฟุต");
+    expect(formatSignedElevation(-100, "IMPERIAL")).toBe("-328 ฟุต");
+    expect(formatSignedElevation(100, "IMPERIAL", "en")).toBe("+328 ft");
+  });
+
+  it("formats metric deltas with a sign and no conversion", () => {
+    expect(formatSignedElevation(50)).toBe("+50 ม.");
+    expect(formatSignedElevation(-50)).toBe("-50 ม.");
+    expect(formatSignedElevation(0)).toBe("0 ม.");
   });
 });
 

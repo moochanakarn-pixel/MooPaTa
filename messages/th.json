@@ -700,7 +700,6 @@
     "fastestSpeed": "ความเร็วสูงสุด",
     "longestDuration": "เวลานานที่สุด",
     "maxElevationGain": "ไต่ระดับสูงสุด",
-    "meters": "ม.",
     "distancePrTrend": "แนวโน้ม PR ระยะทาง",
     "pacePrTrend": "แนวโน้ม PR เพซ",
     "speedPrTrend": "แนวโน้ม PR ความเร็ว",
@@ -716,8 +715,7 @@
     "selectDifferent": "เลือกกิจกรรมสองรายการที่ต่างกันเพื่อเปรียบเทียบ",
     "vs": "VS",
     "paceOrSpeedAvg": "เพซ/ความเร็วเฉลี่ย",
-    "elevationGain": "ไต่ระดับ",
-    "meters": "ม."
+    "elevationGain": "ไต่ระดับ"
   },
   "achievements": {
     "title": "ความสำเร็จ",

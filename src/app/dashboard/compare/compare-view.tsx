@@ -12,6 +12,7 @@ import {
   formatElevationM,
   formatSignedDistance,
   formatSignedDuration,
+  formatSignedElevation,
   formatSignedHeartRate,
   formatSignedPace,
   formatSignedSwimPace,
@@ -188,7 +189,7 @@ export function CompareView({ activities, unit }: { activities: CompareActivity[
             label={t("elevationGain")}
             aValue={a.elevationGainM ? formatElevationM(a.elevationGainM, unit, lang) : "-"}
             bValue={b.elevationGainM ? formatElevationM(b.elevationGainM, unit, lang) : "-"}
-            deltaText={elevationDiff !== null ? `${elevationDiff > 0 ? "+" : ""}${Math.round(elevationDiff)} ${t("meters")}` : undefined}
+            deltaText={elevationDiff !== null ? formatSignedElevation(elevationDiff, unit, lang) : undefined}
           />
           <Row
             label={ts("avgHr")}

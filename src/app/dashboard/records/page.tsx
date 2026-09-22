@@ -10,6 +10,7 @@ import {
   formatActivityDate,
   formatDistanceKm,
   formatDuration,
+  formatElevationM,
   type FormatLang,
   type UnitSystem,
 } from "@/lib/format";
@@ -253,7 +254,7 @@ export default async function RecordsPage() {
                 <RecordRow label={t("longestDuration")} value={r.maxDurationSec ? formatDuration(r.maxDurationSec, lang) : "-"} />
                 <RecordRow
                   label={t("maxElevationGain")}
-                  value={r.maxElevationGainM ? `${Math.round(r.maxElevationGainM)} ${t("meters")}` : "-"}
+                  value={r.maxElevationGainM ? formatElevationM(r.maxElevationGainM, unit, lang) : "-"}
                 />
               </div>
 

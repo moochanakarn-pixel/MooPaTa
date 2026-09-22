@@ -700,7 +700,6 @@
     "fastestSpeed": "Highest speed",
     "longestDuration": "Longest duration",
     "maxElevationGain": "Highest elevation gain",
-    "meters": "m",
     "distancePrTrend": "Distance PR trend",
     "pacePrTrend": "Pace PR trend",
     "speedPrTrend": "Speed PR trend",
@@ -716,8 +715,7 @@
     "selectDifferent": "Select two different activities to compare",
     "vs": "VS",
     "paceOrSpeedAvg": "Avg pace/speed",
-    "elevationGain": "Elevation gain",
-    "meters": "m"
+    "elevationGain": "Elevation gain"
   },
   "achievements": {
     "title": "Achievements",
