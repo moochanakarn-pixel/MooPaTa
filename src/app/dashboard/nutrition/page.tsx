@@ -11,10 +11,10 @@ import {
   computeTargets,
   explainCalorieTarget,
   isProfileComplete,
-  GOAL_LABEL,
-  ACTIVITY_LEVEL_LABEL,
   computeBmi,
   bmiCategory,
+  type ActivityLevel,
+  type NutritionGoal,
   type BmiCategory,
 } from "@/lib/nutrition";
 import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
@@ -32,6 +32,24 @@ import { QuickDownloadSheet } from "../quick-download-sheet";
 const TREND_DAYS = 14;
 const MACRO_TABLE_DAYS = 7;
 const STREAK_DAYS_BACK = 60;
+
+// Message keys under settings.nutritionProfileForm — duplicated from that
+// form's own copy of this map rather than shared, same as badgeBg/
+// stripListMarker elsewhere (2 call sites isn't enough to justify a shared
+// lib, and keeping both small maps in sync is trivial since the enum values
+// never change independently of the label text).
+const ACTIVITY_LEVEL_KEY: Record<ActivityLevel, string> = {
+  SEDENTARY: "activityLevelSedentary",
+  LIGHT: "activityLevelLight",
+  MODERATE: "activityLevelModerate",
+  ACTIVE: "activityLevelActive",
+  VERY_ACTIVE: "activityLevelVeryActive",
+};
+const GOAL_KEY: Record<NutritionGoal, string> = {
+  LOSE: "goalLose",
+  MAINTAIN: "goalMaintain",
+  GAIN: "goalGain",
+};
 
 // Local calendar date, matching todayStart's own use of local getters below
 // (and how "today" is computed elsewhere in the app, e.g. the streak/heatmap
@@ -124,9 +142,14 @@ function MacroBar({ proteinG, carbG, fatG }: { proteinG: number; carbG: number; 
 export default async function NutritionPage({ searchParams }: { searchParams: { quick?: string } }) {
   const userId = await getSessionUserId();
   if (!userId) redirect("/");
-  const [t, tc, locale] = await Promise.all([
+  const [t, tc, tp, locale] = await Promise.all([
     getTranslations("nutrition.page"),
     getTranslations("common"),
+    // Reuses settings' nutrition-profile-form namespace for the activity
+    // level/goal labels in the subtitle below — that form is where the user
+    // actually sets these values, this page just echoes the same text back,
+    // so one translated copy instead of duplicating the same strings here.
+    getTranslations("settings.nutritionProfileForm"),
     getLocale(),
   ]);
   const numberLocale = locale === "en" ? "en-US" : "th-TH";
@@ -389,7 +412,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
       {backLink}
       <h1 className="mb-1 text-xl font-bold">{t("title")}</h1>
       <p className="mb-8 text-sm text-neutral-500">
-        {GOAL_LABEL[user.nutritionGoal]} · {ACTIVITY_LEVEL_LABEL[profile.activityLevel]} ·{" "}
+        {tp(GOAL_KEY[user.nutritionGoal])} · {tp(ACTIVITY_LEVEL_KEY[profile.activityLevel])} ·{" "}
         <Link href="/dashboard/settings" className="text-neutral-400 hover:text-neutral-200 hover:underline">
           {t("editProfile")}
         </Link>{" "}

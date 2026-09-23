@@ -407,14 +407,26 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
       จริงด้วยการ seed น้ำดื่มสัปดาห์นี้มากกว่าสัปดาห์ก่อน 40 มล. เปิดหน้าเชิงลึกจริง ยืนยัน badge
       กลายเป็นสีเทากลางโชว์ "0 ล." (ไม่มีเครื่องหมาย) แทนสีเขียว "0.0 ล." เดิม พร้อม regression-check
       ด้วย diff จริง +500 มล. ยืนยันว่ายังโชว์สีเขียว "+0.5 ล." ถูกต้องเหมือนเดิมไม่กระทบ
-    - **ยังไม่แก้ (รอผู้ใช้ยืนยัน)**: `GOAL_LABEL`/`ACTIVITY_LEVEL_LABEL` (`src/lib/nutrition.ts`) ยังคง
-      Thai-only บนหน้าเชิงลึก (บรรทัด subtitle ใต้หัวข้อ) และหน้าตั้งค่า (dropdown ระดับกิจกรรม/เป้าหมาย
-      ใน `nutrition-profile-form.tsx`) แม้ทั้งสองหน้าอยู่ใน scope i18n ที่แปลแล้วก็ตาม — เอกสารเดิมใน
-      "ยังไม่แปล (ตั้งใจ)" ด้านล่างอ้างว่า "ใช้ร่วมกับหน้านอกขอบเขต" แต่ `grep` แล้วพบว่าทั้งสอง label
-      map นี้ใช้อยู่แค่ 2 จุดนี้เท่านั้น ทั้งคู่อยู่ในขอบเขตที่แปลแล้วจริง ๆ — เป็นช่องว่างจริงที่ควรแก้
-      แต่ต้องเพิ่ม message key ใหม่ (ไม่ใช่แค่ mechanical fix แบบ 3 จุดข้างบน) เลยแยกไว้รอผู้ใช้ยืนยัน
-      ก่อนแก้ — และเรื่อง `LoggingStreakCard`'s headline "🔥 N วัน" ที่ไม่มี label บอกว่าเป็นสถิติของ
-      อะไร (บันทึกอาหารหรือน้ำหนัก) ก็เช่นกัน เป็น copy/design call ไม่ใช่ mechanical bug fix
+    - **แก้แล้ว: `GOAL_LABEL`/`ACTIVITY_LEVEL_LABEL` แปล TH/EN ครบแล้ว** — เดิมสอง label map นี้อยู่ใน
+      `src/lib/nutrition.ts` เป็น Thai-only ตายตัว ใช้อยู่แค่ 2 จุด (หน้าเชิงลึก's subtitle ใต้หัวข้อ,
+      หน้าตั้งค่า's dropdown ระดับกิจกรรม/เป้าหมายใน `nutrition-profile-form.tsx`) ทั้งคู่อยู่ในขอบเขต
+      i18n ที่แปลแล้ว — ย้าย label ไปเป็น message key ใหม่ 8 ตัวใน `settings.nutritionProfileForm`
+      namespace แทน (`activityLevelSedentary`/`Light`/`Moderate`/`Active`/`VeryActive`,
+      `goalLose`/`Maintain`/`Gain`) เลือก namespace นี้เพราะเป็นหน้าที่ "เป็นเจ้าของ" ค่าจริง (ผู้ใช้ตั้ง
+      ค่าที่นี่ หน้าเชิงลึกแค่ echo กลับมาซ้ำ) — `nutrition-profile-form.tsx` (client) เรียก `t()` จาก
+      hook เดิมของตัวเองตรง ๆ, `nutrition/page.tsx` (server) เพิ่มตัวแปล `tp` ตัวที่สามจาก
+      `getTranslations("settings.nutritionProfileForm")` คู่กับ `t`/`tc` เดิม — ทั้งสองไฟล์เก็บ
+      `Record<ActivityLevel/NutritionGoal, string>` แมป enum → message key ไว้เป็นของตัวเอง (ไม่ share
+      lib เพราะมีแค่ 2 จุดใช้ ตาม pattern เดียวกับ `badgeBg`/`stripListMarker`) — ลบ
+      `ACTIVITY_LEVEL_LABEL`/`GOAL_LABEL` ออกจาก `nutrition.ts` เพราะไม่มีจุดเรียกใช้เหลือแล้ว — ทดสอบ
+      จริงด้วยการ seed user โปรไฟล์ครบ (activityLevel MODERATE, goal LOSE) สลับ locale ทั้ง TH/EN เปิด
+      ทั้งสองหน้าจริง ยืนยัน HTML ที่ได้ตรงกับ locale: หน้าตั้งค่าเห็น `<option>` ครบ 8 ตัวเลือกพร้อม
+      `selected` ตรงกับค่าที่ seed ไว้ ("Moderate exercise (3-5 days/week)"/"Lose weight" ตอน EN,
+      "ออกกำลังกายปานกลาง (3-5 วัน/สัปดาห์)"/"ลดน้ำหนัก" ตอน TH), หน้าเชิงลึก's subtitle โชว์ข้อความ
+      คู่กันถูกต้องทั้งสอง locale — `npx tsc --noEmit`, `npm run build`, `npm run test` (199 เทสผ่านหมด)
+      ผ่านทั้งหมดก่อน commit
+    - **ยังไม่แก้ (แยกเป็น copy/design call ไม่ใช่ mechanical bug fix)**: `LoggingStreakCard`'s
+      headline "🔥 N วัน" ยังไม่มี label บอกว่าเป็นสถิติของอะไร (บันทึกอาหารหรือน้ำหนัก)
 - **รูปติดตามรูปร่าง (front/side/back)** — `ProgressPhotosCard`
   (`src/app/dashboard/nutrition/progress-photos-card.tsx`) เก็บเป็นประวัติแบบมีวันที่
   (`ProgressPhotoLog`, ตารางแยก ไม่ใช่ field เดียวบน `User` แบบเดิม) อัปโหลดใหม่แต่ละครั้งคือแถวใหม่

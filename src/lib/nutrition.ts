@@ -10,20 +10,6 @@ export const ACTIVITY_LEVEL_MULTIPLIER: Record<ActivityLevel, number> = {
   VERY_ACTIVE: 1.9,
 };
 
-export const ACTIVITY_LEVEL_LABEL: Record<ActivityLevel, string> = {
-  SEDENTARY: "แทบไม่ออกกำลังกาย",
-  LIGHT: "ออกกำลังกายเบา (1-3 วัน/สัปดาห์)",
-  MODERATE: "ออกกำลังกายปานกลาง (3-5 วัน/สัปดาห์)",
-  ACTIVE: "ออกกำลังกายหนัก (6-7 วัน/สัปดาห์)",
-  VERY_ACTIVE: "หนักมาก/งานใช้แรงกาย",
-};
-
-export const GOAL_LABEL: Record<NutritionGoal, string> = {
-  LOSE: "ลดน้ำหนัก",
-  MAINTAIN: "คงน้ำหนัก",
-  GAIN: "เพิ่มน้ำหนัก",
-};
-
 // 1kg of body fat is roughly 7700 kcal — the standard estimate behind
 // "a 500 kcal/day deficit loses ~0.5kg/week."
 const KCAL_PER_KG_FAT = 7700;

@@ -3,13 +3,25 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import {
-  ACTIVITY_LEVEL_LABEL,
-  GOAL_LABEL,
-  type ActivityLevel,
-  type NutritionGoal,
-  type NutritionSex,
-} from "@/lib/nutrition";
+import { type ActivityLevel, type NutritionGoal, type NutritionSex } from "@/lib/nutrition";
+
+const ACTIVITY_LEVELS: ActivityLevel[] = ["SEDENTARY", "LIGHT", "MODERATE", "ACTIVE", "VERY_ACTIVE"];
+const GOALS: NutritionGoal[] = ["LOSE", "MAINTAIN", "GAIN"];
+// Message keys per value — camelCased from the enum values, matches the
+// ACTIVITY_LEVEL_LABEL/GOAL_LABEL text these replaced (nutrition/page.tsx's
+// subtitle reuses this same namespace/keys so the two stay in sync).
+const ACTIVITY_LEVEL_KEY: Record<ActivityLevel, string> = {
+  SEDENTARY: "activityLevelSedentary",
+  LIGHT: "activityLevelLight",
+  MODERATE: "activityLevelModerate",
+  ACTIVE: "activityLevelActive",
+  VERY_ACTIVE: "activityLevelVeryActive",
+};
+const GOAL_KEY: Record<NutritionGoal, string> = {
+  LOSE: "goalLose",
+  MAINTAIN: "goalMaintain",
+  GAIN: "goalGain",
+};
 
 export interface NutritionProfileInitial {
   weightKg: number | null;
@@ -95,9 +107,9 @@ export function NutritionProfileForm({ initial }: { initial: NutritionProfileIni
         <label className={LABEL_CLASS}>{t("activityLevel")}</label>
         <select value={activityLevel} onChange={(e) => setActivityLevel(e.target.value as ActivityLevel)} className={INPUT_CLASS}>
           <option value="">{t("select")}</option>
-          {(Object.keys(ACTIVITY_LEVEL_LABEL) as ActivityLevel[]).map((level) => (
+          {ACTIVITY_LEVELS.map((level) => (
             <option key={level} value={level}>
-              {ACTIVITY_LEVEL_LABEL[level]}
+              {t(ACTIVITY_LEVEL_KEY[level])}
             </option>
           ))}
         </select>
@@ -107,9 +119,9 @@ export function NutritionProfileForm({ initial }: { initial: NutritionProfileIni
         <div>
           <label className={LABEL_CLASS}>{t("goal")}</label>
           <select value={goal} onChange={(e) => setGoal(e.target.value as NutritionGoal)} className={INPUT_CLASS}>
-            {(Object.keys(GOAL_LABEL) as NutritionGoal[]).map((g) => (
+            {GOALS.map((g) => (
               <option key={g} value={g}>
-                {GOAL_LABEL[g]}
+                {t(GOAL_KEY[g])}
               </option>
             ))}
           </select>
