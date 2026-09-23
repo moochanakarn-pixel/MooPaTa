@@ -252,6 +252,7 @@
       "undoLast": "Undo last entry",
       "undoing": "Undoing...",
       "invalidAmount": "Enter a valid water amount first",
+      "amountTooLarge": "Max {max} ml per entry",
       "saveFailed": "Save failed — try again",
       "undoFailed": "Undo failed — try again"
     }

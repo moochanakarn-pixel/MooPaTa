@@ -11,7 +11,12 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}));
   const ml = Number(body.ml);
-  if (!Number.isFinite(ml) || ml <= 0 || ml > 5000) {
+  // 10000ml (10L) per entry — generous enough for someone backfilling a
+  // whole day's intake in one go, while still catching an accidental extra
+  // digit (e.g. "50000") rather than silently storing it. Keep in sync with
+  // MAX_WATER_ML in water-log-card.tsx, which pre-validates client-side so
+  // this check is normally just a backstop.
+  if (!Number.isFinite(ml) || ml <= 0 || ml > 10000) {
     return NextResponse.json({ error: "invalid_ml" }, { status: 400 });
   }
   // Set when logging into a day other than today via the food page's date

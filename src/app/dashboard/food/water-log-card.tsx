@@ -13,6 +13,10 @@ const QUICK_ADD_ML = [250, 350, 500];
 const GLASS_ML = 250;
 const MIN_GLASSES = 4;
 const MAX_GLASSES = 14;
+// Keep in sync with the server-side cap in api/water/log/route.ts — checked
+// here too so a too-large custom amount gets a specific "max is X" message
+// instead of the generic saveFailed one after a round trip to the server.
+const MAX_WATER_ML = 10000;
 
 function WaterGlass({
   fillPct,
@@ -128,6 +132,10 @@ export function WaterLogCard({
       setError(t("invalidAmount"));
       return;
     }
+    if (ml > MAX_WATER_ML) {
+      setError(t("amountTooLarge", { max: MAX_WATER_ML }));
+      return;
+    }
     setError(null);
     setAdding(ml);
     const res = await fetch("/api/water/log", {
@@ -201,6 +209,7 @@ export function WaterLogCard({
         <input
           type="number"
           min="1"
+          max={MAX_WATER_ML}
           value={customMl}
           onChange={(e) => setCustomMl(e.target.value)}
           placeholder={t("customPlaceholder")}
