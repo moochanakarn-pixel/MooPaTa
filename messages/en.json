@@ -836,6 +836,8 @@
     "errorSpeed": "Enter a valid max speed (a number greater than 0)",
     "errorExerciseReps": "\"{name}\" needs a whole number of reps greater than 0 for every set",
     "errorExerciseRpe": "\"{name}\" has an RPE that isn't a whole number or half-step (e.g. 7, 7.5) between 1-10",
+    "errorExerciseWeight": "\"{name}\" has a weight that isn't a valid non-negative number in some set",
+    "errorOptionalNumber": "Enter a valid {field} (a non-negative number)",
     "errorSaveFailed": "Save failed — please try again",
 
     "rpeCardioLevels": [

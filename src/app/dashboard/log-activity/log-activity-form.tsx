@@ -440,6 +440,28 @@ export function LogActivityForm({
       setError(t("errorDuration"));
       return;
     }
+    // Every optional numeric field below mirrors the server's own
+    // optionalNonNegative() check (src/lib/activity-validation.ts) — empty
+    // is fine, anything non-empty must be a finite number >= 0. Without
+    // this, a stray "-5" or non-numeric paste only surfaces as the generic
+    // errorSaveFailed after a round trip to the server, the same class of
+    // bug already fixed once for RPE and the water log elsewhere in the
+    // app. label.split(" (")[0] strips the "(กม.)"/"(km)" unit suffix off
+    // the existing field label rather than needing a separate short-name
+    // key per field just for this message.
+    const optionalNumberFields: [string, string][] = [
+      [distanceKm, t("labelDistance")],
+      [calories, t("labelCalories")],
+      [avgHeartRate, t("labelAvgHr")],
+      [maxHeartRate, t("labelMaxHr")],
+      [avgCadence, t("labelCadence")],
+    ];
+    for (const [value, label] of optionalNumberFields) {
+      if (value.trim() && !(Number.isFinite(Number(value)) && Number(value) >= 0)) {
+        setError(t("errorOptionalNumber", { field: label.split(" (")[0] }));
+        return;
+      }
+    }
     if (rpe.trim()) {
       const n = Number(rpe);
       if (!Number.isFinite(n) || !Number.isInteger(n * 2) || n < 1 || n > 10) {
@@ -458,6 +480,10 @@ export function LogActivityForm({
         const reps = Number(s.reps);
         if (!Number.isInteger(reps) || reps <= 0) {
           setError(t("errorExerciseReps", { name: r.name.trim() }));
+          return;
+        }
+        if (s.weightKg.trim() && !(Number.isFinite(Number(s.weightKg)) && Number(s.weightKg) >= 0)) {
+          setError(t("errorExerciseWeight", { name: r.name.trim() }));
           return;
         }
         if (s.rpe.trim()) {

@@ -1594,11 +1594,40 @@ achievements, activity detail, weight-training) เข้าถึงผ่า�
       (`parseExerciseSetLine` ใน `activity-import-parse.ts`) เดิม `Math.round(rpe)` ปัดเป็นจำนวนเต็มเสมอ
       ไม่ว่า AI จะตอบอะไรมา เปลี่ยนเป็น `Math.round(rpe * 2) / 2` ปัดเข้าขั้นครึ่งจุดที่ใกล้สุดแทน — ส่วน
       RPE กิจกรรมทั้งครั้ง (อ่านผ่าน `FIELD_MATCHERS`/`firstNumber` ธรรมดา) ไม่มีการปัดอยู่แล้วตั้งแต่แรก
-      เลยไม่ต้องแก้จุดนั้น — **ข้อความ error รวม ๆ แบบ "บันทึกไม่สำเร็จ" ยังเป็นปัญหากับ field
-      optional ตัวอื่นที่ validate ผ่าน server เท่านั้น** (distanceKm/avgHeartRate/maxHeartRate/calories/
-      avgCadence ผ่าน `optionalNonNegative()`) ถ้าเจอ report "บันทึกไม่สำเร็จ" อีกในอนาคตให้สงสัยฟิลด์
-      พวกนี้ก่อนเป็นอันดับต้น ๆ เช่นกัน — ยังไม่ได้ทำ client-side validation ให้ครบทุกฟิลด์ในรอบนี้ เพราะ
-      เจอแค่ RPE ที่เป็นปัญหาจริงจากการใช้งาน)
+      เลยไม่ต้องแก้จุดนั้น — **ข้อความ error รวม ๆ แบบ "บันทึกไม่สำเร็จ" เคยเป็นปัญหากับ field optional
+      ตัวอื่นที่ validate ผ่าน server เท่านั้นด้วยเหมือนกัน (แก้แล้วในรอบถัดมา ดูหัวข้อ "client-side
+      validation ฟิลด์ตัวเลข" ด้านล่าง)
+      - **client-side validation ฟิลด์ตัวเลข optional ทั้งหมดในฟอร์มบันทึก/แก้ไขกิจกรรม** — ผู้ใช้ขอ
+        (หลังคุยกันว่าอะไรทำให้ใช้งานแอปสะดวกขึ้นได้บ้าง) ให้แก้ปัญหาเดียวกับที่ RPE เคยเจอมาก่อน (ดูข้อ
+        บนสุด) แต่ให้ครบทุกฟิลด์ ไม่ใช่แค่ RPE — เดิมฟิลด์ optional อื่นที่ validate ผ่าน server เท่านั้น
+        (`distanceKm`/`calories`/`avgHeartRate`/`maxHeartRate`/`avgCadence` ผ่าน `optionalNonNegative()`,
+        น้ำหนักต่อเซ็ทผ่าน `optionalNonNegative()` เหมือนกัน) พิมพ์ค่าติดลบ/ไม่ใช่ตัวเลขแล้วกด "บันทึก
+        กิจกรรม" จะไปโดน server reject (`400 invalid_optional_field`/`invalid_exercises`) แต่ฝั่ง client
+        จับ error แบบรวม ๆ โชว์แค่ `errorSaveFailed` ("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง") ไม่บอกว่าฟิลด์ไหน
+        พัง — เพิ่มเช็คใน `save()` (`log-activity-form.tsx`) ก่อนยิง request เสมอ ตามลำดับก่อน-หลังเดิม
+        (duration → ฟิลด์ตัวเลข optional ระดับกิจกรรม → RPE กิจกรรม → เพซ/ความเร็วสูงสุด → แต่ละเซ็ทของ
+        แต่ละท่า: reps → น้ำหนัก → RPE): ฟิลด์ optional ระดับกิจกรรมทั้ง 5 (`distanceKm`/`calories`/
+        `avgHeartRate`/`maxHeartRate`/`avgCadence`) วนเช็คเป็น array เดียว `optionalNumberFields` (ค่า +
+        label คู่กัน) แทนที่จะ copy เงื่อนไขเดิมซ้ำ 5 รอบ — เงื่อนไขตรงกับ `optionalNonNegative()` เป๊ะ
+        (ว่างได้, ถ้าไม่ว่างต้องเป็นตัวเลขจำกัด (`Number.isFinite`) และ `>= 0`) ใช้ key เดียว
+        `errorOptionalNumber` (`{field}` interpolation) ไม่ใช่สร้าง key แยกทีละฟิลด์ 5 อัน — ชื่อฟิลด์ที่
+        สอดเข้าไปดึงจาก label ที่มีอยู่แล้ว (`t("labelDistance")` ฯลฯ) ผ่าน `.split(" (")[0]` ตัดส่วนหน่วย
+        `"(กม.)"`/`"(km)"` ท้ายชื่อออกก่อน (ไม่ต้องสร้าง short-name key แยกอีกชุด) — น้ำหนักต่อเซ็ท
+        (`s.weightKg`) เพิ่มเช็คเดียวกันในลูป `namedExercises` เดิมที่เช็ค reps/RPE อยู่แล้ว (คั่นกลางสองตัว
+        นั้นพอดี) ข้อความ error ใช้ key ใหม่ `errorExerciseWeight` (`{name}` interpolation แบบเดียวกับ
+        `errorExerciseReps`/`errorExerciseRpe` ข้าง ๆ กัน) — เพิ่ม key `errorOptionalNumber`/
+        `errorExerciseWeight` ใน `messages/th.json`/`en.json` (namespace `logActivity`) — ทดสอบจริงด้วย
+        Playwright: (1) กรอกหัวใจเฉลี่ยติดลบ → เห็น error เจาะจงตรงกับ label ฟิลด์นั้น, 0 request ไปที่
+        `/api/activity/manual`, (2) กรอกข้อมูลถูกต้องทั้งหมด (รวมน้ำหนักต่อเซ็ทที่ถูกต้อง) → บันทึกสำเร็จ
+        (`200`), redirect ไปหน้าแรกตามปกติ, (3) กรอกน้ำหนักติดลบในเซ็ทของท่าเวท → เห็น
+        `errorExerciseWeight` ตรงชื่อท่า, 0 request — **หมายเหตุระหว่างเทส**: รอบแรกใช้
+        `page.getByPlaceholder("ไม่มี")` (ไม่ใส่ `{ exact: true }`) หาช่องน้ำหนักต่อเซ็ท ได้ผลลัพธ์เหมือน
+        validation ไม่ทำงาน (ค่าติดลบหลุดไปถึง server เป็น 200) — ไล่ debug พบว่าเป็นบั๊กของสคริปต์เทสเอง
+        ไม่ใช่โค้ดแอพ: `getByPlaceholder` แบบ string ทำ substring match ไม่ใช่ exact match โดย default
+        ทำให้ไปจับ placeholder ของช่อง "หมายเหตุ" ระดับกิจกรรม (`notesPlaceholder` มีคำว่า "...ที่**ไม่มี**
+        ช่องกรอกเฉพาะ..." อยู่ในนั้นพอดี) ที่อยู่ก่อนหน้าส่วนท่าเวทใน DOM แทนที่จะเป็นช่องน้ำหนักจริง
+        (`weightPlaceholder` = `"ไม่มี"` exact) — ค่าติดลบเลยไปลงที่ `Activity.notes` แทน `ExerciseSet.
+        weightKg` แก้สคริปต์เทสให้ใส่ `{ exact: true }` แล้วเห็นพฤติกรรมถูกต้องตามที่ตั้งใจทันที
       - **ไม่มี "เซ็ทวอร์มอัพ" แยกประเภทในระบบ** — ผู้ใช้ (ที่ส่ง sheet มา) ยืนยันว่าไม่ต้องการแยก
         เซ็ทวอร์มอัพออกจากเซ็ทจริงด้วย flag พิเศษ ตั้งใจปล่อยให้วอร์มอัพเป็นแค่เซ็ทธรรมดาที่น้ำหนักเบา
         กว่า (บันทึกเป็นเซ็ทแรก ๆ ของท่านั้นในฟอร์มได้เลย) เพราะ `ExerciseSet` รองรับจำนวนเซ็ทไม่จำกัด
