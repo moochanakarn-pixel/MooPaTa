@@ -38,7 +38,17 @@ const PLACEHOLDER = `ชื่อเมนู | ปริมาณ | แคล�
 // there's no mixed signal about whether the edge pipes matter (they
 // don't, to our parser, but keeping it consistent is one less thing for
 // the AI to have to reconcile).
+// The safety-margin line exists because underestimating calories eaten is
+// the direction that actually hurts someone's weight-control goal (silently
+// eating more than logged) — overestimating slightly just means their diary
+// looks a bit worse than reality, a harmless direction to err in. Telling
+// the AI to round toward the higher end of its uncertainty range when it
+// isn't sure biases every downstream estimate that way, for free, with no
+// change needed to the parser itself (it just reads whatever number comes
+// back).
 const AI_PROMPT_TEMPLATE = `ช่วยคำนวณแคลอรี่ โปรตีน คาร์บ และไขมัน ของมื้ออาหารนี้ให้หน่อย: [อธิบายอาหารที่กินตรงนี้ เช่น ข้าวกะเพราหมูสับ 1 จาน กับไข่ดาว 1 ฟอง]
+
+ถ้าไม่แน่ใจปริมาณที่แท้จริง ให้ใช้หลัก safety margin คือประมาณแบบเผื่อไว้ก่อน เลือกใช้ค่าแคลอรี่/แมโครที่ค่อนไปทางสูงในช่วงที่เป็นไปได้ ดีกว่าค่าต่ำสุด เพราะประเมินแคลอรี่ที่กินต่ำกว่าความจริงจะกระทบการควบคุมน้ำหนักมากกว่าประเมินสูงกว่าจริงเล็กน้อย
 
 ตอบกลับมาเป็นตาราง markdown เท่านั้น ไม่ต้องมีคำอธิบายอื่นแทรก โดยมีแถวหัวตารางขึ้นต้นตามนี้เป๊ะๆ แล้วตามด้วยเมนูละหนึ่งแถว:
 | ชื่อเมนู | ปริมาณ | แคลอรี่ | โปรตีน | คาร์บ | ไขมัน |
