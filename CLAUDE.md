@@ -2019,14 +2019,28 @@ achievements, activity detail, weight-training) เข้าถึงผ่า�
   รายชื่อหน้าทั้งหมด) — เหลือแค่จุดที่ตั้งใจไม่แปล (AI-import prompt, ข้อความ error จาก API, อีเมล,
   ข้อความในรูปการ์ดแชร์ Satori, ข้อมูลที่ผู้ใช้พิมพ์เอง) — comment ในโค้ดเป็นอังกฤษเป็นหลัก อธิบาย
   "ทำไม" ไม่ใช่ "ทำอะไร"
-- **`Picture/` (โฟลเดอร์ต้นฉบับภาพ mascot เก่า) กับ `IIS/web.config` และไฟล์ 0 ไบต์ 5 ไฟล์ที่ root
+- **`Picture/` (โฟลเดอร์ต้นฉบับภาพ mascot เก่า) กับไฟล์ 0 ไบต์ 5 ไฟล์ที่ root
   (`cd`/`git`/`moopata@0.1.0`/`next`/`type`) ถูกลบออกจากโปรเจกต์แล้ว** — พบจากการ audit ตรวจหาไฟล์ที่ลบได้
   ตามคำขอผู้ใช้: 5 ไฟล์ 0 ไบต์ที่ root เป็นขยะที่หลุดติด commit มาโดยไม่ตั้งใจ (ชื่อดูเหมือนคำสั่ง shell
   ที่พิมพ์ผิดแล้ว redirect สร้างไฟล์แทนที่จะรันจริง เจอครั้งแรกใน commit 2026-09-14 ที่จริง ๆ ทำเรื่อง RPE
   explanations ไม่เกี่ยวกันเลย) — `Picture/` ทั้งโฟลเดอร์ยืนยันด้วย `md5sum` ว่าซ้ำไบต์ต่อไบต์กับไฟล์ใน
   `design/` เป๊ะทุกไฟล์ (แค่ชื่อคนละแบบ) โดย `design/` มีไฟล์ครบกว่า (มี `mascot-face-transparent.png`
   เพิ่มที่เป็นต้นฉบับจริงของ `public/mascot-face.png` ที่ใช้อยู่ในแอพ) — **`design/` คือโฟลเดอร์ต้นฉบับ
-  ภาพที่ใช้อ้างอิงต่อจากนี้** (ไม่ใช่ `Picture/` อีกต่อไป) — `IIS/web.config` เป็นเศษจาก deploy วิธีเก่า
-  ที่เลิกใช้แล้ว (`DEPLOY-WINDOWS.md` เขียนไว้ชัดว่า "IIS is skipped entirely in favor of Caddy") —
-  ตรวจแล้วว่าไม่มีที่ไหนในโค้ด/doc อ้างอิงไฟล์เหล่านี้เลยก่อนลบ (`patches/next+14.2.15.patch` ไม่ถูกแตะ
-  เพราะยังใช้งานจริงผ่าน `postinstall: patch-package && prisma generate` ใน `package.json`)
+  ภาพที่ใช้อ้างอิงต่อจากนี้** (ไม่ใช่ `Picture/` อีกต่อไป) — `patches/next+14.2.15.patch` ไม่ถูกแตะเพราะ
+  ยังใช้งานจริงผ่าน `postinstall: patch-package && prisma generate` ใน `package.json`
+- **`IIS/web.config` ห้ามลบเด็ดขาด — เป็นไฟล์ reverse-proxy config ที่ production ใช้งานจริง ไม่ใช่เศษเก่า
+  ตามที่เข้าใจผิดไปตอนแรก** — audit รอบเดียวกับข้างบนเคยลบไฟล์นี้ไปด้วย โดยอ้างอิงจาก
+  `DEPLOY-WINDOWS.md`'s บรรทัดเปิดที่เขียนว่า "IIS is skipped entirely in favor of Caddy" (มโนว่าเป็น
+  เศษจาก deploy วิธีเก่าที่เลิกใช้แล้ว) — **แต่พอ deploy commit ที่ลบไฟล์นี้ไปจริง (`git pull` บนเครื่อง
+  production) เว็บ `moopata.mcnkth.com` ล่มทันทีเป็นหน้า "500 - Internal server error" แบบ default ของ
+  IIS เป๊ะ** ยืนยันว่า production จริง ๆ ใช้ IIS เป็น reverse proxy (ไม่ใช่ Caddy ตามที่ doc เขียนไว้ผิด
+  หรือ setup จริงเปลี่ยนไปจากตอนเขียน doc โดยไม่ได้อัปเดตตาม) — physical path ของ site ใน IIS ชี้ไปที่
+  โฟลเดอร์ `IIS\` นี้ตรง ๆ (git ไม่เก็บโฟลเดอร์ว่าง พอลบไฟล์เดียวข้างในออก โฟลเดอร์ทั้งก้อนเลยหายไปจาก
+  disk ด้วยตอน pull ทำให้ IIS หา physical path ไม่เจอ) — กู้คืนไฟล์กลับมาทันที (เนื้อหาเดิมเป๊ะ, rewrite
+  rule ไป `http://localhost:3000/{R:1}` ตรงกับพอร์ตที่ `nssm`/Next.js รันอยู่) ทั้งบน production (สร้างไฟล์
+  ตรงผ่าน `notepad`) และใน repo (`git revert` การลบ) — **บทเรียน: `DEPLOY-WINDOWS.md` ไม่ตรงกับ production
+  จริงในเรื่องนี้ (อย่างน้อยก็ reverse proxy — Caddy section ในนั้นอาจไม่เคยถูกใช้จริง หรือถูกเปลี่ยนมาเป็น
+  IIS ทีหลังโดยไม่ได้แก้ doc ตาม) ยังไม่ได้แก้ doc ให้ตรงกับความจริงทั้งหมด (รอผู้ใช้ยืนยันรายละเอียด IIS
+  site config จริงก่อน) — **ห้ามลบไฟล์ใด ๆ ที่เกี่ยวกับ deploy/infra โดยอ้างอิงแค่คำอธิบายใน doc อย่างเดียว
+  โดยไม่ถามผู้ใช้ก่อนถ้าไม่มั่นใจ 100%** แม้ doc จะเขียนไว้ชัดเจนแค่ไหนก็ตาม เพราะ doc อาจไม่ตรงกับสถานะ
+  จริงของเครื่อง production ที่ผู้ใช้จัดการเองนอกสายตา

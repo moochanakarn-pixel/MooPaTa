@@ -6,6 +6,17 @@ native equivalents instead: IIS is skipped entirely in favor of **Caddy**,
 which gets automatic HTTPS with about 5 lines of config and no separate
 certificate step.
 
+> **This doesn't match the actual production box.** A 2026-09-23 incident
+> confirmed the live `moopata.mcnkth.com` deployment routes through **IIS**
+> (via `IIS/web.config`'s URL Rewrite rule straight to `localhost:3000`,
+> physical path pointing at that same `IIS/` folder in the repo checkout) —
+> not Caddy as described below. Deleting `IIS/web.config` took the site down
+> with IIS's own default 500 page until it was restored. Whether Caddy is
+> also running, or was swapped out for IIS at some point after this guide
+> was written, hasn't been confirmed — treat the Caddy steps below as
+> unverified against reality until that's sorted out, and never delete
+> `IIS/web.config` based on this doc's word alone.
+
 Replace `moopata.mcnkth.com` and the VPS IP with your own throughout.
 
 ## 1. Connect to the VPS
