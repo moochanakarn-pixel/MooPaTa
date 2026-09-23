@@ -1,23 +1,26 @@
 # Deploy MooPaTa on a Windows Server VPS
 
 For a VPS running **Windows Server** (not Linux) — the tooling in `DEPLOY.md`
-(apt-get, Nginx, Certbot, systemd/PM2) doesn't apply here. This uses Windows-
-native equivalents instead: IIS is skipped entirely in favor of **Caddy**,
-which gets automatic HTTPS with about 5 lines of config and no separate
-certificate step.
+(apt-get, Nginx, Certbot, systemd/PM2) doesn't apply here. The reverse proxy
+in front of the Node process is **IIS** with the URL Rewrite module — see
+step 6.
 
-> **This doesn't match the actual production box.** A 2026-09-23 incident
-> confirmed the live `moopata.mcnkth.com` deployment routes through **IIS**
-> (via `IIS/web.config`'s URL Rewrite rule straight to `localhost:3000`,
-> physical path pointing at that same `IIS/` folder in the repo checkout) —
-> not Caddy as described below. Deleting `IIS/web.config` took the site down
-> with IIS's own default 500 page until it was restored. Whether Caddy is
-> also running, or was swapped out for IIS at some point after this guide
-> was written, hasn't been confirmed — treat the Caddy steps below as
-> unverified against reality until that's sorted out, and never delete
-> `IIS/web.config` based on this doc's word alone.
+> **Corrected 2026-09-23.** This doc used to say IIS was skipped in favor of
+> Caddy — that was wrong. An incident confirmed the live `moopata.mcnkth.com`
+> deployment actually routes through IIS (via `IIS/web.config`'s URL Rewrite
+> rule straight to `localhost:3000`): deleting that file as presumed dead
+> weight took the site down with IIS's own default 500 page, because IIS's
+> site config points its physical path directly at the `IIS/` folder in the
+> repo checkout, and git doesn't track empty directories — so removing the
+> one file inside it removed the whole folder from disk. `nssm status Caddy`
+> on the production box returns "service does not exist" — Caddy was never
+> actually installed there. **Never delete `IIS/web.config`.**
 
-Replace `moopata.mcnkth.com` and the VPS IP with your own throughout.
+Replace `moopata.mcnkth.com` and the VPS IP with your own throughout — and
+note production itself actually runs from `D:\Projectphp\MooPaTa`, not
+`C:\MooPaTa` as used in the steps below (a leftover from when this doc was
+first written as a from-scratch guide); adjust the drive/path to taste, just
+be consistent about it across every step.
 
 ## 1. Connect to the VPS
 
@@ -117,32 +120,67 @@ nssm start MooPaTa
 
 Check it's up: `Invoke-WebRequest http://localhost:3000` should return status 200.
 
-## 6. Caddy — reverse proxy with automatic HTTPS
+## 6. IIS — reverse proxy in front of the Node process
 
-Caddy replaces Nginx + Certbot: point it at a domain and it gets a real
-Let's Encrypt certificate on its own, no separate steps.
+Confirmed against production (2026-09-23): the live site is an IIS site
+named `MooPaTa`, physical path `<repo>\IIS` (the `IIS/` folder inside the
+repo checkout — it holds nothing but `web.config`, already committed to the
+repo so it comes along with the `git clone` in step 3, nothing to create by
+hand), forwarding every request to `http://localhost:3000` via URL Rewrite.
+**Never delete `IIS/web.config`** — see the warning at the top of this doc.
 
 ```powershell
-Invoke-WebRequest -Uri "https://github.com/caddyserver/caddy/releases/download/v2.8.4/caddy_2.8.4_windows_amd64.zip" -OutFile "$env:TEMP\caddy.zip"
-Expand-Archive "$env:TEMP\caddy.zip" -DestinationPath "C:\Caddy"
+# IIS itself, plus the URL Rewrite module (not a default IIS feature —
+# a separate install)
+Install-WindowsFeature -Name Web-Server, Web-Http-Redirect
+Invoke-WebRequest -Uri "https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi" -OutFile "$env:TEMP\urlrewrite.msi"
+Start-Process msiexec.exe -ArgumentList "/i `"$env:TEMP\urlrewrite.msi`" /quiet" -Wait
 
-@"
-moopata.mcnkth.com {
-    reverse_proxy localhost:3000
-}
-"@ | Out-File -Encoding utf8 "C:\Caddy\Caddyfile"
-
-nssm install Caddy "C:\Caddy\caddy.exe" "run --config C:\Caddy\Caddyfile"
-nssm set Caddy AppDirectory "C:\Caddy"
-nssm start Caddy
+Import-Module WebAdministration
+New-Website -Name "MooPaTa" -PhysicalPath "C:\MooPaTa\IIS" -Port 80 -HostHeader "moopata.mcnkth.com"
 ```
+
+`IIS/web.config` (already in the repo — this is its full contents, nothing
+more to add) holds the actual rewrite rule:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <system.webServer>
+        <rewrite>
+            <rules>
+                <rule name="ReverseProxyInboundRule1" stopProcessing="true">
+                    <match url="(.*)" />
+                    <action type="Rewrite" url="http://localhost:3000/{R:1}" />
+                </rule>
+            </rules>
+        </rewrite>
+    </system.webServer>
+</configuration>
+```
+
+**HTTPS binding + certificate**: production has an `https *:443:moopata.mcnkth.com`
+binding alongside the `http` one, but exactly how that certificate was
+issued/renewed hasn't been confirmed — check **IIS Manager → Sites →
+MooPaTa → Bindings → edit the `https` entry** to see which certificate is
+currently selected before following either option below on a fresh box:
+
+- **win-acme** — the closest Windows/IIS equivalent of what Caddy would've
+  done automatically: downloads a free Let's Encrypt certificate and can
+  bind it into IIS for you. https://www.win-acme.com/
+- **Cloudflare Origin Certificate** — if the domain is proxied through
+  Cloudflare (orange cloud), generate one from the Cloudflare dashboard
+  (SSL/TLS → Origin Server), import it into IIS's certificate store, then
+  select it on the `https` binding — no public ACME validation needed here,
+  since Cloudflare is the one presenting a cert to the public internet.
 
 ## 7. Open the firewall
 
 Both Windows Firewall on the VPS **and** the VPS provider's own network
 firewall/security group (check the ReadyIDC control panel — there may be a
-separate "Firewall" section) need ports 80 and 443 open, or Caddy can't
-reach Let's Encrypt to issue the cert and nobody outside can reach the app.
+separate "Firewall" section) need ports 80 and 443 open, or nobody outside
+can reach the app — and if using win-acme (step 6), it needs inbound HTTP-01
+validation on port 80 to issue or renew a certificate at all.
 
 ```powershell
 New-NetFirewallRule -DisplayName "HTTP" -Direction Inbound -LocalPort 80 -Protocol TCP -Action Allow
@@ -151,11 +189,17 @@ New-NetFirewallRule -DisplayName "HTTPS" -Direction Inbound -LocalPort 443 -Prot
 
 ## 8. Cloudflare
 
-Same as the Linux guide: while Caddy is issuing its first certificate, keep
-the DNS record on **DNS only** (grey cloud) so Let's Encrypt's validation
-reaches the VPS directly. Once `https://moopata.mcnkth.com` loads with a
-valid padlock, switch SSL/TLS mode to **Full (strict)** and, if wanted,
-flip the DNS record back to **Proxied** (orange cloud).
+If issuing a certificate with win-acme (step 6): same as the Linux guide,
+keep the DNS record on **DNS only** (grey cloud) while it's validating, so
+the HTTP-01 challenge reaches the VPS directly. Once
+`https://moopata.mcnkth.com` loads with a valid padlock, switch SSL/TLS
+mode to **Full (strict)** and, if wanted, flip the DNS record back to
+**Proxied** (orange cloud).
+
+If using a Cloudflare Origin Certificate instead, this doesn't apply the
+same way — Cloudflare's proxy is what presents a certificate to the public
+internet in that setup, so the DNS record can stay **Proxied** the whole
+time; just make sure SSL/TLS mode is **Full (strict)**.
 
 ## 9. Strava auto-sync — removed
 
@@ -226,13 +270,16 @@ Two Windows-specific gotchas this sequence works around:
 
 ## Troubleshooting
 
-- **Caddy won't get a certificate**: almost always port 80/443 blocked
+- **win-acme won't get a certificate**: almost always port 80/443 blocked
   somewhere — check both Windows Firewall (step 7) and the VPS provider's
-  own network firewall panel. Check `nssm status Caddy` and look in
-  `C:\Caddy` for a log file.
-- **Site loads but app is broken (500s)**: `nssm status MooPaTa`, then check
-  the Windows Event Viewer (Application log) or run `npm start` directly in
-  a PowerShell window (not via the service) to see errors live.
+  own network firewall panel.
+- **Site loads but app is broken (500s)**: check whether it's IIS's own
+  default error page (`IIS/web.config` missing or the `MooPaTa` site's
+  physical path pointing at a folder that doesn't exist — see the warning
+  at the top of this doc) versus the Node app itself erroring — `nssm
+  status MooPaTa`, then check the Windows Event Viewer (Application log) or
+  run `npm start` directly in a PowerShell window (not via the service) to
+  see Node's own errors live.
 - **Cloudflare "too many redirects"**: SSL/TLS mode is on Flexible — switch
   to Full, same as the Linux guide.
 - **"Today" starts/ends at the wrong time, or water/whey reminders fire at

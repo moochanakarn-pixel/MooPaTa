@@ -2061,8 +2061,18 @@ achievements, activity detail, weight-training) เข้าถึงผ่า�
   disk ด้วยตอน pull ทำให้ IIS หา physical path ไม่เจอ) — กู้คืนไฟล์กลับมาทันที (เนื้อหาเดิมเป๊ะ, rewrite
   rule ไป `http://localhost:3000/{R:1}` ตรงกับพอร์ตที่ `nssm`/Next.js รันอยู่) ทั้งบน production (สร้างไฟล์
   ตรงผ่าน `notepad`) และใน repo (`git revert` การลบ) — **บทเรียน: `DEPLOY-WINDOWS.md` ไม่ตรงกับ production
-  จริงในเรื่องนี้ (อย่างน้อยก็ reverse proxy — Caddy section ในนั้นอาจไม่เคยถูกใช้จริง หรือถูกเปลี่ยนมาเป็น
-  IIS ทีหลังโดยไม่ได้แก้ doc ตาม) ยังไม่ได้แก้ doc ให้ตรงกับความจริงทั้งหมด (รอผู้ใช้ยืนยันรายละเอียด IIS
-  site config จริงก่อน) — **ห้ามลบไฟล์ใด ๆ ที่เกี่ยวกับ deploy/infra โดยอ้างอิงแค่คำอธิบายใน doc อย่างเดียว
-  โดยไม่ถามผู้ใช้ก่อนถ้าไม่มั่นใจ 100%** แม้ doc จะเขียนไว้ชัดเจนแค่ไหนก็ตาม เพราะ doc อาจไม่ตรงกับสถานะ
-  จริงของเครื่อง production ที่ผู้ใช้จัดการเองนอกสายตา
+  จริงในเรื่องนี้ (อย่างน้อยก็ reverse proxy — Caddy section ในนั้นไม่เคยถูกใช้จริงเลย) — **ห้ามลบไฟล์ใด ๆ
+  ที่เกี่ยวกับ deploy/infra โดยอ้างอิงแค่คำอธิบายใน doc อย่างเดียวโดยไม่ถามผู้ใช้ก่อนถ้าไม่มั่นใจ 100%**
+  แม้ doc จะเขียนไว้ชัดเจนแค่ไหนก็ตาม เพราะ doc อาจไม่ตรงกับสถานะจริงของเครื่อง production ที่ผู้ใช้จัดการ
+  เองนอกสายตา — **แก้ doc ให้ตรงกับความจริงเสร็จแล้ว** (ผู้ใช้ส่ง screenshot จาก IIS Manager มายืนยัน: site
+  name `MooPaTa`, physical path `D:\Projectphp\MooPaTa\IIS`, bindings `http:80`/`https:443` ผูกกับ
+  hostname `moopata.mcnkth.com` ตรง ๆ, และ `nssm status Caddy` ตอบ "service does not exist" ยืนยันว่า
+  Caddy ไม่เคยถูกติดตั้งจริงบนเครื่องนี้เลย) — เขียน `DEPLOY-WINDOWS.md`'s section 6 ใหม่ทั้งหมดจาก "Caddy
+  install steps" เป็น "IIS + URL Rewrite module setup steps" ตรงกับที่ยืนยันได้จริง (เพิ่ม callout เปิดเรื่อง
+  อธิบาย incident + correction, section 7/8/Troubleshooting เปลี่ยนคำที่อ้างอิง Caddy เป็น win-acme/
+  Cloudflare Origin Cert แทน) — **จุดเดียวที่ยังไม่ยืนยัน (ทิ้งไว้เป็นหมายเหตุในตัว doc เอง ไม่ได้เดาสุ่ม)**:
+  วิธีที่ cert บน binding `https:443` ถูกออกใบจริง (win-acme/Cloudflare Origin Cert/อื่น ๆ) — doc ชี้ให้
+  เช็คที่ IIS Manager → Bindings → edit ตัว `https` ก่อนเชื่อสมมติฐานใดทั้งสองแบบที่เสนอไว้ — เพิ่มหมายเหตุ
+  ด้วยว่า path convention ในสคริปต์ตัวอย่างทั้ง doc ยังใช้ `C:\MooPaTa` (ของเดิมตอนเขียนเป็น from-scratch
+  guide) ต่างจาก `D:\Projectphp\MooPaTa` ที่ production ใช้จริง — ไม่ได้ไล่แก้ path ทุกจุดในสคริปต์ตัวอย่าง
+  (ยอมรับ trade-off ไว้) แค่เตือนไว้ตั้งแต่ต้น doc ให้คนอ่านปรับเองให้ตรงกัน
