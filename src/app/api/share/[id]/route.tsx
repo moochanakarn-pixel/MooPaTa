@@ -322,6 +322,20 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           0
         ) + (omittedSetCount > 0 ? 44 : 0); // truncation note line
 
+  // List style otherwise showed zero summary numbers at all — no time, no
+  // calories, no heart rate, just the exercise breakdown. Weight training
+  // always has a duration (unlike distance, which the hero-number fallback
+  // logic above deliberately excludes from statItems to avoid showing it
+  // twice) — list has no hero number to collide with, so duration is always
+  // included here. Calories/avg HR stay optional like everywhere else in
+  // this route (skip a field rather than show a meaningless "-"). Kept to
+  // exactly these three (not max HR, cadence, elevation, ...) on purpose —
+  // this is a one-line summary for a card whose whole point is the exercise
+  // list below it, not a second stat grid.
+  const listSummaryStats: { value: string; label: string }[] = [{ value: formatDuration(activity.durationSec, lang), label: t.timeLabel }];
+  if (activity.calories) listSummaryStats.push({ value: `${Math.round(activity.calories)} kcal`, label: t.caloriesLabel });
+  if (activity.avgHeartRate) listSummaryStats.push({ value: `${Math.round(activity.avgHeartRate)} bpm`, label: t.avgHrLabel });
+
   // Unlike grid/hero, the list card shows only the type badge, never the PR
   // badges (see the comment on that div further down) — always exactly one
   // row, so no line-wrap estimate is needed here the way there briefly was
@@ -335,6 +349,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     60 + // type badge row
     28 + // gap
     (activity.name ? 50 + 28 : 0) + // activity name + gap, only if present
+    72 + // summary stats row (time/calories/avg HR) + gap
     58; // "ท่าออกกำลังกาย" section title + gap
   const listHeight = Math.round(2 * 64 + listHeaderHeight + listExercisesHeight + 40); // + flat safety margin
 
@@ -387,6 +402,17 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             {activity.name && (
               <div style={{ display: "flex", fontSize: 34, fontWeight: 700, color: "white", textShadow }}>
                 {activity.name}
+              </div>
+            )}
+
+            {listSummaryStats.length > 0 && (
+              <div style={{ display: "flex", gap: 40 }}>
+                {listSummaryStats.map((s) => (
+                  <div key={s.label} style={{ display: "flex", flexDirection: "column" }}>
+                    <span style={{ fontSize: 32, fontWeight: 700, color: "white", textShadow }}>{s.value}</span>
+                    <span style={{ fontSize: 20, color: "#a3a3a3", textShadow }}>{s.label}</span>
+                  </div>
+                ))}
               </div>
             )}
 
