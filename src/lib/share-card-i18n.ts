@@ -96,6 +96,19 @@ const dict = {
     exercisesListTitle: "ท่าออกกำลังกาย",
     setLine: (n: number, reps: number, weightKg: number | null, rpe: number | null) =>
       `เซ็ท ${n}: ${reps} ครั้ง${weightKg !== null ? ` × ${weightKg} กก.` : ""}${rpe !== null ? ` (RPE ${rpe})` : ""}`,
+    // Used instead of setLine when every set in the exercise has the same
+    // rep count (straight sets, the common case) — the reps move up into
+    // exerciseNameWithReps once instead of repeating "12 ครั้ง" on every
+    // line, which is what made a 4-set exercise print 4 near-identical
+    // lines. Pyramid/drop sets (where reps actually vary set-to-set) keep
+    // using setLine as before, so real variation is never hidden.
+    exerciseNameWithReps: (name: string, reps: number) => `${name} (${reps} ครั้ง)`,
+    setLineNoReps: (n: number, weightKg: number | null, rpe: number | null) => {
+      const parts: string[] = [];
+      if (weightKg !== null) parts.push(`${weightKg} กก.`);
+      if (rpe !== null) parts.push(`(RPE ${rpe})`);
+      return `เซ็ท ${n}${parts.length > 0 ? `: ${parts.join(" ")}` : ""}`;
+    },
     noExercisesText: "ยังไม่มีท่าออกกำลังกายบันทึกไว้",
     // Shown when MAX_LIST_SETS truncated the exercise list (see the perf
     // comment in the route) — always says so rather than silently dropping
@@ -166,6 +179,13 @@ const dict = {
     exercisesListTitle: "Exercises",
     setLine: (n: number, reps: number, weightKg: number | null, rpe: number | null) =>
       `Set ${n}: ${reps} reps${weightKg !== null ? ` × ${weightKg} kg` : ""}${rpe !== null ? ` (RPE ${rpe})` : ""}`,
+    exerciseNameWithReps: (name: string, reps: number) => `${name} (${reps} reps)`,
+    setLineNoReps: (n: number, weightKg: number | null, rpe: number | null) => {
+      const parts: string[] = [];
+      if (weightKg !== null) parts.push(`${weightKg} kg`);
+      if (rpe !== null) parts.push(`(RPE ${rpe})`);
+      return `Set ${n}${parts.length > 0 ? `: ${parts.join(" ")}` : ""}`;
+    },
     noExercisesText: "No exercises logged",
     listTruncatedNote: (n: number) => `+ ${n} more sets not shown (session too long for one image)`,
   },

@@ -262,7 +262,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // wrapping onto 3 lines lost its whole last exercise card off the bottom
   // edge when this only budgeted one badge row), so every constant here
   // leans generous.
-  const EXERCISE_TITLE_HEIGHT = 60;
+  // 60 was a single-line estimate; bumped for a second-line cushion now
+  // that the title can carry "(N ครั้ง)" appended to the exercise name
+  // (see uniformReps below) — a long name plus that suffix occasionally
+  // wraps, and per the "leans generous" note above, a little unused space
+  // is harmless while a clipped card isn't.
+  const EXERCISE_TITLE_HEIGHT = 96;
   const SET_ROW_HEIGHT = 50;
   const EXERCISE_CARD_PADDING = 50; // 24 top + 24 bottom + a few px slack
   const EXERCISE_CARD_GAP = 22;
@@ -393,32 +398,48 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
               <span style={{ fontSize: 24, color: "#a3a3a3", textShadow }}>{t.noExercisesText}</span>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: EXERCISE_CARD_GAP }}>
-                {visibleExercises.map((ex) => (
-                  <div
-                    key={ex.id}
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 10,
-                      borderRadius: 20,
-                      border: "2px solid rgba(255,255,255,0.14)",
-                      padding: 24,
-                    }}
-                  >
-                    <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>{ex.name}</span>
-                    {/* One combined span per set instead of a row div + two
-                        separate spans (label, detail) — three Satori text/
-                        layout nodes down to one. A long session's sheer set
-                        count is what made this render path slow (see the
-                        perf comment above MAX_LIST_SETS), so cutting nodes
-                        here matters more than for any other card style. */}
-                    {ex.sets.map((s, i) => (
-                      <span key={s.id} style={{ fontSize: 26, fontWeight: 600, color: "white", textShadow }}>
-                        {t.setLine(i + 1, s.reps, s.weightKg, s.rpe)}
+                {visibleExercises.map((ex) => {
+                  // Straight sets (same rep count every set — the common
+                  // case) used to print "N ครั้ง" on every single line,
+                  // which for a 4-set exercise at identical reps/weight/RPE
+                  // read as four nearly-identical rows. When every set
+                  // shares one rep count, show it once in the exercise
+                  // title instead and drop it from each set's line.
+                  // Pyramid/drop sets (reps actually differ) keep the full
+                  // per-set line so that real variation still shows.
+                  const uniformReps =
+                    ex.sets.length > 0 && ex.sets.every((s) => s.reps === ex.sets[0].reps) ? ex.sets[0].reps : null;
+                  return (
+                    <div
+                      key={ex.id}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                        borderRadius: 20,
+                        border: "2px solid rgba(255,255,255,0.14)",
+                        padding: 24,
+                      }}
+                    >
+                      <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>
+                        {uniformReps !== null ? t.exerciseNameWithReps(ex.name, uniformReps) : ex.name}
                       </span>
-                    ))}
-                  </div>
-                ))}
+                      {/* One combined span per set instead of a row div + two
+                          separate spans (label, detail) — three Satori text/
+                          layout nodes down to one. A long session's sheer set
+                          count is what made this render path slow (see the
+                          perf comment above MAX_LIST_SETS), so cutting nodes
+                          here matters more than for any other card style. */}
+                      {ex.sets.map((s, i) => (
+                        <span key={s.id} style={{ fontSize: 26, fontWeight: 600, color: "white", textShadow }}>
+                          {uniformReps !== null
+                            ? t.setLineNoReps(i + 1, s.weightKg, s.rpe)
+                            : t.setLine(i + 1, s.reps, s.weightKg, s.rpe)}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })}
                 {omittedSetCount > 0 && (
                   <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{t.listTruncatedNote(omittedSetCount)}</span>
                 )}
