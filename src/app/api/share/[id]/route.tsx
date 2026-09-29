@@ -268,7 +268,17 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // wraps, and per the "leans generous" note above, a little unused space
   // is harmless while a clipped card isn't.
   const EXERCISE_TITLE_HEIGHT = 96;
-  const SET_ROW_HEIGHT = 50;
+  // Was 50, tuned for the old one-<span>-per-set layout where each line was
+  // its own flex row with a `gap: 10` between them. Now that a whole
+  // exercise's sets render as one whiteSpace: "pre-line" text node (see the
+  // sets JSX below), each line only costs its natural font line-height, no
+  // extra flex gap — measured directly (render two real sessions at
+  // different set counts, compare each PNG's actual content bounding box
+  // via its alpha channel against the canvas height the old constant would
+  // allocate) at ~28-31px/line, not 50. Kept at 36 rather than the measured
+  // value, same "leans generous" margin the rest of this block already
+  // applies elsewhere.
+  const SET_ROW_HEIGHT = 36;
   const EXERCISE_CARD_PADDING = 50; // 24 top + 24 bottom + a few px slack
   const EXERCISE_CARD_GAP = 22;
 
@@ -450,19 +460,33 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
                       <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>
                         {uniformReps !== null ? t.exerciseNameWithReps(ex.name, uniformReps) : ex.name}
                       </span>
-                      {/* One combined span per set instead of a row div + two
-                          separate spans (label, detail) — three Satori text/
-                          layout nodes down to one. A long session's sheer set
-                          count is what made this render path slow (see the
-                          perf comment above MAX_LIST_SETS), so cutting nodes
-                          here matters more than for any other card style. */}
-                      {ex.sets.map((s, i) => (
-                        <span key={s.id} style={{ fontSize: 26, fontWeight: 600, color: "white", textShadow }}>
-                          {uniformReps !== null
-                            ? t.setLineNoReps(i + 1, s.weightKg, s.rpe)
-                            : t.setLine(i + 1, s.reps, s.weightKg, s.rpe)}
-                        </span>
-                      ))}
+                      {/* All of an exercise's sets as ONE Satori text node
+                          (newline-joined + whiteSpace: "pre-line") instead of
+                          one <span> per set — Satori renders each `\n` in a
+                          pre-line-styled text node as its own line, same
+                          visual result as separate spans. This was the
+                          largest remaining cost in this render path: a
+                          direct before/after timing against this same route
+                          (curl, server already warm, same seeded activity)
+                          measured a 10-exercise/50-set session (the
+                          MAX_LIST_SETS cap) drop from ~35s to ~17s, and an
+                          8-exercise/32-set session from ~21s to ~12s — a much
+                          bigger win than the earlier 3-nodes-to-1-node-per-set
+                          change, because this cuts nodes by the set count
+                          instead of by a constant factor. MAX_LIST_SETS is
+                          left at 50 rather than raised despite the new
+                          headroom — see its own comment for why a short
+                          worst-case blocking window matters more than
+                          fitting a longer session in one image. */}
+                      <span style={{ fontSize: 26, fontWeight: 600, color: "white", textShadow, whiteSpace: "pre-line" }}>
+                        {ex.sets
+                          .map((s, i) =>
+                            uniformReps !== null
+                              ? t.setLineNoReps(i + 1, s.weightKg, s.rpe)
+                              : t.setLine(i + 1, s.reps, s.weightKg, s.rpe)
+                          )
+                          .join("\n")}
+                      </span>
                     </div>
                   );
                 })}
