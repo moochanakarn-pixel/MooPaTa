@@ -162,30 +162,39 @@ export async function GET(req: NextRequest) {
               marginBottom: 32,
             }}
           >
-            <div style={cardStyle}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
-                <span style={{ fontSize: 100, fontWeight: 700, color: "white", lineHeight: 1, textShadow }}>
-                  {agg._count._all}
-                </span>
-                <span style={{ fontSize: 34, fontWeight: 700, color: "#a3a3a3", textShadow }}>{t.activitiesLabel}</span>
-              </div>
-              <div style={{ display: "flex", gap: 48, marginTop: 24 }}>
-                <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
-                  <span style={{ fontSize: 40, fontWeight: 700, color: "white", textShadow }}>
-                    {formatDuration(agg._sum.durationSec ?? 0, lang)}
+            {/* Skipped entirely (not shown as a hero "0") for a user who only
+                logged food this period and did no activities at all — total
+                volume/PR/favorite-type below are already conditional on the
+                same thing since they can't exist without an activity, but
+                this hero block has no such natural guard of its own (a
+                zero-activity month still has a defined, non-null
+                aggregate), so it needs an explicit one. */}
+            {agg._count._all > 0 && (
+              <div style={cardStyle}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 16 }}>
+                  <span style={{ fontSize: 100, fontWeight: 700, color: "white", lineHeight: 1, textShadow }}>
+                    {agg._count._all}
                   </span>
-                  <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{t.totalTimeLabel}</span>
+                  <span style={{ fontSize: 34, fontWeight: 700, color: "#a3a3a3", textShadow }}>{t.activitiesLabel}</span>
                 </div>
-                {totalDistanceM > 0 && (
+                <div style={{ display: "flex", gap: 48, marginTop: 24 }}>
                   <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
                     <span style={{ fontSize: 40, fontWeight: 700, color: "white", textShadow }}>
-                      {distance.value} {distance.unitLabel}
+                      {formatDuration(agg._sum.durationSec ?? 0, lang)}
                     </span>
-                    <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{t.totalDistanceLabel}</span>
+                    <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{t.totalTimeLabel}</span>
                   </div>
-                )}
+                  {totalDistanceM > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", width: 260 }}>
+                      <span style={{ fontSize: 40, fontWeight: 700, color: "white", textShadow }}>
+                        {distance.value} {distance.unitLabel}
+                      </span>
+                      <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{t.totalDistanceLabel}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             <div style={cardStyle}>
               <div style={{ display: "flex", gap: 48 }}>

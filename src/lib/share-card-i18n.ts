@@ -125,6 +125,16 @@ const dict = {
     newPrHighlightLabel: "PR ใหม่ในช่วงนี้",
     favoriteTypeLabel: "กีฬาที่ทำบ่อยที่สุด",
     recapEmptyText: "ยังไม่มีข้อมูลในช่วงนี้ — เริ่มบันทึกกิจกรรมหรืออาหารได้เลย!",
+
+    // api/share/period — same "don't show a meaningless 0.00 km hero"
+    // problem the recap card above already guards against, found while
+    // fixing that one (a zero-activity week/month otherwise showed a big
+    // "0.00 กม." hero next to a "-"/"-" pace/elevation row).
+    periodEmptyText: "ยังไม่มีกิจกรรมในช่วงนี้ — เริ่มบันทึกกิจกรรมได้เลย!",
+
+    // api/share/nutrition — same fix, its own text since this card is food/
+    // water/weight, never activities.
+    nutritionEmptyText: "ยังไม่มีข้อมูลในช่วงนี้ — เริ่มบันทึกอาหาร น้ำ หรือน้ำหนักได้เลย!",
   },
   en: {
     prBadge: (name: string, weightKg: number) => `PR ${name} ${weightKg} kg`,
@@ -205,6 +215,10 @@ const dict = {
     newPrHighlightLabel: "New PR this period",
     favoriteTypeLabel: "Most frequent activity",
     recapEmptyText: "No data yet this period — go log an activity or a meal!",
+
+    periodEmptyText: "No activities logged this period — go log one!",
+
+    nutritionEmptyText: "No data yet this period — go log some food, water, or a weigh-in!",
   },
 };
 
