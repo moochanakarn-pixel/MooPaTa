@@ -391,6 +391,7 @@
       "takePhotoWithGuide": "Take photo with guide",
       "tip": "Take photos periodically (e.g. monthly) at the same angle and pose, so changes over time are easier to compare",
       "beforeAfter": "Before-after comparison",
+      "downloadComparison": "Download this image",
       "daysApart": "{days} days apart",
       "before": "Before",
       "after": "After",

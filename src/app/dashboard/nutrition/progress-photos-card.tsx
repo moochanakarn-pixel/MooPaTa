@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { PHOTO_ANGLE_LABEL, type PhotoAngle } from "@/lib/progress-photo-types";
 import { PoseGuideCamera } from "./pose-guide-camera";
+import { QuickDownloadSheet } from "../quick-download-sheet";
 
 export interface ProgressPhotoEntry {
   id: string;
@@ -38,6 +39,7 @@ export function ProgressPhotosCard({
   autoOpenAngle?: PhotoAngle | null;
 }) {
   const t = useTranslations("nutrition.progressPhotosCard");
+  const tc = useTranslations("common");
   const locale = useLocale();
   const dateLocale = locale === "en" ? "en-US" : "th-TH";
   const router = useRouter();
@@ -162,9 +164,26 @@ export function ProgressPhotosCard({
               const daysApart = Math.round((latest.takenAtMs - oldest.takenAtMs) / 86_400_000);
               return (
                 <div key={a.angle}>
-                  <p className="mb-1.5 text-xs text-neutral-500">
-                    {PHOTO_ANGLE_LABEL[a.angle]} — {t("daysApart", { days: daysApart })}
-                  </p>
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <p className="text-xs text-neutral-500">
+                      {PHOTO_ANGLE_LABEL[a.angle]} — {t("daysApart", { days: daysApart })}
+                    </p>
+                    <QuickDownloadSheet
+                      triggerLabel={t("downloadComparison")}
+                      triggerClassName="shrink-0 text-[11px] text-cyan-500 transition hover:text-cyan-400"
+                      sheetTitle={t("beforeAfter")}
+                      languageLabel={tc("language")}
+                      downloadLabel={tc("downloadImage")}
+                      shareLabel={tc("share")}
+                      generatingLabel={tc("generatingImage")}
+                      downloadFailedLabel={tc("downloadFailed")}
+                      previewLoadingLabel={tc("loadingPreview")}
+                      previewAlt={t("beforeAfter")}
+                      closeLabel={tc("close")}
+                      defaultLang={locale === "en" ? "en" : "th"}
+                      hrefBase={`/api/share/before-after?angle=${a.angle}`}
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     {[oldest, latest].map((entry, i) => (
                       <div key={entry.id}>

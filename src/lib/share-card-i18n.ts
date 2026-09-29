@@ -135,6 +135,21 @@ const dict = {
     // api/share/nutrition — same fix, its own text since this card is food/
     // water/weight, never activities.
     nutritionEmptyText: "ยังไม่มีข้อมูลในช่วงนี้ — เริ่มบันทึกอาหาร น้ำ หรือน้ำหนักได้เลย!",
+
+    // api/share/before-after — the progress-photos card's in-app before/
+    // after comparison (ProgressPhotosCard), downloadable as its own image
+    // for the first time. Angle labels here are their own copy rather than
+    // reusing src/lib/progress-photo-types.ts's PHOTO_ANGLE_LABEL, which is
+    // Thai-only (never routed through next-intl) — this route needs a real
+    // English string for ?lang=en.
+    beforeAfterBadge: "เปรียบเทียบก่อน-หลัง",
+    beforeLabel: "ก่อน",
+    afterLabel: "หลัง",
+    daysApartLabel: (days: number) => `ห่างกัน ${days} วัน`,
+    angleFrontLabel: "ด้านหน้า",
+    angleSideLabel: "ด้านข้าง",
+    angleBackLabel: "ด้านหลัง",
+    beforeAfterEmptyText: "ยังไม่มีรูปพอสำหรับเปรียบเทียบมุมนี้ — ต้องมีอย่างน้อย 2 รูป",
   },
   en: {
     prBadge: (name: string, weightKg: number) => `PR ${name} ${weightKg} kg`,
@@ -219,6 +234,15 @@ const dict = {
     periodEmptyText: "No activities logged this period — go log one!",
 
     nutritionEmptyText: "No data yet this period — go log some food, water, or a weigh-in!",
+
+    beforeAfterBadge: "Before & After",
+    beforeLabel: "Before",
+    afterLabel: "After",
+    daysApartLabel: (days: number) => `${days} days apart`,
+    angleFrontLabel: "Front",
+    angleSideLabel: "Side",
+    angleBackLabel: "Back",
+    beforeAfterEmptyText: "Not enough photos to compare yet for this angle — need at least 2",
   },
 };
 

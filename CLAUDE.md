@@ -488,7 +488,7 @@ InBody) — 2 อันหลังลิงก์ไป `/dashboard/nutrition?q
 achievements, activity detail, weight-training) เข้าถึงผ่านลิงก์จากหน้าแรกเท่านั้น
 
 ### 4. Share cards (Satori/`next/og`) — จริง ๆ คือ "ดาวน์โหลด" ไม่ใช่ "แชร์"
-- `src/app/api/share/{daily-summary,nutrition,period,recap,[id]}/route.tsx` — สร้างรูปสรุปเป็น PNG ให้
+- `src/app/api/share/{daily-summary,nutrition,period,recap,before-after,[id]}/route.tsx` — สร้างรูปสรุปเป็น PNG ให้
   ดาวน์โหลด (`[id]` = การ์ดกิจกรรมเดี่ยว เปิดจากปุ่มที่หน้ารายละเอียดกิจกรรม) — **ไม่มีการเรียก
   `navigator.share`/OS share sheet ที่ไหนในแอพเลย** ทุกปุ่มจบที่ดาวน์โหลดไฟล์ตรง ๆ (`<a download>`)
   เพราะงั้นข้อความ UI ทุกจุดที่เกี่ยวกับฟีเจอร์นี้เลยใช้คำว่า "ดาวน์โหลด" ("Download") ไม่ใช่ "แชร์"
@@ -759,6 +759,48 @@ achievements, activity detail, weight-training) เข้าถึงผ่า�
     `periodEmptyText`/`nutritionEmptyText` ใน `share-card-i18n.ts`) — ทดสอบจริงทั้งสองไฟล์ด้วย user เปล่า
     (เห็น empty state ถูกต้องทั้งคู่) และ user ที่มีข้อมูลจริง (regression-check ยืนยันยังโชว์ตัวเลขปกติ
     ไม่กระทบ) — `npx tsc --noEmit`, `npm run build`, `npm run test` (199 เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
+- **การ์ดเปรียบเทียบก่อน-หลัง** (`/api/share/before-after/route.tsx`, ปุ่ม "ดาวน์โหลดรูปนี้" ต่อจากหัวข้อ
+  แต่ละมุมในส่วน "เปรียบเทียบก่อน-หลัง" ของ `ProgressPhotosCard`) — หน้าเชิงลึกมีการเปรียบเทียบรูป
+  ก่อน-หลังในตัวอยู่แล้ว (รูปแรกสุด vs ล่าสุดของแต่ละมุม side-by-side) แต่ไม่เคยดาวน์โหลด/แชร์ออกมาเป็น
+  รูปเดียวได้เลยสักจุด ต่างจากสถิติอื่นแทบทุกตัวในแอพที่มีการ์ดดาวน์โหลดของตัวเองแล้ว — ผู้ใช้เลือกทำ
+  ฟีเจอร์นี้ก่อนจากตัวเลือกที่เสนอไว้ ("ก่อน-หลังก่อนเลย")
+  - **ต่อ 1 การ์ดต่อ 1 มุม** (`?angle=FRONT|SIDE|BACK`, default `FRONT`) ไม่ใช่รวม 3 มุมในรูปเดียว —
+    ตรงกับที่ `ProgressPhotosCard`'s ส่วนก่อน-หลังเองก็แยกแสดงทีละมุมอยู่แล้ว (`anglesWithComparison.map`)
+    แต่ละมุมมีปุ่มดาวน์โหลดของตัวเอง ไม่ใช่ปุ่มเดียวรวมทุกมุม
+  - **เงื่อนไข "พอเปรียบเทียบได้" ตรงกับที่ UI ในแอพใช้อยู่แล้วเป๊ะ** (`oldest.id !== latest.id`, ต้องมี
+    ≥2 รูปของมุมนั้นจริง ๆ ไม่ใช่รูปเดียวกันซ้ำ) เพราะปุ่มดาวน์โหลดนี้โผล่เฉพาะในมุมที่ `anglesWithComparison`
+    กรองมาแล้วอยู่แล้ว แต่ route เองก็เช็คซ้ำอีกชั้น (ไม่เชื่อ query param เพียงอย่างเดียว) เผื่อคนลิงก์ตรง
+    เข้ามาที่มุมที่มีรูปเดียว/ไม่มีรูปเลย — ไม่พอเปรียบเทียบ (หรือไฟล์บนดิสก์หายไปจาก path ที่ DB อ้างถึง
+    — เช่น ลบไฟล์มือนอกแอพ) ตกไปที่การ์ด empty-state เดียวกัน ("ยังไม่มีรูปพอสำหรับเปรียบเทียบมุมนี้ —
+    ต้องมีอย่างน้อย 2 รูป") ไม่ crash เป็น 500
+  - **อ่านรูปจากดิสก์ตรง ๆ แล้ว embed เป็น data URI** (เหมือน `daily-summary/route.tsx`'s `avatarPath`
+    self-upload) เพราะไฟล์ progress photo อยู่นอก `public/` อ่านได้แค่ผ่าน route ที่ auth-gated
+    (`/api/progress-photo/[id]`) — satori ไม่มี session cookie ไปเรียก URL นั้นได้ อ่าน raw bytes ผ่าน
+    `readProgressPhotoFile()` (`src/lib/progress-photo-storage.ts`) ตรง ๆ แทน
+  - **กล่องรูปสูง 940px ไม่ใช่ 613px (อัตราส่วน 3:4 แบบ thumbnail ในแอพ)** — ลองรอบแรกตามอัตราส่วน 3:4
+    เดิมของ thumbnail ในแอพ (460×613) แล้วเปิดดูจริง พบว่าเหลือพื้นที่ว่างเปล่าเกือบครึ่งเฟรม 1920px
+    ด้านบน-ล่างของรูป ทั้งที่จุดประสงค์ทั้งหมดของการ์ดนี้คือโชว์รูปสองรูปเทียบกัน — ความกว้าง (460px)
+    เป็นตัวจำกัดจริง (สองกล่อง+ช่องว่างต้องพอดีกับความกว้างเฟรม 1080px ลบ padding) แต่ความสูงมีที่เหลือ
+    เยอะ เลยขยับเป็น 940px ให้รูปเต็มเฟรมมากขึ้น (`objectFit: "cover"` ครอบตัดรูปที่อัตราส่วนไม่ตรงอยู่แล้ว
+    เป็นปกติ ไม่มีเหตุผลด้าน correctness ต้องตามอัตราส่วน 3:4 เป๊ะ) — เทียบสองเวอร์ชันด้วยตาจริงก่อนเลือก
+    ค่าสุดท้าย
+  - ธีมสีของตัวเอง (navy→dark red→amber gradient `#0b0f19 → #171313 → #1c0f08`) กับ badge สีฟ้า-เขียว
+    (`cyan`, `#22d3ee`) แยกจากการ์ดอื่นในตระกูลนี้ทั้งหมด (Recap ใช้ violet/gold, period/nutrition ใช้
+    navy/green, daily-summary ใช้ส้ม/น้ำตาล) — ใช้ `cardStyle`/textShadow/`badgeBg`/`?bg=transparent`
+    pattern เดียวกับการ์ดอื่นทุกประการ (ไม่มีอะไรใหม่ด้านเทคนิค)
+  - บรรทัด "ห่างกัน N วัน" (`t.daysApartLabel`) คำนวณจาก `latest.takenAt - oldest.takenAt` ปัดเป็นวันเต็ม
+    ต่อด้วยรูปสองรูปเคียงกัน (แต่ละรูปมีป้าย "ก่อน"/"หลัง" + วันที่ถ่ายกำกับ)
+  - **`QuickDownloadSheet` ตัวเดิม** วางไว้ในหัวข้อของแต่ละมุม (`mb-1.5 flex items-center justify-between
+    gap-2` แทน `<p>` เดี่ยว ๆ เดิม) — ปรับ label แค่จุดเดียว: `hrefBase` ผูกกับ `angle` ของแถวนั้น
+    (`/api/share/before-after?angle=${a.angle}`) ไม่มีตัวเลือกพิเศษอื่นเพิ่ม (เหมือนปุ่มดาวน์โหลด
+    Recap/สรุปเดือนนี้ข้าง ๆ กัน) — เพิ่ม key ใหม่ `nutrition.progressPhotosCard.downloadComparison`
+    (reuse `common.language`/`downloadImage`/`share`/`generatingImage`/`downloadFailed`/
+    `loadingPreview`/`close` เดิมทั้งหมดเหมือนทุกจุดที่ใช้ `QuickDownloadSheet`)
+  - ทดสอบจริงด้วยการ seed user + 2 รูปปลอมของมุม FRONT (ห่างกัน 32 วัน, ขนาด/สีต่างกันชัดเจนเพื่อดูการ
+    ครอบตัดจริง) curl ทั้ง TH/opaque, EN/transparent, และมุม SIDE ที่ไม่มีรูปเลย (empty state) — ยืนยัน
+    ภาพถูกต้องทุกกรณี: รูปเต็มกล่องโดยไม่เพี้ยนสัดส่วน, ข้อความ/วันที่แปลถูกต้องตาม locale, ตัวอักษรอ่านออก
+    ชัดเจนบนพื้นหลังโปร่งใส, empty state โชว์ข้อความที่ถูกต้องแทนที่จะ crash หรือโชว์กล่องว่างเปล่า —
+    `npx tsc --noEmit`, `npm run build`, `npm run test` (199 เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
 - **การ์ดสรุปผลประจำวัน** (`/dashboard/summary`, `daily-summary/route.tsx`) มีธีมของตัวเอง แยกจาก
   period/nutrition — พื้นหลัง gradient ส้ม/น้ำตาลอุ่นแทนโทนเข้ม navy/green เดิม, หัวการ์ดโชว์
   avatar+ชื่อผู้ใช้จริง (`avatarPath` self-upload อ่านไฟล์แล้ว embed เป็น data URI เพราะ
