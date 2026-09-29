@@ -65,23 +65,44 @@ export function PeriodComparison({
 
   return (
     <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-medium">{t("title")}</h2>
-        <QuickDownloadSheet
-          triggerLabel={t("downloadThisMonth")}
-          triggerClassName="text-xs text-neutral-500 transition hover:text-neutral-300"
-          sheetTitle={t("downloadThisMonth")}
-          languageLabel={tc("language")}
-          downloadLabel={tc("downloadImage")}
-          shareLabel={tc("share")}
-          generatingLabel={tc("generatingImage")}
-          downloadFailedLabel={tc("downloadFailed")}
-          previewLoadingLabel={tc("loadingPreview")}
-          previewAlt={t("downloadThisMonth")}
-          closeLabel={tc("close")}
-          defaultLang={locale === "en" ? "en" : "th"}
-          hrefBase="/api/share/period?range=month"
-        />
+        <div className="flex items-center gap-3">
+          {/* The plain-totals card (period route) and this one (a "Wrapped"-
+              style highlight reel — biggest PR, favorite sport, food-logging
+              consistency) answer different questions, so both stay reachable
+              from this card rather than replacing one with the other. */}
+          <QuickDownloadSheet
+            triggerLabel={t("downloadRecap")}
+            triggerClassName="text-xs text-amber-500 transition hover:text-amber-400"
+            sheetTitle={t("downloadRecap")}
+            languageLabel={tc("language")}
+            downloadLabel={tc("downloadImage")}
+            shareLabel={tc("share")}
+            generatingLabel={tc("generatingImage")}
+            downloadFailedLabel={tc("downloadFailed")}
+            previewLoadingLabel={tc("loadingPreview")}
+            previewAlt={t("downloadRecap")}
+            closeLabel={tc("close")}
+            defaultLang={locale === "en" ? "en" : "th"}
+            hrefBase="/api/share/recap?period=month"
+          />
+          <QuickDownloadSheet
+            triggerLabel={t("downloadThisMonth")}
+            triggerClassName="text-xs text-neutral-500 transition hover:text-neutral-300"
+            sheetTitle={t("downloadThisMonth")}
+            languageLabel={tc("language")}
+            downloadLabel={tc("downloadImage")}
+            shareLabel={tc("share")}
+            generatingLabel={tc("generatingImage")}
+            downloadFailedLabel={tc("downloadFailed")}
+            previewLoadingLabel={tc("loadingPreview")}
+            previewAlt={t("downloadThisMonth")}
+            closeLabel={tc("close")}
+            defaultLang={locale === "en" ? "en" : "th"}
+            hrefBase="/api/share/period?range=month"
+          />
+        </div>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <Metric

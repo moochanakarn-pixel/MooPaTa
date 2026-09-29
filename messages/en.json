@@ -108,6 +108,7 @@
     "periodComparison": {
       "title": "This month vs. last month",
       "downloadThisMonth": "Download this month's summary",
+      "downloadRecap": "Download Recap",
       "activities": "Activities",
       "distance": "Distance",
       "duration": "Time",

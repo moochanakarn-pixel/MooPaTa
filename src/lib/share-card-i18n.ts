@@ -115,6 +115,16 @@ const dict = {
     // the rest, matching this project's "truncate visibly, never silently"
     // convention (e.g. Activity.notes' 500-char cutoff).
     listTruncatedNote: (n: number) => `+ อีก ${n} เซ็ทไม่แสดงในรูปนี้ (เซสชันยาวเกินไป)`,
+
+    // api/share/recap — a "Wrapped"-style highlight card (month or year),
+    // distinct from period's plain totals: this one leads with achievements
+    // (a PR hit, the sport trained most) rather than just summing numbers.
+    recapBadge: "🎉 Recap",
+    totalDistanceLabel: "ระยะทางรวม",
+    totalVolumeLabel: "น้ำหนักที่ยกได้รวม",
+    newPrHighlightLabel: "PR ใหม่ในช่วงนี้",
+    favoriteTypeLabel: "กีฬาที่ทำบ่อยที่สุด",
+    recapEmptyText: "ยังไม่มีข้อมูลในช่วงนี้ — เริ่มบันทึกกิจกรรมหรืออาหารได้เลย!",
   },
   en: {
     prBadge: (name: string, weightKg: number) => `PR ${name} ${weightKg} kg`,
@@ -188,6 +198,13 @@ const dict = {
     },
     noExercisesText: "No exercises logged",
     listTruncatedNote: (n: number) => `+ ${n} more sets not shown (session too long for one image)`,
+
+    recapBadge: "🎉 Recap",
+    totalDistanceLabel: "Total distance",
+    totalVolumeLabel: "Total weight lifted",
+    newPrHighlightLabel: "New PR this period",
+    favoriteTypeLabel: "Most frequent activity",
+    recapEmptyText: "No data yet this period — go log an activity or a meal!",
   },
 };
 
