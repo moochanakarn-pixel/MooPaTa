@@ -299,6 +299,7 @@
     "loggingStreakCard": {
       "weekdayLabels": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
       "title": "Logging streak",
+      "currentFoodStreakLabel": "Food logging streak",
       "days": "days",
       "daysCount": "{count} days",
       "longestFoodStreak": "Longest food logging streak",

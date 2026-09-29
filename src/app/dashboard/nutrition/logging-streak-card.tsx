@@ -23,6 +23,7 @@ export function LoggingStreakCard({
     <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
       <h2 className="mb-3 font-medium">{t("title")}</h2>
 
+      <p className="mb-1 text-xs text-neutral-500">{t("currentFoodStreakLabel")}</p>
       <p className="mb-4 flex items-baseline gap-2 text-2xl font-extrabold">
         <span>🔥</span>
         {currentStreak} <span className="text-sm font-normal text-neutral-500">{t("days")}</span>

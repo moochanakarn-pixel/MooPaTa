@@ -299,6 +299,7 @@
     "loggingStreakCard": {
       "weekdayLabels": ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"],
       "title": "สถิติบันทึกต่อเนื่อง",
+      "currentFoodStreakLabel": "บันทึกอาหารต่อเนื่อง",
       "days": "วัน",
       "daysCount": "{count} วัน",
       "longestFoodStreak": "บันทึกอาหารต่อเนื่องสูงสุด",

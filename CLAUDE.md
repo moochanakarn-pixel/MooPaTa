@@ -425,8 +425,31 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
       "ออกกำลังกายปานกลาง (3-5 วัน/สัปดาห์)"/"ลดน้ำหนัก" ตอน TH), หน้าเชิงลึก's subtitle โชว์ข้อความ
       คู่กันถูกต้องทั้งสอง locale — `npx tsc --noEmit`, `npm run build`, `npm run test` (199 เทสผ่านหมด)
       ผ่านทั้งหมดก่อน commit
-    - **ยังไม่แก้ (แยกเป็น copy/design call ไม่ใช่ mechanical bug fix)**: `LoggingStreakCard`'s
-      headline "🔥 N วัน" ยังไม่มี label บอกว่าเป็นสถิติของอะไร (บันทึกอาหารหรือน้ำหนัก)
+    - **แก้แล้ว: `LoggingStreakCard`'s headline "🔥 N วัน" มี label บอกแล้วว่าเป็นสถิติของอะไร** — เดิม
+      ไม่มีอะไรบอกว่า headline นับสตรีคอะไร (บันทึกอาหารหรือน้ำหนัก) ทั้งที่การ์ดเดียวกันโชว์ทั้งสองอย่าง
+      แยกกันอยู่แล้วในบล็อก "บันทึกอาหารต่อเนื่องสูงสุด"/"บันทึกน้ำหนักต่อเนื่องสูงสุด" ด้านล่าง — พบระหว่าง
+      audit ทั้งแอพรอบใหม่ (ผู้ใช้ขอ "ตรวจหาบัคทั้งหมด" หลังใช้งานจริงมา 2 สัปดาห์) ยืนยันจาก
+      `nutrition/page.tsx` ว่า `currentStreak` ที่ส่งเข้า headline คือ `foodStreak.current` เสมอ (ไม่เคย
+      เป็นน้ำหนัก) เพิ่ม `<p>` เล็ก ๆ ("บันทึกอาหารต่อเนื่อง"/"Food logging streak", key ใหม่
+      `nutrition.loggingStreakCard.currentFoodStreakLabel`) ไว้เหนือ headline — ทดสอบจริงด้วยการ seed
+      food log ต่อเนื่อง 3 วัน เปิดหน้าเชิงลึกจริงผ่าน Playwright ยืนยันเห็น "บันทึกอาหารต่อเนื่อง" ต่อด้วย
+      "🔥 3 วัน" ถูกต้อง — `npx tsc --noEmit`, `npm run build`, `npm run test` (199 เทสผ่านหมด) ผ่านทั้งหมด
+      ก่อน commit
+    - **Audit รอบ "ตรวจหาบัคทั้งหมดเลย" (2026-09-29, หลังใช้งานจริง 2 สัปดาห์)** — ไล่ตรวจ bug class ที่
+      เคยเจอซ้ำ ๆ ในแอพนี้อีกรอบ (ไม่ใช่เดา แต่ grep + อ่านโค้ดจริงทุกจุดที่เจอ): (1) **"time carry" bug**
+      (`Math.floor(x/60)`/`Math.round(x%60)` แยกปัดคนละหน่วย จนได้ "5:60") — grep ทั่ว `src/` เจอ 10 จุด
+      ใน `format.ts`/`log-activity-form.tsx`/`api/share/[id]/route.tsx` ตรวจทีละจุดยืนยันทุกจุดใช้ pattern
+      ที่ถูกต้องอยู่แล้ว (ปัดค่ารวมเป็น integer ครั้งเดียวก่อนค่อย derive หน่วยใหญ่/เล็ก) ไม่มี regression —
+      (2) **"double +/- sign" bug** (component ที่รับ `formatValue` prop ใส่เครื่องหมาย +/- เองซ้ำกับที่
+      ฟังก์ชันข้างในใส่ไปแล้ว) — grep หา `> 0 ? "+" : ""` ทุกจุด ตรวจแล้วเจอแค่จุดเดียวที่เคยพังจริง
+      (`exercise-progression-chart.tsx`, แก้ไปแล้วก่อนหน้านี้) ที่เหลือทุกจุดปัดค่าก่อนเช็คเครื่องหมายถูก
+      ต้องแล้ว ไม่มีจุดไหนพังซ้ำ — (3) **cross-activity-type comparison guard** (เทียบ spm กับ rpm,
+      เพซวิ่งกับความเร็วปั่นจักรยาน ฯลฯ ข้ามหน่วยกันตรง ๆ) — ตรวจ `compare-view.tsx`'s `cadenceDiff`/
+      `paceDiff`/`bothSameKind` ยืนยัน guard `a.type === b.type`/`bothSameKind` ยังอยู่ครบ — (4)
+      **`ActivityGoal`'s `goalKm` หาร 0** — ตรวจ `POST /api/settings/goal` ยืนยัน validate `goalKm > 0`
+      ที่ server เสมอ (ไม่มีทางเป็น 0 ได้จาก UI) — (5) แก้ไอเทมเดียวที่ CLAUDE.md เคยบันทึกไว้ว่ายังไม่แก้
+      (ดูด้านบน) — ไม่พบบั๊กใหม่เพิ่มเติมนอกจากนี้ในรอบนี้ (โค้ดเบสผ่านการ audit หลายรอบมาแล้วก่อนหน้า
+      ทุก bug class หลักที่เคยเจอถูกแก้และมี regression test/comment กันไว้ค่อนข้างครบ)
 - **รูปติดตามรูปร่าง (front/side/back)** — `ProgressPhotosCard`
   (`src/app/dashboard/nutrition/progress-photos-card.tsx`) เก็บเป็นประวัติแบบมีวันที่
   (`ProgressPhotoLog`, ตารางแยก ไม่ใช่ field เดียวบน `User` แบบเดิม) อัปโหลดใหม่แต่ละครั้งคือแถวใหม่
