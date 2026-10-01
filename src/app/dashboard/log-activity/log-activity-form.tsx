@@ -274,6 +274,37 @@ export function LogActivityForm({
   // user already filled in.
   const showExercisesSection = type === "WeightTraining" || type === "Workout" || exercises.length > 0;
 
+  // The "more info" block (distance/calories/HR/cadence/best pace/RPE/
+  // notes — 7 fields + a textarea) used to render fully expanded always,
+  // making the single most common action in the app (logging an activity)
+  // scroll past a wall of fields most entries never touch just to reach
+  // the save button. Collapsed behind a native <details> by default for a
+  // new entry, open by default when editing an activity that already has
+  // any of these filled in (so editing never hides data that's already
+  // there — same rule `showExercisesSection` above follows), and forced
+  // open from applyParsedText below if AI-import fills any of these
+  // fields (otherwise the user has no way to see what just got filled
+  // in). A plain `useState` rather than a value recomputed fresh every
+  // render, so a later `setMoreInfoOpen(true)` can force it open without
+  // every other re-render fighting the user's own manual open/close click
+  // on the native <details> (React only ever writes the `open` attribute
+  // when this state value itself changes, never just because some other
+  // field's state changed and the component re-rendered).
+  const [moreInfoOpen, setMoreInfoOpen] = useState(
+    () =>
+      !!(
+        initial &&
+        (initial.distanceKm ||
+          initial.calories ||
+          initial.avgHeartRate ||
+          initial.maxHeartRate ||
+          initial.avgCadence ||
+          initial.maxSpeedMs ||
+          initial.rpe ||
+          initial.notes)
+      )
+  );
+
   // Converts whichever of the three fields is currently visible into
   // Activity.maxSpeedMs (m/s) for the request body — `null` means nothing
   // was entered (leave the activity's own maxSpeedMs untouched/unset), and
@@ -401,6 +432,22 @@ export function LogActivityForm({
     if (!gotAnything) {
       setImportNotice(t("importNoData"));
       return;
+    }
+    // Force the "more info" <details> open if AI-import filled any of the
+    // fields inside it — otherwise it can silently stay collapsed (e.g.
+    // editing an activity that had none of them set yet) and the user has
+    // no way to see what parsing just filled in.
+    if (
+      parsed.distanceKm !== null ||
+      parsed.calories !== null ||
+      parsed.avgHeartRate !== null ||
+      parsed.maxHeartRate !== null ||
+      parsed.avgCadence !== null ||
+      parsed.maxSpeedMs !== null ||
+      parsed.rpe !== null ||
+      parsed.notes !== null
+    ) {
+      setMoreInfoOpen(true);
     }
     setImportNotice(null);
     setMode("manual");
@@ -656,8 +703,12 @@ export function LogActivityForm({
           />
         </div>
 
-        <div className="border-t border-neutral-800 pt-4">
-          <p className="mb-3 text-xs text-neutral-500">{t("moreInfoHint")}</p>
+        <details
+          className="border-t border-neutral-800 pt-4"
+          open={moreInfoOpen}
+          onToggle={(e) => setMoreInfoOpen(e.currentTarget.open)}
+        >
+          <summary className="mb-3 cursor-pointer text-xs text-neutral-500">{t("moreInfoHint")}</summary>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={LABEL_CLASS}>{t("labelDistance")}</label>
@@ -776,7 +827,7 @@ export function LogActivityForm({
               className={`${INPUT_CLASS} resize-y`}
             />
           </div>
-        </div>
+        </details>
 
         {showExercisesSection && (
         <div className="border-t border-neutral-800 pt-4">
