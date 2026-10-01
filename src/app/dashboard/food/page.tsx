@@ -137,16 +137,16 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
         {t("backToOverview")}
       </Link>
 
-      <div className="mb-1 flex items-center justify-between">
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
         <h1 className="text-xl font-bold">{t("title")}</h1>
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard/food/history" className="text-xs text-neutral-500 transition hover:text-neutral-300">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Link href="/dashboard/food/history" className="whitespace-nowrap text-xs text-neutral-500 transition hover:text-neutral-300">
             {t("history")}
           </Link>
-          <Link href="/dashboard/portion-guide" className="text-xs text-neutral-500 transition hover:text-neutral-300">
+          <Link href="/dashboard/portion-guide" className="whitespace-nowrap text-xs text-neutral-500 transition hover:text-neutral-300">
             {t("portionGuide")}
           </Link>
-          <Link href="/dashboard/food/library" className="text-xs text-neutral-500 transition hover:text-neutral-300">
+          <Link href="/dashboard/food/library" className="whitespace-nowrap text-xs text-neutral-500 transition hover:text-neutral-300">
             {t("library")}
           </Link>
         </div>

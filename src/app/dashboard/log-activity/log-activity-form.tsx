@@ -260,6 +260,20 @@ export function LogActivityForm({
   const paceUnit = paceUnitMeters(type);
   const usesPace = paceUnit !== null;
 
+  // The exercises block (RPE-lift guide, "repeat from a previous session",
+  // per-set reps/weight/RPE grid) used to render unconditionally for every
+  // activity type — logging a plain Run surfaced the same weight-training
+  // UI, including suggestions pulled from an actual past WeightTraining
+  // session, adding length/noise to the most common action in the app for
+  // content that's irrelevant to a cardio entry. Gate it to the types it's
+  // actually for (WeightTraining, and Workout/"ออกกำลังกายทั่วไป" since
+  // that's the closest match to the calisthenics case the hint text
+  // already calls out) — but keep showing it once `exercises.length > 0`
+  // regardless of type, so switching the type dropdown away from
+  // WeightTraining mid-entry (e.g. while editing) never hides rows the
+  // user already filled in.
+  const showExercisesSection = type === "WeightTraining" || type === "Workout" || exercises.length > 0;
+
   // Converts whichever of the three fields is currently visible into
   // Activity.maxSpeedMs (m/s) for the request body — `null` means nothing
   // was entered (leave the activity's own maxSpeedMs untouched/unset), and
@@ -764,6 +778,7 @@ export function LogActivityForm({
           </div>
         </div>
 
+        {showExercisesSection && (
         <div className="border-t border-neutral-800 pt-4">
           <p className="mb-1 text-xs text-neutral-500">{t("exercisesHint")}</p>
           <div className="mb-3">
@@ -934,6 +949,7 @@ export function LogActivityForm({
             {t("addExercise")}
           </button>
         </div>
+        )}
 
         {error && <p className="text-xs text-red-400">{error}</p>}
 
