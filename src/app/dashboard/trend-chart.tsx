@@ -24,15 +24,15 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
 
   return (
     <div className="rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
-      <div className="mb-4 flex items-baseline justify-between">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 className="font-medium">{t("title")}</h2>
-        <div className="flex items-center gap-3">
-          <p className="text-xs text-neutral-500">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="whitespace-nowrap text-xs text-neutral-500">
             {t("last12Weeks")} <span className="text-neutral-400">{t("avgKm", { km: avg.toFixed(1) })}</span>
           </p>
           <QuickDownloadSheet
             triggerLabel={t("downloadThisWeek")}
-            triggerClassName="text-xs text-neutral-500 transition hover:text-neutral-300"
+            triggerClassName="whitespace-nowrap text-xs text-neutral-500 transition hover:text-neutral-300"
             sheetTitle={t("downloadThisWeek")}
             languageLabel={tc("language")}
             downloadLabel={tc("downloadImage")}

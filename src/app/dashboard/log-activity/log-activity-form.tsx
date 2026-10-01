@@ -305,6 +305,16 @@ export function LogActivityForm({
       )
   );
 
+  // `startedAt` is the raw "YYYY-MM-DDTHH:mm" string the datetime-local
+  // input works in (parsed as local wall-clock time by `new Date(...)`,
+  // same timezone the picker itself is showing) — re-parsed here just to
+  // drive the locale-formatted confirmation line under the picker.
+  const startedAtDate = (() => {
+    if (!startedAt) return null;
+    const d = new Date(startedAt);
+    return Number.isNaN(d.getTime()) ? null : d;
+  })();
+
   // Converts whichever of the three fields is currently visible into
   // Activity.maxSpeedMs (m/s) for the request body — `null` means nothing
   // was entered (leave the activity's own maxSpeedMs untouched/unset), and
@@ -697,10 +707,33 @@ export function LogActivityForm({
           <label className={LABEL_CLASS}>{t("labelStartedAt")}</label>
           <input
             type="datetime-local"
+            lang={lang}
             value={startedAt}
             onChange={(e) => setStartedAt(e.target.value)}
             className={INPUT_CLASS}
           />
+          {/* `<input type="datetime-local">`'s own displayed format follows
+              the browser/OS locale, not this app's — `lang` above nudges
+              Chromium toward it but isn't honored everywhere consistently,
+              so this line is the one place that's guaranteed to read in
+              the app's own date style no matter what the native picker
+              shows (friction audit found the native control rendering
+              English/Gregorian — "10/01/2026, 07:29 PM" — while every
+              other date in the app is Thai-formatted; unverified whether
+              that reproduces on a phone actually set to Thai locale, but
+              this line makes it a non-issue either way). */}
+          {startedAtDate && (
+            <p className="mt-1 text-xs text-neutral-500">
+              {startedAtDate.toLocaleString(lang === "en" ? "en-US" : "th-TH", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              })}
+            </p>
+          )}
         </div>
 
         <details
