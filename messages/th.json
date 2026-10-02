@@ -47,6 +47,18 @@
       "timesUnit": "ครั้ง",
       "noSupplements": "ยังไม่มีรายการ"
     },
+    "weeklyInsights": {
+      "title": "สัปดาห์นี้เทียบกับสัปดาห์ก่อน",
+      "streakRecord": "สถิติบันทึกต่อเนื่องสูงสุดใหม่ — {days} วันติดต่อกัน!",
+      "activityCountUp": "ออกกำลังกายมากขึ้น {count} ครั้ง",
+      "activityCountDown": "ออกกำลังกายน้อยลง {count} ครั้ง",
+      "activityDurationUp": "ออกกำลังกายนานขึ้น {minutes} นาที",
+      "activityDurationDown": "ออกกำลังกายน้อยลง {minutes} นาที",
+      "foodConsistencyUp": "บันทึกอาหารสม่ำเสมอขึ้น {days} วัน",
+      "foodConsistencyDown": "บันทึกอาหารน้อยวันลง {days} วัน",
+      "waterUp": "ดื่มน้ำมากขึ้น {liters} ลิตร",
+      "waterDown": "ดื่มน้ำน้อยลง {liters} ลิตร"
+    },
     "goalProgress": {
       "title": "เป้าหมายเดือนนี้",
       "reached": "ถึงเป้าหมายแล้ว 🎉",

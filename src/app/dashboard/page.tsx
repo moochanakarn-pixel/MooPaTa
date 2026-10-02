@@ -6,6 +6,8 @@ import { getSessionUserId } from "@/lib/session";
 import { macrosForGrams } from "@/lib/food";
 import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nutrition";
 import { getLatestBodyComposition } from "@/lib/body-composition";
+import { buildWeeklyInsights } from "@/lib/insights";
+import { localDateKey } from "@/lib/streak";
 import { ActivityFilters } from "./activity-filters";
 import { ActivityHeatmap, buildHeatmapDays, computeStreaks } from "./activity-heatmap";
 import { ActivityListView, type ActivityRow } from "./activity-list-view";
@@ -17,6 +19,7 @@ import { OnboardingCard, type OnboardingStep } from "./onboarding-card";
 import { PeriodComparison } from "./period-comparison";
 import { TrendChart, type WeekBucket } from "./trend-chart";
 import { TypeBreakdown, type TypeShare } from "./type-breakdown";
+import { WeeklyInsightsCard } from "./weekly-insights-card";
 
 const WEEKS_OF_HISTORY = 12;
 const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -72,6 +75,8 @@ export default async function DashboardPage({
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
+  const thisWeekStart = startOfWeek(now);
+  const lastWeekStart = new Date(thisWeekStart.getTime() - MS_PER_WEEK);
 
   const activityFilter: { type?: string; startedAt?: { gte: Date } } = {};
   if (searchParams.type) activityFilter.type = searchParams.type;
@@ -100,6 +105,10 @@ export default async function DashboardPage({
     activeSupplements,
     totalFoodLogCount,
     totalWaterLogCount,
+    thisWeekActivityAgg,
+    lastWeekActivityAgg,
+    weeklyFoodLogs,
+    weeklyWaterLogs,
   ] = await Promise.all([
       db.user.findUnique({ where: { id: userId } }),
       db.activityGoal.findMany({ where: { userId }, orderBy: { activityType: "asc" } }),
@@ -158,6 +167,27 @@ export default async function DashboardPage({
       }),
       db.foodLog.count({ where: { userId } }),
       db.waterLog.count({ where: { userId } }),
+      db.activity.aggregate({
+        where: { userId, startedAt: { gte: thisWeekStart } },
+        _count: { _all: true },
+        _sum: { durationSec: true },
+      }),
+      db.activity.aggregate({
+        where: { userId, startedAt: { gte: lastWeekStart, lt: thisWeekStart } },
+        _count: { _all: true },
+        _sum: { durationSec: true },
+      }),
+      // One query covering both weeks (lastWeekStart..now), split in JS below
+      // — same "query once, bucket per-week in a loop" pattern MacroWeekTable
+      // uses for its 7-day food totals, instead of 2 separate round trips.
+      db.foodLog.findMany({
+        where: { userId, loggedAt: { gte: lastWeekStart } },
+        select: { loggedAt: true },
+      }),
+      db.waterLog.findMany({
+        where: { userId, loggedAt: { gte: lastWeekStart } },
+        select: { loggedAt: true, ml: true },
+      }),
     ]);
 
   const unit = user?.unitSystem ?? "METRIC";
@@ -240,6 +270,27 @@ export default async function DashboardPage({
   const streaks = computeStreaks(heatmapDays);
 
   const weeklyBuckets = buildWeeklyBuckets(chartRows, locale);
+
+  const thisWeekFoodDays = new Set<string>();
+  const lastWeekFoodDays = new Set<string>();
+  for (const log of weeklyFoodLogs) {
+    if (log.loggedAt >= thisWeekStart) thisWeekFoodDays.add(localDateKey(log.loggedAt));
+    else lastWeekFoodDays.add(localDateKey(log.loggedAt));
+  }
+  let thisWeekWaterMl = 0;
+  let lastWeekWaterMl = 0;
+  for (const log of weeklyWaterLogs) {
+    if (log.loggedAt >= thisWeekStart) thisWeekWaterMl += log.ml;
+    else lastWeekWaterMl += log.ml;
+  }
+  const weeklyInsights = buildWeeklyInsights({
+    thisWeekActivities: { count: thisWeekActivityAgg._count._all, durationSec: thisWeekActivityAgg._sum.durationSec ?? 0 },
+    lastWeekActivities: { count: lastWeekActivityAgg._count._all, durationSec: lastWeekActivityAgg._sum.durationSec ?? 0 },
+    thisWeekLogging: { loggedDays: thisWeekFoodDays.size, waterMl: thisWeekWaterMl },
+    lastWeekLogging: { loggedDays: lastWeekFoodDays.size, waterMl: lastWeekWaterMl },
+    currentStreak: streaks.current,
+    longestStreak: streaks.longest,
+  });
 
   const activityRows: ActivityRow[] = activities.map((a) => ({
     id: a.id,
@@ -382,6 +433,8 @@ export default async function DashboardPage({
         supplementsTakenToday={supplementsTakenToday}
         supplementsTotal={activeSupplements.length}
       />
+
+      <WeeklyInsightsCard insights={weeklyInsights} />
 
       <CollapsibleSection title={t("moreStatsTitle")} defaultOpen>
         {thisMonthActivities.length > 0 && (

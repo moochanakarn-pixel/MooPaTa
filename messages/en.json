@@ -47,6 +47,18 @@
       "timesUnit": "taken",
       "noSupplements": "No items yet"
     },
+    "weeklyInsights": {
+      "title": "This week vs last week",
+      "streakRecord": "New logging streak record — {days} days in a row!",
+      "activityCountUp": "{count} more workouts",
+      "activityCountDown": "{count} fewer workouts",
+      "activityDurationUp": "{minutes} more active minutes",
+      "activityDurationDown": "{minutes} fewer active minutes",
+      "foodConsistencyUp": "Logged food on {days} more days",
+      "foodConsistencyDown": "Logged food on {days} fewer days",
+      "waterUp": "{liters} L more water",
+      "waterDown": "{liters} L less water"
+    },
     "goalProgress": {
       "title": "This month's goals",
       "reached": "Goal reached 🎉",
