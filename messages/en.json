@@ -216,6 +216,9 @@
       "close": "Close",
       "searchPlaceholder": "Search for a dish, e.g. stir-fried basil",
       "scanLabel": "Scan label",
+      "mealTemplates": "Meal combos",
+      "logTemplate": "Log whole meal",
+      "loggingTemplate": "Saving...",
       "favorites": "Favorites",
       "frequentMenu": "Frequently eaten",
       "suggestedFromCatalog": "Suggested from the Thai food catalog",
@@ -245,7 +248,8 @@
         "editSaveFailed": "Save failed — try again",
         "repeatFailed": "Repeat failed — try again",
         "nothingToCopy": "The previous day has nothing to copy",
-        "copyFailed": "Copy failed — try again"
+        "copyFailed": "Copy failed — try again",
+        "logTemplateFailed": "Save failed — try again"
       }
     },
     "nutrientOverview": {
@@ -326,6 +330,12 @@
       "gramsValue": "{value} g",
       "litersValue": "{value} L",
       "vsLastWeek": "vs. last week"
+    },
+    "weeklyInsights": {
+      "weightTrendUp": "Average weight up {value} kg",
+      "weightTrendDown": "Average weight down {value} kg",
+      "proteinTotalUp": "Total protein up {value} g",
+      "proteinTotalDown": "Total protein down {value} g"
     },
     "calorieTrendChart": {
       "title": "Daily calories",

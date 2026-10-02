@@ -216,6 +216,9 @@
       "close": "ปิด",
       "searchPlaceholder": "ค้นหาเมนู เช่น ผัดกะเพรา",
       "scanLabel": "สแกนฉลาก",
+      "mealTemplates": "มื้อโปรด",
+      "logTemplate": "บันทึกทั้งมื้อ",
+      "loggingTemplate": "กำลังบันทึก...",
       "favorites": "เมนูโปรด",
       "frequentMenu": "เมนูที่กินบ่อย",
       "suggestedFromCatalog": "แนะนำจากรายการอาหารไทย",
@@ -245,7 +248,8 @@
         "editSaveFailed": "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง",
         "repeatFailed": "ทำซ้ำไม่สำเร็จ ลองใหม่อีกครั้ง",
         "nothingToCopy": "วันก่อนหน้าไม่มีข้อมูลให้คัดลอก",
-        "copyFailed": "คัดลอกไม่สำเร็จ ลองใหม่อีกครั้ง"
+        "copyFailed": "คัดลอกไม่สำเร็จ ลองใหม่อีกครั้ง",
+        "logTemplateFailed": "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง"
       }
     },
     "nutrientOverview": {
@@ -326,6 +330,12 @@
       "gramsValue": "{value} ก.",
       "litersValue": "{value} ล.",
       "vsLastWeek": "จากสัปดาห์ก่อน"
+    },
+    "weeklyInsights": {
+      "weightTrendUp": "น้ำหนักเฉลี่ยเพิ่มขึ้น {value} กก.",
+      "weightTrendDown": "น้ำหนักเฉลี่ยลดลง {value} กก.",
+      "proteinTotalUp": "โปรตีนรวมเพิ่มขึ้น {value} ก.",
+      "proteinTotalDown": "โปรตีนรวมลดลง {value} ก."
     },
     "calorieTrendChart": {
       "title": "แคลอรี่รายวัน",

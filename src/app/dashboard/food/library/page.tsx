@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSessionUserId } from "@/lib/session";
 import { FoodLibraryView, type LibraryFood } from "./food-library-view";
+import { MealTemplatesSection, type MealTemplateData } from "./meal-templates-section";
 
 export default async function FoodLibraryPage() {
   const userId = await getSessionUserId();
@@ -28,6 +29,26 @@ export default async function FoodLibraryPage() {
     unitLabel: f.unitLabel,
   }));
 
+  const templateRows = await db.mealTemplate.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    include: { items: { include: { food: true }, orderBy: { order: "asc" } } },
+  });
+
+  const templates: MealTemplateData[] = templateRows.map((tmpl) => ({
+    id: tmpl.id,
+    name: tmpl.name,
+    items: tmpl.items.map((i) => ({
+      foodId: i.foodId,
+      foodName: i.food.name,
+      grams: i.grams,
+      caloriesPer100g: i.food.caloriesPer100g,
+      proteinPer100g: i.food.proteinPer100g,
+      carbPer100g: i.food.carbPer100g,
+      fatPer100g: i.food.fatPer100g,
+    })),
+  }));
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-10">
       <Link href="/dashboard/food" className="mb-6 inline-flex items-center gap-1.5 text-sm text-neutral-500 transition hover:text-neutral-300">
@@ -42,6 +63,8 @@ export default async function FoodLibraryPage() {
         ทุกเมนูที่เคยบันทึก (จากแคตตาล็อก บาร์โค้ด หรือพิมพ์เอง) จะถูกเก็บไว้ที่นี่ให้ค้นหาเจอเวลาบันทึกซ้ำ — แก้ไขค่าพลังงาน/แมโคร
         หรือลบทิ้งได้ที่นี่ กดดาวเมนูที่กินบ่อยๆ ไว้ จะไปโผล่เป็น &quot;แนะนำมื้อถัดไป&quot; แทนเมนูจากแคตตาล็อกที่หน้าบันทึกอาหาร
       </p>
+
+      <MealTemplatesSection templates={templates} foods={foods} />
 
       <FoodLibraryView foods={foods} />
     </main>

@@ -68,6 +68,17 @@ export interface HealthFlags {
   highUricAcid: boolean;
 }
 
+// A saved "มื้อโปรด" combo (see MealTemplate in schema.prisma) — summarized
+// down to just what the one-tap log button in the add-food panel needs to
+// show, rather than the full item list the library page's management UI
+// uses (MealTemplateData in meal-templates-section.tsx).
+export interface MealTemplateSummary {
+  id: string;
+  name: string;
+  calories: number;
+  itemsLabel: string;
+}
+
 type PendingFood =
   | { kind: "personal"; food: PersonalFood; grams: number }
   | { kind: "catalog"; food: CatalogFood; grams: number }
@@ -99,6 +110,7 @@ export function FoodLogView({
   viewDate,
   isToday,
   healthFlags,
+  mealTemplates,
 }: {
   todayLogs: TodayLogEntry[];
   personalFoods: PersonalFood[];
@@ -106,6 +118,7 @@ export function FoodLogView({
   viewDate: string;
   isToday: boolean;
   healthFlags: HealthFlags;
+  mealTemplates: MealTemplateSummary[];
 }) {
   const t = useTranslations("food.diary");
   const locale = useLocale();
@@ -139,6 +152,8 @@ export function FoodLogView({
   const [repeatingId, setRepeatingId] = useState<string | null>(null);
   const [copyingDay, setCopyingDay] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
+  const [loggingTemplateId, setLoggingTemplateId] = useState<string | null>(null);
+  const [templateError, setTemplateError] = useState<string | null>(null);
   // Starts unset (matches what the server renders) and is filled in by the
   // effect below right after mount — computing the time-of-day guess in the
   // initializer would run it once during SSR and again on the client, and
@@ -488,6 +503,29 @@ export function FoodLogView({
     }
   }
 
+  // One tap logs every item in the template at once (same mealType/day as
+  // whatever's picked in this panel already) — mirrors repeatLog above but
+  // fans out over several FoodLog rows server-side in one request instead
+  // of copying a single entry.
+  async function logTemplate(id: string) {
+    setTemplateError(null);
+    setLoggingTemplateId(id);
+    const body: Record<string, unknown> = { mealType: mealType || null };
+    if (!isToday) body.loggedAt = viewDate;
+    const res = await fetch(`/api/meal-template/${id}/log`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setLoggingTemplateId(null);
+    if (res.ok) {
+      setShowAdd(false);
+      router.refresh();
+    } else {
+      setTemplateError(t("errors.logTemplateFailed"));
+    }
+  }
+
   function prevDateKey(dateKey: string): string {
     const [y, m, d] = dateKey.split("-").map(Number);
     const dt = new Date(y, m - 1, d);
@@ -749,6 +787,29 @@ export function FoodLogView({
                   {t("scanLabel")}
                 </button>
               </div>
+
+              {!query.trim() && mealTemplates.length > 0 && (
+                <div className="mb-3">
+                  <p className="mb-1 px-1 text-[11px] text-neutral-600">{t("mealTemplates")}</p>
+                  <div className="space-y-1">
+                    {mealTemplates.map((tmpl) => (
+                      <button
+                        key={tmpl.id}
+                        onClick={() => logTemplate(tmpl.id)}
+                        disabled={loggingTemplateId === tmpl.id}
+                        title={tmpl.itemsLabel}
+                        className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-neutral-800/50 disabled:opacity-50"
+                      >
+                        <span className="min-w-0 truncate text-neutral-200">{tmpl.name}</span>
+                        <span className="flex-none text-xs text-neutral-500">
+                          {loggingTemplateId === tmpl.id ? t("loggingTemplate") : `${Math.round(tmpl.calories)} kcal`}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {templateError && <p className="mt-1 px-1 text-xs text-red-400">{templateError}</p>}
+                </div>
+              )}
 
               {!query.trim() && favoritePersonalFoods.length > 0 && (
                 <div className="mb-3">

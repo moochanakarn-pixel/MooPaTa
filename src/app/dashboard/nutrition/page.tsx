@@ -18,7 +18,9 @@ import {
   type BmiCategory,
 } from "@/lib/nutrition";
 import { buildDayCounts, computeStreak, localDateKey } from "@/lib/streak";
+import { buildNutritionInsights } from "@/lib/insights";
 import { WeightLogCard, type WeightLogEntry } from "./weight-log-card";
+import { NutritionInsightsCard } from "./nutrition-insights-card";
 import { CalorieTrendChart, type CalorieDayBucket } from "./calorie-trend-chart";
 import { MacroWeekTable, type MacroWeekDay } from "./macro-week-table";
 import { CalorieRing } from "./calorie-ring";
@@ -357,6 +359,30 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
     else if (w.loggedAt >= lastWeekStart && w.loggedAt < thisWeekStart) lastWeekWaterMl += w.ml;
   }
 
+  // Reuses weightRows (already fetched for the trend chart/streak above) —
+  // averaged per week rather than "latest vs previous log" so a single
+  // off-cadence weigh-in doesn't dominate the comparison the way it would
+  // with just two points.
+  let thisWeekWeightSum = 0;
+  let thisWeekWeightCount = 0;
+  let lastWeekWeightSum = 0;
+  let lastWeekWeightCount = 0;
+  for (const w of weightRows) {
+    if (w.loggedAt >= thisWeekStart && w.loggedAt < thisWeekEnd) {
+      thisWeekWeightSum += w.weightKg;
+      thisWeekWeightCount++;
+    } else if (w.loggedAt >= lastWeekStart && w.loggedAt < thisWeekStart) {
+      lastWeekWeightSum += w.weightKg;
+      lastWeekWeightCount++;
+    }
+  }
+  const nutritionInsights = buildNutritionInsights({
+    thisWeekAvgWeightKg: thisWeekWeightCount > 0 ? thisWeekWeightSum / thisWeekWeightCount : null,
+    lastWeekAvgWeightKg: lastWeekWeightCount > 0 ? lastWeekWeightSum / lastWeekWeightCount : null,
+    thisWeekProteinG,
+    lastWeekProteinG,
+  });
+
   const trendDays: CalorieDayBucket[] = Array.from({ length: TREND_DAYS }, (_, i) => {
     const d = new Date(trendStart);
     d.setDate(d.getDate() + i);
@@ -437,6 +463,8 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
           hrefBase="/api/share/nutrition"
         />
       </p>
+
+      <NutritionInsightsCard insights={nutritionInsights} />
 
       <LoggingStreakCard
         currentStreak={foodStreak.current}

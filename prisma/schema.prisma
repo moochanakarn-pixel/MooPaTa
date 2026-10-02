@@ -81,6 +81,7 @@ model User {
   activityGoals       ActivityGoal[]
   foods               Food[]
   foodLogs            FoodLog[]
+  mealTemplates       MealTemplate[]
   waterLogs           WaterLog[]
   supplements         Supplement[]
   supplementLogs      SupplementLog[]
@@ -222,9 +223,10 @@ model Food {
   // from being picked/suggested again.
   deletedAt            DateTime?
 
-  userId String
-  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  logs   FoodLog[]
+  userId        String
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs          FoodLog[]
+  templateItems MealTemplateItem[]
 
   @@unique([userId, barcode])
   @@index([userId])
@@ -257,6 +259,45 @@ enum MealType {
   LUNCH
   DINNER
   SNACK
+}
+
+// A named group of foods the user eats together often (e.g. "มื้อเช้าปกติ"
+// = ไข่ต้ม + นมถั่วเหลือง + ขนมปัง) — logging it creates one FoodLog row per
+// item in a single request, instead of adding each food to the diary one
+// at a time. Items reference Food rows directly (not a frozen copy of their
+// macros), same as FoodLog does, so editing a food's nutrition in the
+// library also updates what this template will log from then on.
+model MealTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items  MealTemplateItem[]
+
+  @@index([userId])
+}
+
+model MealTemplateItem {
+  id    String @id @default(cuid())
+  grams Float
+  // Display/log order within the template — matters for a consistent list,
+  // not for anything computed.
+  order Int
+
+  templateId String
+  template   MealTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  foodId     String
+  // Same onDelete: Cascade as FoodLog's own foodId relation — in practice
+  // Food rows are always soft-deleted (see Food.deletedAt above) so a food
+  // used in a template that later gets "removed" from the library still
+  // resolves fine here and keeps logging correctly, it just stops being
+  // pickable fresh. Cascade only matters as a safety net for the Food row
+  // genuinely being hard-deleted.
+  food       Food         @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
 }
 
 // One OAuth link between a User and an external fitness provider.

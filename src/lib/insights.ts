@@ -99,3 +99,62 @@ export function buildWeeklyInsights(input: WeeklyInsightsInput): WeeklyInsight[]
 
   return insights.slice(0, MAX_WEEKLY_INSIGHTS);
 }
+
+export interface NutritionInsightsInput {
+  // null when a week has no weight logs at all — nothing to average, so the
+  // weightTrend insight is skipped rather than comparing against 0.
+  thisWeekAvgWeightKg: number | null;
+  lastWeekAvgWeightKg: number | null;
+  thisWeekProteinG: number;
+  lastWeekProteinG: number;
+}
+
+export type NutritionInsightKind = "weightTrend" | "proteinTotal";
+
+export interface NutritionInsight {
+  kind: NutritionInsightKind;
+  // The literal direction the number moved — picks which of the two
+  // message variants ("...increased"/"...decreased") to show. This is
+  // deliberately NOT the same thing as "good news or not": for
+  // weightTrend specifically, down is the direction treated as good news
+  // (lime) regardless of the user's actual goal, matching the dashboard
+  // HealthSummary's existing weight-delta badge right above this card's
+  // counterpart, which colors a drop as good unconditionally rather than
+  // checking nutritionGoal — this card follows that same established
+  // (if simplified) convention rather than inventing a goal-aware one.
+  direction: "up" | "down";
+  // Always a positive magnitude — direction carries the sign. weightTrend
+  // is kg at 0.1 precision, proteinTotal is whole grams.
+  value: number;
+}
+
+// A change smaller than this reads as scale/logging noise, not a real
+// week-to-week shift — same reasoning as MIN_DURATION_DELTA_SEC/
+// MIN_WATER_DELTA_ML above.
+const MIN_WEIGHT_DELTA_KG = 0.2;
+const MIN_PROTEIN_DELTA_G = 10;
+
+export const MAX_NUTRITION_INSIGHTS = 2;
+
+// Same idea as buildWeeklyInsights above (a fixed, non-AI set of candidate
+// "this week vs last week" comparisons, filtered to the ones with a real
+// signal) but scoped to the nutrition page's own data — weight trend and
+// total protein intake, neither of which the page's existing
+// NutritionPeriodComparison numbers already say as a plain sentence.
+export function buildNutritionInsights(input: NutritionInsightsInput): NutritionInsight[] {
+  const insights: NutritionInsight[] = [];
+
+  if (input.thisWeekAvgWeightKg !== null && input.lastWeekAvgWeightKg !== null) {
+    const deltaKg = Math.round((input.thisWeekAvgWeightKg - input.lastWeekAvgWeightKg) * 10) / 10;
+    if (Math.abs(deltaKg) >= MIN_WEIGHT_DELTA_KG) {
+      insights.push({ kind: "weightTrend", direction: deltaKg > 0 ? "up" : "down", value: Math.abs(deltaKg) });
+    }
+  }
+
+  const proteinDelta = Math.round(input.thisWeekProteinG - input.lastWeekProteinG);
+  if (Math.abs(proteinDelta) >= MIN_PROTEIN_DELTA_G) {
+    insights.push({ kind: "proteinTotal", direction: proteinDelta > 0 ? "up" : "down", value: Math.abs(proteinDelta) });
+  }
+
+  return insights.slice(0, MAX_NUTRITION_INSIGHTS);
+}

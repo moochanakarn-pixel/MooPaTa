@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildWeeklyInsights, MAX_WEEKLY_INSIGHTS, type WeeklyInsightsInput } from "./insights";
+import {
+  buildNutritionInsights,
+  buildWeeklyInsights,
+  MAX_NUTRITION_INSIGHTS,
+  MAX_WEEKLY_INSIGHTS,
+  type NutritionInsightsInput,
+  type WeeklyInsightsInput,
+} from "./insights";
 
 const BASE: WeeklyInsightsInput = {
   thisWeekActivities: { count: 0, durationSec: 0 },
@@ -111,5 +118,56 @@ describe("buildWeeklyInsights", () => {
     expect(result).toHaveLength(MAX_WEEKLY_INSIGHTS);
     expect(result.map((i) => i.kind)).toEqual(["streakRecord", "activityCount", "foodConsistency"]);
     // water would have been the 4th candidate but got cut by the cap.
+  });
+});
+
+const NUTRITION_BASE: NutritionInsightsInput = {
+  thisWeekAvgWeightKg: null,
+  lastWeekAvgWeightKg: null,
+  thisWeekProteinG: 0,
+  lastWeekProteinG: 0,
+};
+
+describe("buildNutritionInsights", () => {
+  it("returns nothing when there's no weight data and protein is unchanged", () => {
+    expect(buildNutritionInsights(NUTRITION_BASE)).toEqual([]);
+  });
+
+  it("skips the weight insight entirely when either week has no weight logs", () => {
+    expect(buildNutritionInsights({ ...NUTRITION_BASE, thisWeekAvgWeightKg: 70 })).toEqual([]);
+    expect(buildNutritionInsights({ ...NUTRITION_BASE, lastWeekAvgWeightKg: 70 })).toEqual([]);
+  });
+
+  it("reports a weight trend past the 0.2kg noise floor, direction = which way the number moved", () => {
+    const up = buildNutritionInsights({ ...NUTRITION_BASE, thisWeekAvgWeightKg: 70.5, lastWeekAvgWeightKg: 70.0 });
+    expect(up).toEqual([{ kind: "weightTrend", direction: "up", value: 0.5 }]);
+
+    const down = buildNutritionInsights({ ...NUTRITION_BASE, thisWeekAvgWeightKg: 69.5, lastWeekAvgWeightKg: 70.0 });
+    expect(down).toEqual([{ kind: "weightTrend", direction: "down", value: 0.5 }]);
+
+    const noise = buildNutritionInsights({ ...NUTRITION_BASE, thisWeekAvgWeightKg: 70.05, lastWeekAvgWeightKg: 70.0 });
+    expect(noise).toEqual([]);
+  });
+
+  it("reports a protein total delta past the 10g noise floor, in both directions", () => {
+    const up = buildNutritionInsights({ ...NUTRITION_BASE, thisWeekProteinG: 500, lastWeekProteinG: 450 });
+    expect(up).toEqual([{ kind: "proteinTotal", direction: "up", value: 50 }]);
+
+    const down = buildNutritionInsights({ ...NUTRITION_BASE, thisWeekProteinG: 400, lastWeekProteinG: 450 });
+    expect(down).toEqual([{ kind: "proteinTotal", direction: "down", value: 50 }]);
+
+    const noise = buildNutritionInsights({ ...NUTRITION_BASE, thisWeekProteinG: 455, lastWeekProteinG: 450 });
+    expect(noise).toEqual([]);
+  });
+
+  it("returns both insights together, capped at MAX_NUTRITION_INSIGHTS", () => {
+    const result = buildNutritionInsights({
+      thisWeekAvgWeightKg: 69.0,
+      lastWeekAvgWeightKg: 70.0,
+      thisWeekProteinG: 600,
+      lastWeekProteinG: 450,
+    });
+    expect(result).toHaveLength(MAX_NUTRITION_INSIGHTS);
+    expect(result.map((i) => i.kind)).toEqual(["weightTrend", "proteinTotal"]);
   });
 });

@@ -8,7 +8,7 @@ import { applyActivityBonus, computeTargets, isProfileComplete } from "@/lib/nut
 import { getLatestBodyComposition } from "@/lib/body-composition";
 import { localDateKey } from "@/lib/streak";
 import { DateStrip } from "./date-strip";
-import { FoodLogView, type DailyTargets, type PersonalFood, type TodayLogEntry } from "./food-log-view";
+import { FoodLogView, type DailyTargets, type MealTemplateSummary, type PersonalFood, type TodayLogEntry } from "./food-log-view";
 import { WaterLogCard, type WaterLogEntry } from "./water-log-card";
 
 export default async function FoodPage({ searchParams }: { searchParams: { date?: string } }) {
@@ -31,7 +31,7 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
   const viewDayEnd = new Date(viewDayStart);
   viewDayEnd.setDate(viewDayEnd.getDate() + 1);
 
-  const [user, viewDayLogRows, personalFoodRows, viewDayWaterRows, viewDayActivities, foodLogCounts] = await Promise.all([
+  const [user, viewDayLogRows, personalFoodRows, viewDayWaterRows, viewDayActivities, foodLogCounts, mealTemplateRows] = await Promise.all([
     db.user.findUnique({ where: { id: userId } }),
     db.foodLog.findMany({
       where: { userId, loggedAt: { gte: viewDayStart, lt: viewDayEnd } },
@@ -59,8 +59,20 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
     // section shown ahead of it in that same panel (personalFoodRows
     // already carries isFavorite since its query has no explicit `select`).
     db.foodLog.groupBy({ by: ["foodId"], where: { userId }, _count: { _all: true } }),
+    db.mealTemplate.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: { items: { include: { food: true }, orderBy: { order: "asc" } } },
+    }),
   ]);
   const logCountByFoodId = new Map(foodLogCounts.map((r) => [r.foodId, r._count._all]));
+
+  const mealTemplates: MealTemplateSummary[] = mealTemplateRows.map((tmpl) => ({
+    id: tmpl.id,
+    name: tmpl.name,
+    calories: tmpl.items.reduce((sum, i) => sum + macrosForGrams(i.food, i.grams).calories, 0),
+    itemsLabel: tmpl.items.map((i) => `${i.food.name} ${Math.round(i.grams)}${i.food.unitLabel}`).join(", "),
+  }));
 
   const waterLogs: WaterLogEntry[] = viewDayWaterRows.map((w) => ({ id: w.id, ml: w.ml, loggedAtMs: w.loggedAt.getTime() }));
 
@@ -189,6 +201,7 @@ export default async function FoodPage({ searchParams }: { searchParams: { date?
           highCholesterol: user?.healthFlagHighCholesterol ?? false,
           highUricAcid: user?.healthFlagHighUricAcid ?? false,
         }}
+        mealTemplates={mealTemplates}
       />
     </main>
   );
