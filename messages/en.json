@@ -963,13 +963,13 @@
     "waterP1": "This is the midpoint of the commonly used 30-35 mL/kg range.",
 
     "activityTitle": "Why today's activity increases your targets",
-    "activityP1": "A day with an activity logged (from Strava or manually) automatically bumps up your targets, counted in 30-minute blocks:",
+    "activityP1": "A day with an activity logged automatically bumps up your targets, counted in 30-minute blocks:",
     "activityList": [
       "Water: +500 mL per 30 min (up to +1.5 L/day)",
       "Carbs: +15 g per 30 min (up to +90 g/day) — replenishing used glycogen",
       "Protein: +5 g per 30 min (up to +30 g/day)"
     ],
-    "activityP2": "Calculated from duration alone, not split by intensity, since manually logged activities don't have intensity data comparable to activities synced from Strava — so the same formula works for both.",
+    "activityP2": "Water is based on total duration alone. Carbs and protein get an extra multiplier based on the calories you logged per activity (lighter than average ×0.75, harder than average up to ×1.5). Activities with no calories logged, or shorter than 5 minutes, aren't adjusted (×1, same as the base formula).",
 
     "weightTitle": "What the weight trend chart is for",
     "weightP1": "Logging your weight on the nutrition page automatically updates your profile's weight, so BMR/TDEE always calculate from your latest weight without having to go back and edit it on the settings page each time."

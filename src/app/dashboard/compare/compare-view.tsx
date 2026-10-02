@@ -117,7 +117,13 @@ export function CompareView({ activities, unit }: { activities: CompareActivity[
   // km/h-formatted values).
   const bothSameKind = bothRun || bothSwim;
 
-  const distanceDiff = a && b ? (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0) : null;
+  // Like elevationDiff/hrDiff/cadenceDiff below, this only means something
+  // when both sides actually have a distance — treating a missing value as
+  // 0 (the previous behavior) produced a misleading delta like "-5.20 กม."
+  // when comparing e.g. a WeightTraining session (no distance at all)
+  // against a Run, even though the WeightTraining side correctly shows "-"
+  // for its own value right next to it.
+  const distanceDiff = a && b && a.distanceMeters && b.distanceMeters ? a.distanceMeters - b.distanceMeters : null;
   const durationDiff = a && b ? a.durationSec - b.durationSec : null;
   const paceDiff =
     a && b && bothSameKind && a.avgSpeedMs && b.avgSpeedMs
