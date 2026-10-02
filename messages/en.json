@@ -1012,12 +1012,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "saveFailed": "Save failed — please try again",
-    "errorNameRequired": "Enter a supplement name first",
-    "wheyTitle": "Post-workout whey reminder",
-    "wheyDesc": "A notification 30-60 minutes after a logged activity ends (from Strava or manually logged)",
-    "wheyTurnOff": "Turn off",
-    "wheyTurnOn": "Turn on",
-    "wheyNeedSubscription": "You need to turn on notifications on the <link>food diary page</link> first before you can get this reminder."
+    "errorNameRequired": "Enter a supplement name first"
   },
   "weightTraining": {
     "title": "Weight Training Summary",

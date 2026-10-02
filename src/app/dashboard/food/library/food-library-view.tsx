@@ -35,7 +35,7 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
   // rather than the raw per100g fields directly — for a unit-based food
   // that's the only way these numbers land on something a person actually
   // recognizes (e.g. "150 kcal ต่อ 1 ชิ้น" instead of "15000 kcal/100g").
-  const initialRef = useMemo(() => macrosForGrams(food, referenceQuantity(food.unitLabel)), [food]);
+  const initialRef = useMemo(() => macrosForGrams(food, referenceQuantity(food, food.unitLabel)), [food]);
   const [calories, setCalories] = useState(String(Math.round(initialRef.calories * 100) / 100));
   const [protein, setProtein] = useState(String(Math.round(initialRef.proteinG * 100) / 100));
   const [carb, setCarb] = useState(String(Math.round(initialRef.carbG * 100) / 100));
@@ -45,7 +45,7 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
   const [error, setError] = useState<string | null>(null);
 
   const trimmedUnitLabel = unitLabel.trim() || GRAM_UNIT;
-  const refLabel = referenceQuantityLabel(trimmedUnitLabel);
+  const refLabel = referenceQuantityLabel(food, trimmedUnitLabel);
 
   async function save() {
     // Number("") is 0, not NaN — an emptied field must fail this check
@@ -72,10 +72,14 @@ function EditForm({ food, onCancel, onSaved }: { food: LibraryFood; onCancel: ()
     // Convert back from "per reference quantity" to the stored per-100
     // basis — the same total-at-a-given-portion-size math the custom-food
     // add form already uses, just running in reverse from the reference
-    // quantity instead of forward from an arbitrary grams input.
+    // quantity instead of forward from an arbitrary grams input. Must use
+    // the exact same (food, trimmedUnitLabel) basis as refLabel above —
+    // that's the quantity the person was shown while typing these numbers,
+    // so it's the only quantity that correctly un-scales them back to a
+    // per-100 figure.
     const per100g = per100gFromTotal(
       { calories: caloriesRef, proteinG: proteinRef, carbG: carbRef, fatG: fatRef },
-      referenceQuantity(trimmedUnitLabel)
+      referenceQuantity(food, trimmedUnitLabel)
     );
     const res = await fetch(`/api/food/${food.id}`, {
       method: "PATCH",
@@ -322,11 +326,11 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
                   <p className="mb-1 font-medium text-rose-400">{group[0].name}</p>
                   <ul className="space-y-0.5">
                     {group.map((f) => {
-                      const ref = macrosForGrams(f, referenceQuantity(f.unitLabel));
+                      const ref = macrosForGrams(f, referenceQuantity(f, f.unitLabel));
                       return (
                         <li key={f.id} className="text-rose-400/80">
                           {Math.round(ref.calories)} kcal · {ref.proteinG.toFixed(0)}p / {ref.carbG.toFixed(0)}c / {ref.fatG.toFixed(0)}f ต่อ{" "}
-                          {referenceQuantityLabel(f.unitLabel)} · บันทึกไปแล้ว {f.logCount} ครั้ง
+                          {referenceQuantityLabel(f, f.unitLabel)} · บันทึกไปแล้ว {f.logCount} ครั้ง
                         </li>
                       );
                     })}
@@ -374,11 +378,11 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
                   </p>
                   <p className="mt-1 text-xs text-neutral-500">
                     {(() => {
-                      const ref = macrosForGrams(f, referenceQuantity(f.unitLabel));
+                      const ref = macrosForGrams(f, referenceQuantity(f, f.unitLabel));
                       return (
                         <>
                           {Math.round(ref.calories)} kcal · {ref.proteinG.toFixed(0)}p / {ref.carbG.toFixed(0)}c / {ref.fatG.toFixed(0)}f ต่อ{" "}
-                          {referenceQuantityLabel(f.unitLabel)} · ปกติกิน {Math.round(f.typicalGrams)} {f.unitLabel}
+                          {referenceQuantityLabel(f, f.unitLabel)} · ปกติกิน {Math.round(f.typicalGrams)} {f.unitLabel}
                         </>
                       );
                     })()}

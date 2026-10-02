@@ -765,7 +765,7 @@ export function FoodLogView({
                           {f.name}
                         </span>
                         <span className="text-xs text-neutral-500">
-                          {Math.round(macrosForGrams(f, f.typicalGrams).calories)} kcal/{referenceQuantityLabel(f.unitLabel)}
+                          {Math.round(macrosForGrams(f, f.typicalGrams).calories)} kcal/{referenceQuantityLabel(f, f.unitLabel)}
                         </span>
                       </button>
                     ))}
@@ -809,7 +809,7 @@ export function FoodLogView({
                         >
                           <span className="text-neutral-200">{f.name}</span>
                           <span className="text-xs text-neutral-500">
-                            {Math.round(macrosForGrams(f, referenceQuantity(f.unitLabel)).calories)} kcal/{referenceQuantityLabel(f.unitLabel)}
+                            {Math.round(macrosForGrams(f, referenceQuantity(f, f.unitLabel)).calories)} kcal/{referenceQuantityLabel(f, f.unitLabel)}
                           </span>
                         </button>
                       ))}

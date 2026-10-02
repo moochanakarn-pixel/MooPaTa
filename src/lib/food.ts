@@ -69,12 +69,35 @@ export function isGramUnit(unitLabel: string): boolean {
 // weight-based food (matches the stored per100g fields directly), or 1 of
 // the unit for a count-based one — "100 ชิ้น" of a custom food is never
 // what anyone means, but "1 ชิ้น" is exactly the portion it was created from.
-export function referenceQuantity(unitLabel: string): number {
-  return isGramUnit(unitLabel) ? 100 : 1;
+//
+// That "1 of the unit" assumption only holds for a genuinely discrete unit
+// (a whole egg, a whole slice) where 1 unit carries a substantial amount on
+// its own. A custom food whose unitLabel is a divisible measure instead
+// (มล., ช้อนโต๊ะ, ...) stores its macros the same ratio-only way — created
+// from "I had X มล. and it was Y kcal", so caloriesPer100g ends up meaning
+// "per 100 มล.", same convention as a real nutrition label — and 1/100th of
+// that rounds every field to 0, making a food that genuinely has calories
+// read as if it had none. Falling back to 100 of the unit in that case
+// keeps the ordinary discrete-unit food (never triggers this, since a
+// whole item's calories are essentially never under ~0.5 kcal) working
+// exactly as before, while giving a divisible unit a reference quantity
+// that's actually informative.
+export function referenceQuantity(food: Per100g, unitLabel: string): number {
+  if (isGramUnit(unitLabel)) return 100;
+  const atOne = macrosForGrams(food, 1);
+  const allRoundToZero =
+    Math.round(atOne.calories) === 0 &&
+    Math.round(atOne.proteinG) === 0 &&
+    Math.round(atOne.carbG) === 0 &&
+    Math.round(atOne.fatG) === 0;
+  const hasRealData =
+    food.caloriesPer100g > 0 || food.proteinPer100g > 0 || food.carbPer100g > 0 || food.fatPer100g > 0;
+  return allRoundToZero && hasRealData ? 100 : 1;
 }
 
-export function referenceQuantityLabel(unitLabel: string): string {
-  return isGramUnit(unitLabel) ? `100 ${GRAM_UNIT}` : `1 ${unitLabel}`;
+export function referenceQuantityLabel(food: Per100g, unitLabel: string): string {
+  if (isGramUnit(unitLabel)) return `100 ${GRAM_UNIT}`;
+  return `${referenceQuantity(food, unitLabel)} ${unitLabel}`;
 }
 
 // Fallback unit name when a count-based food has no more specific one to
