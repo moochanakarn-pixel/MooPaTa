@@ -1,6 +1,5 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
-import { getExerciseStats } from "@/lib/exercise-stats";
 import {
   activitySpeedValue,
   activityTypeLabel,
@@ -33,8 +32,8 @@ import { parseShareLang, shareT } from "@/lib/share-card-i18n";
 // a quick centered flex that reads at a glance (closer to what most people
 // actually post to a story).
 //
-// ?pos=top|center|bottom picks where the whole details block (logo, badges,
-// name, hero number, sub-stats/route, stat grid) sits vertically in the
+// ?pos=top|center|bottom picks where the whole details block (logo, type
+// badge, name, hero number, sub-stats/route, stat grid) sits vertically in the
 // frame — as one group, not the logo/header separately pinned to the top
 // and a stat grid separately pinned to the bottom like before. Combined
 // with ?bg=transparent this is what makes the card usable as an
@@ -76,34 +75,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   ]);
   if (!activity || activity.userId !== userId) {
     return new Response("Not found", { status: 404 });
-  }
-
-  const bests = await db.activity.aggregate({
-    where: { userId, type: activity.type },
-    _max: { distanceMeters: true, avgSpeedMs: true },
-  });
-  const badges: string[] = [];
-  if (activity.distanceMeters && activity.distanceMeters === bests._max.distanceMeters) {
-    badges.push(t.longestDistanceBadge);
-  }
-  if (activity.avgSpeedMs && activity.avgSpeedMs === bests._max.avgSpeedMs) {
-    badges.push(activity.type === "Run" || activity.type === "Swim" ? t.fastestPaceBadge : t.fastestSpeedBadge);
-  }
-  // Weight-training PRs (src/lib/exercise-stats.ts) don't fit the
-  // distance/speed badges above at all, but they're exactly the kind of
-  // "worth bragging about" moment this card exists for — only queried when
-  // the activity actually logged exercises, since most activities won't.
-  // Skipped for cardStyle === "list" too: that layout never shows PR
-  // badges (see the comment on that div further down — it'd just repeat
-  // what the exercise list already shows in full), so this scan of the
-  // user's entire exercise history would be pure wasted DB work there.
-  if (activity.exercises.length > 0 && cardStyle !== "list") {
-    const exerciseStats = await getExerciseStats(userId);
-    for (const s of exerciseStats) {
-      if (s.prActivityId === activity.id && s.prWeightKg !== null) {
-        badges.push(t.prBadge(s.name, s.prWeightKg));
-      }
-    }
   }
 
   const unit = user?.unitSystem ?? "METRIC";
@@ -250,18 +221,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const badgeBg = (rgb: string) => (transparent ? `rgba(${rgb},0.55)` : `rgba(${rgb},0.15)`);
 
   // ?style=list has no fixed 1080x1920 aspect like grid/hero — its content
-  // (every exercise's every set, plus a PR badge per exercise that hit one)
-  // can be any length, so the canvas height is computed from the actual
-  // content instead of a constant. Each constant below is a rough per-row
-  // pixel estimate (font size + line spacing/padding at the sizes used in
-  // the JSX further down) rather than an exact measurement — Satori has no
-  // layout-measurement API to ask "how tall did this render", so this is
-  // the only way to size the canvas before rendering it. A little too tall
-  // just leaves harmless blank space at the bottom; a little too short
-  // clips content (confirmed by hand — a session with several PR badges
-  // wrapping onto 3 lines lost its whole last exercise card off the bottom
-  // edge when this only budgeted one badge row), so every constant here
-  // leans generous.
+  // (every exercise's every set) can be any length, so the canvas height is
+  // computed from the actual content instead of a constant. Each constant
+  // below is a rough per-row pixel estimate (font size + line spacing/
+  // padding at the sizes used in the JSX further down) rather than an exact
+  // measurement — Satori has no layout-measurement API to ask "how tall did
+  // this render", so this is the only way to size the canvas before
+  // rendering it. A little too tall just leaves harmless blank space at the
+  // bottom; a little too short clips content, so every constant here leans
+  // generous.
   // 60 was a single-line estimate; bumped for a second-line cushion now
   // that the title can carry "(N ครั้ง)" appended to the exercise name
   // (see uniformReps below) — a long name plus that suffix occasionally
@@ -346,11 +314,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   if (activity.calories) listSummaryStats.push({ value: `${Math.round(activity.calories)} kcal`, label: t.caloriesLabel });
   if (activity.avgHeartRate) listSummaryStats.push({ value: `${Math.round(activity.avgHeartRate)} bpm`, label: t.avgHrLabel });
 
-  // Unlike grid/hero, the list card shows only the type badge, never the PR
-  // badges (see the comment on that div further down) — always exactly one
-  // row, so no line-wrap estimate is needed here the way there briefly was
-  // when PR badges were still shown (that's what caused the clipping this
-  // whole height-estimation approach exists to avoid).
+  // The list card shows only the type badge — always exactly one row, so no
+  // line-wrap estimate is needed here.
   const listHeaderHeight =
     96 + // mascot logo
     40 + // gap below logo
@@ -386,12 +351,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           <div style={{ display: "flex", flexDirection: "column", marginTop: 40, gap: 28 }}>
             <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{dateLabel}</span>
 
-            {/* No PR badges here (unlike grid/hero below) — a PR badge's
-                text ("PR Reverse pecfly 12 กก.") is just that exercise's own
-                name + weight, which the full exercise list right below
-                already shows in detail — repeating it up here as a row of
-                badges was pure duplication for a card whose whole point is
-                the exercise list itself, per user request. */}
             <div style={{ display: "flex" }}>
               <div
                 style={{
@@ -514,7 +473,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           fontFamily: "Noto Sans Thai",
         }}
       >
-        {/* Everything that makes up "the details" — logo, badges, name,
+        {/* Everything that makes up "the details" — logo, type badge, name,
             hero number, sub-stats/route, and (grid style) the full stat
             grid — moves together as one group, positioned via ?pos instead
             of the old layout where the logo/header sat fixed at the top and
@@ -560,25 +519,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             >
               {activityTypeLabel(activity.type, lang)}
             </div>
-            {badges.map((b) => (
-              <div
-                key={b}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 20px",
-                  borderRadius: 999,
-                  background: badgeBg("245,158,11"),
-                  color: "#f59e0b",
-                  fontSize: 22,
-                  fontWeight: 700,
-                  textShadow,
-                }}
-              >
-                🏆 {b}
-              </div>
-            ))}
           </div>
 
           {activity.name && (
