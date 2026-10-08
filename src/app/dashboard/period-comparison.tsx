@@ -77,6 +77,7 @@ export function PeriodComparison({
             triggerClassName="text-xs text-amber-500 transition hover:text-amber-400"
             sheetTitle={t("downloadRecap")}
             languageLabel={tc("language")}
+            hideLogoLabel={tc("hideLogo")}
             downloadLabel={tc("downloadImage")}
             shareLabel={tc("share")}
             generatingLabel={tc("generatingImage")}
@@ -92,6 +93,7 @@ export function PeriodComparison({
             triggerClassName="text-xs text-neutral-500 transition hover:text-neutral-300"
             sheetTitle={t("downloadThisMonth")}
             languageLabel={tc("language")}
+            hideLogoLabel={tc("hideLogo")}
             downloadLabel={tc("downloadImage")}
             shareLabel={tc("share")}
             generatingLabel={tc("generatingImage")}

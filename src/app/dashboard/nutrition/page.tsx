@@ -452,6 +452,7 @@ export default async function NutritionPage({ searchParams }: { searchParams: { 
           triggerClassName="text-neutral-400 hover:text-neutral-200 hover:underline"
           sheetTitle={t("downloadThisMonth")}
           languageLabel={tc("language")}
+          hideLogoLabel={tc("hideLogo")}
           downloadLabel={tc("downloadImage")}
           shareLabel={tc("share")}
           generatingLabel={tc("generatingImage")}

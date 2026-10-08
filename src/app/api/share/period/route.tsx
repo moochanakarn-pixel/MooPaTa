@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
   // and a 0.15-alpha badge pill reads as a barely-there tint against
   // anything that isn't this card's own background.
   const transparent = searchParams.get("bg") === "transparent";
+  const hideLogo = searchParams.get("logo") === "hide";
 
   const user = await db.user.findUnique({ where: { id: userId } });
   const unit = user?.unitSystem ?? "METRIC";
@@ -106,9 +107,13 @@ export async function GET(req: NextRequest) {
   const hasAnyData = agg._count._all > 0;
 
   let fonts;
-  let mascotLogo;
+  let mascotLogo = "";
   try {
-    [fonts, mascotLogo] = await Promise.all([loadShareFonts(), loadMascotLogoDataUri()]);
+    if (hideLogo) {
+      fonts = await loadShareFonts();
+    } else {
+      [fonts, mascotLogo] = await Promise.all([loadShareFonts(), loadMascotLogoDataUri()]);
+    }
   } catch (err) {
     console.error("Share card: font/logo load failed", err);
     return new Response(
@@ -139,8 +144,10 @@ export async function GET(req: NextRequest) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={mascotLogo} width={56} height={56} style={{ borderRadius: 14 }} />
+          {!hideLogo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={mascotLogo} width={56} height={56} style={{ borderRadius: 14 }} />
+          )}
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>MooPaTa</span>
             <span style={{ fontSize: 20, color: "#a3a3a3", textShadow }}>{dateRangeLabel}</span>

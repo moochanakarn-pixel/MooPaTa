@@ -173,6 +173,7 @@ export function ProgressPhotosCard({
                       triggerClassName="shrink-0 text-[11px] text-cyan-500 transition hover:text-cyan-400"
                       sheetTitle={t("beforeAfter")}
                       languageLabel={tc("language")}
+                      hideLogoLabel={tc("hideLogo")}
                       downloadLabel={tc("downloadImage")}
                       shareLabel={tc("share")}
                       generatingLabel={tc("generatingImage")}

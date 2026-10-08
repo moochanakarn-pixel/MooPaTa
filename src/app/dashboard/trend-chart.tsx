@@ -35,6 +35,7 @@ export function TrendChart({ weeks }: { weeks: WeekBucket[] }) {
             triggerClassName="whitespace-nowrap text-xs text-neutral-500 transition hover:text-neutral-300"
             sheetTitle={t("downloadThisWeek")}
             languageLabel={tc("language")}
+            hideLogoLabel={tc("hideLogo")}
             downloadLabel={tc("downloadImage")}
             shareLabel={tc("share")}
             generatingLabel={tc("generatingImage")}

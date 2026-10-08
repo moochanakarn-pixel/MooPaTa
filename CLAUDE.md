@@ -622,6 +622,45 @@ achievements, activity detail, weight-training) เข้าถึงผ่า�
   ทุกอย่าง ไม่ได้ redesign เป็นโลโก้เดี่ยว ๆ 96×96 แบบ `[id]`** เพราะ 2 route นี้ไม่มีระบบ `?pos` จัด
   ตำแหน่งบล็อกรายละเอียดแบบ `[id]` การย้ายข้อความ/วันที่ออกจากแถวโลโก้จะเป็นการ redesign ใหญ่เกินขอบเขต
   ของแค่ "เปลี่ยนไอคอนที่ดูล้าสมัย" ตามที่ตรวจพบ — เปลี่ยนแค่ไอคอนโดยไม่แตะ layout ที่เหลือเลย
+- **`?logo=hide` — ซ่อนโลโก้ mascot ออกจากการ์ดได้ ทั้ง 5 route ที่มีโลโก้** (`[id]`, `before-after`,
+  `nutrition`, `period`, `recap` — `daily-summary` ไม่เข้าเกณฑ์นี้เพราะหัวการ์ดเป็นรูป avatar ของผู้ใช้เอง
+  ไม่ใช่โลโก้แอพ) — ผู้ใช้ขอหลังจากคุยเรื่องเอารูปการ์ดไปโพสต์ IG/FB Story (เรื่องเดียวกับที่เพิ่งลบบัดจี้ PR
+  ออกไปข้างบน) ว่าอยากมีตัวเลือก "ซ่อน" แบรนด์ของแอพออกจากรูปที่โพสต์ได้ด้วย ไม่ใช่แค่ล้างบัดจี้ที่รก —
+  ค่า default คือโชว์โลโก้เหมือนเดิมทุกจุด (ไม่ใช่ default ที่เปลี่ยนพฤติกรรมเดิม) และ**ไม่ persist ข้าม
+  ครั้งเหมือน `lang`** (ตั้งใจ ตามที่ผู้ใช้ยืนยันตอนถาม — คนละ trade-off กับ `style` ของ
+  `ShareActivityButton` ที่จำไว้ใน `localStorage` เพราะ "ซ่อนโลโก้" เป็นตัวเลือกเฉพาะรอบที่โพสต์ ไม่ใช่
+  รสนิยมถาวรแบบสไตล์การ์ด)
+  - **ทั้ง 5 route**: เพิ่ม `const hideLogo = searchParams.get("logo") === "hide";` คู่กับ `transparent`/
+    `bg` เดิม แล้วข้าม `loadMascotLogoDataUri()` ไปเลยเมื่อ `hideLogo` (เหลือแค่ `loadShareFonts()` ตัว
+    เดียว ไม่ fetch ไฟล์โลโก้เปล่า ๆ ที่ไม่ได้ใช้) — `mascotLogo` เปลี่ยนจาก type `string` เป็น default
+    `""` แทน (ไม่ใช่ `string | null`) กันต้องแตะ type ที่ `<img src={mascotLogo}>` ใช้อยู่ทุกจุด เพราะ
+    ไม่มีทาง render `<img>` อยู่ดีเมื่อ `hideLogo` เป็น true (ค่า `""` ไม่เคยถูกใช้จริง)
+  - **`[id]/route.tsx`**: ทั้ง grid/hero (โลโก้ 96×96 เดี่ยว ๆ ในบล็อก "รายละเอียด") และ `?style=list`
+    (โลโก้ 96×96 หัวการ์ด) ห่อ `<img>` ด้วย `{!hideLogo && (...)}` — grid/hero เป็น flex column ที่มี
+    `gap: 28` อยู่แล้ว ตัด child ตัวหนึ่งออกไม่กระทบ spacing ที่เหลือ (gap ปิดเองอัตโนมัติ), list style
+    มี wrapper แยกคนละ `<div>` กับบล็อกวันที่/badge ที่ตามมา (มี `marginTop: 40` ของตัวเอง) ดีไซน์ไว้
+    ตั้งแต่แรกว่าเป็นคนละก้อนกัน เลยไม่ต้องย้ายอะไร — `listHeaderHeight` (ตัวประเมินความสูง canvas ของ
+    `?style=list`, ดู "`?style=list` เคยโหลดค้างบ่อย..." ด้านล่าง) หัก 96px ออกเมื่อ `hideLogo` (ส่วน
+    40px ของ "gap below logo" ยังคงบวกอยู่เสมอ เพราะ `marginTop: 40` ของบล็อกถัดไปไม่ได้หายไปพร้อมโลโก้
+    — กลายเป็นระยะขอบบนแทนเฉย ๆ)
+  - **`before-after`/`nutrition`/`period`/`recap`**: ทั้ง 4 route ใช้ header pattern เดียวกัน (โลโก้
+    56×56 + "MooPaTa"/ป้ายชื่อการ์ด ในแถว `flex` เดียวกัน `gap: 16`) ห่อแค่ `<img>` ด้วย
+    `{!hideLogo && (...)}` เหลือแค่บล็อกข้อความ (ชื่อแอพ+วันที่/มุมถ่ายรูป) ไม่ต้องแก้อะไรเพิ่ม เพราะ
+    `gap` เป็นช่องว่าง*ระหว่าง*ลูกเท่านั้น ไม่เหลือเป็นที่ว่างค้างถ้าลูกตัวหนึ่งหายไป
+  - **UI**: checkbox ใหม่ (ไม่ใช่ toggle แบบ style/lang ที่มีอยู่เดิม เพราะเป็นตัวเลือกแบบ on/off จริง ๆ
+    ไม่ใช่เลือกจากหลายตัวเลือก) — เพิ่มทั้งใน `ShareActivityButton` (สำหรับ `[id]`, state แยกไม่ persist)
+    และ `QuickDownloadSheet` (component กลางที่ `before-after`/`nutrition`/`period`/`recap` ทั้ง 5 จุด
+    เรียกใช้ร่วมกัน — เพิ่ม prop ใหม่ `hideLogoLabel: string` ตาม pattern เดียวกับ `closeLabel`/
+    `languageLabel` เดิม ให้ทุก caller ส่ง `tc("hideLogo")` เข้ามา) ต่อ query `&logo=hide` เข้า href เมื่อ
+    ติ๊กไว้ — เพิ่ม key ใหม่ `common.hideLogo` ("ซ่อนโลโก้"/"Hide logo") ใน `messages/th.json`/`en.json`
+    reuse ข้ามทั้งสอง component เดียวกับ label อื่น ๆ ในแถบนี้
+  - ทดสอบจริงด้วยการ seed กิจกรรมวิ่ง + food log แล้ว curl ทั้ง `[id]?style=grid` และ `before-after?angle=
+    FRONT` (route เดียวที่ไม่มี emoji เลยเทสได้จริงในสภาพแวดล้อมนี้ — ดู comment ด้านล่างเรื่อง sandbox
+    ไม่มี network ไปหา `cdn.jsdelivr.net` ที่ next/og ต้องใช้ fetch glyph อีโมจิ ทำให้ `period`/
+    `nutrition`/`recap` เทสจริงในนี้ไม่ได้ ต้องอาศัย pattern เดียวกันเป๊ะที่ยืนยันแล้วจาก 2 route ที่เทสได้
+    แทน) ทั้งคู่ยืนยันด้วยตา: ไม่ติ๊ก → โลโก้โชว้ปกติ, ติ๊ก → โลโก้หายไปเกลี้ยง ข้อความ/badge ที่เหลือขยับ
+    ขึ้นมาแทนที่โดยไม่มีช่องว่างค้างหรือ layout พัง — `npx tsc --noEmit`, `npm run build`, `npm run test`
+    (217 เทสผ่านหมด, รวม `messages.test.ts`'s key-parity check สำหรับ key ใหม่) ผ่านทั้งหมดก่อน commit
 - **`Cache-Control: private, max-age=120`** ทั้ง 4 route (เดิมเป็น `no-cache, no-store`) — ผู้ใช้บ่นว่า
   พรีวิวในชีทดาวน์โหลดช้า เพราะทุกครั้งที่เปลี่ยนตัวเลือก (style/bg/lang/pos ฯลฯ) ต้อง query DB +
   render ผ่าน Satori ใหม่ทั้งหมดไม่มี cache เลยสักนิด แก้ด้วยการให้ browser cache ตาม URL เต็ม (ซึ่งมี

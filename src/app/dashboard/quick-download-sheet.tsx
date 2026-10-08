@@ -24,6 +24,7 @@ export function QuickDownloadSheet({
   triggerClassName,
   sheetTitle,
   languageLabel,
+  hideLogoLabel,
   downloadLabel,
   shareLabel,
   generatingLabel,
@@ -38,6 +39,7 @@ export function QuickDownloadSheet({
   triggerClassName: string;
   sheetTitle: string;
   languageLabel: string;
+  hideLogoLabel: string;
   downloadLabel: string;
   shareLabel: string;
   generatingLabel: string;
@@ -50,6 +52,8 @@ export function QuickDownloadSheet({
 }) {
   const [open, setOpen] = useState(false);
   const [lang, setLang] = useState<ShareLang>(defaultLang);
+  // Not persisted — a one-off choice per download, same treatment as `lang`.
+  const [hideLogo, setHideLogo] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
@@ -62,7 +66,7 @@ export function QuickDownloadSheet({
   // Always transparent now — background used to be a user choice here too
   // (like ShareActivityButton/SummaryConfigurator's own cards) but was
   // removed to cut down on decisions in this sheet.
-  const href = `${hrefBase}${hrefBase.includes("?") ? "&" : "?"}lang=${lang}&bg=transparent`;
+  const href = `${hrefBase}${hrefBase.includes("?") ? "&" : "?"}lang=${lang}&bg=transparent${hideLogo ? "&logo=hide" : ""}`;
 
   // Fetches the PNG ourselves instead of a plain `<a href download>` — the
   // route behind `hrefBase` can be genuinely slow to render (real Satori/
@@ -215,6 +219,16 @@ export function QuickDownloadSheet({
                 </button>
               ))}
             </div>
+
+            <label className="mb-4 flex items-center gap-2 text-xs text-neutral-400">
+              <input
+                type="checkbox"
+                checked={hideLogo}
+                onChange={(e) => setHideLogo(e.target.checked)}
+                className="h-4 w-4 rounded border-neutral-700 bg-neutral-950 accent-[#fc4c02]"
+              />
+              {hideLogoLabel}
+            </label>
 
             <div
               className="relative mx-auto mb-4 aspect-[9/16] w-full max-w-[200px] overflow-hidden rounded-xl"

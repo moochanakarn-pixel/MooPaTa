@@ -7,7 +7,8 @@
     "downloadFailed": "สร้างรูปไม่สำเร็จ ลองใหม่อีกครั้ง",
     "loadingPreview": "กำลังโหลดตัวอย่าง...",
     "close": "ปิด",
-    "share": "แชร์"
+    "share": "แชร์",
+    "hideLogo": "ซ่อนโลโก้"
   },
   "bottomNav": {
     "addData": "เพิ่มข้อมูล",

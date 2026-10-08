@@ -60,6 +60,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const cardStyle = styleParam === "hero" ? "hero" : styleParam === "list" ? "list" : "grid";
   const posParam = searchParams.get("pos");
   const pos: Position = (POSITIONS as readonly string[]).includes(posParam ?? "") ? (posParam as Position) : "center";
+  // ?logo=hide drops the mascot mark entirely (not just a blank/transparent
+  // swap) — some people don't want any app branding on what they post.
+  // Default is to show it, matching every card before this option existed.
+  const hideLogo = searchParams.get("logo") === "hide";
   const lang = parseShareLang(searchParams);
   const t = shareT(lang);
 
@@ -176,9 +180,13 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   });
 
   let fonts;
-  let mascotLogo: string;
+  let mascotLogo = "";
   try {
-    [fonts, mascotLogo] = await Promise.all([loadShareFonts(), loadMascotLogoDataUri()]);
+    if (hideLogo) {
+      fonts = await loadShareFonts();
+    } else {
+      [fonts, mascotLogo] = await Promise.all([loadShareFonts(), loadMascotLogoDataUri()]);
+    }
   } catch (err) {
     // Most likely the bundled .ttf/.png files are missing or corrupted
     // (e.g. a checkout that mangled them). Say so plainly rather than 500-ing.
@@ -317,8 +325,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   // The list card shows only the type badge — always exactly one row, so no
   // line-wrap estimate is needed here.
   const listHeaderHeight =
-    96 + // mascot logo
-    40 + // gap below logo
+    (hideLogo ? 0 : 96) + // mascot logo (skipped when ?logo=hide)
+    40 + // gap below logo (stays as top margin on the next block even if hidden)
     46 + // date row
     28 + // gap
     60 + // type badge row
@@ -343,10 +351,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             fontFamily: "Noto Sans Thai",
           }}
         >
-          <div style={{ display: "flex" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={mascotLogo} width={96} height={96} style={{ borderRadius: 24 }} />
-          </div>
+          {!hideLogo && (
+            <div style={{ display: "flex" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={mascotLogo} width={96} height={96} style={{ borderRadius: 24 }} />
+            </div>
+          )}
 
           <div style={{ display: "flex", flexDirection: "column", marginTop: 40, gap: 28 }}>
             <span style={{ fontSize: 22, color: "#a3a3a3", textShadow }}>{dateLabel}</span>
@@ -495,10 +505,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             gap: 28,
           }}
         >
-          <div style={{ display: "flex" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={mascotLogo} width={96} height={96} style={{ borderRadius: 24 }} />
-          </div>
+          {!hideLogo && (
+            <div style={{ display: "flex" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={mascotLogo} width={96} height={96} style={{ borderRadius: 24 }} />
+            </div>
+          )}
 
           <span style={{ fontSize: 22, color: "#a3a3a3", textShadow, textAlign: cardStyle === "hero" ? "center" : "left" }}>
             {dateLabel}

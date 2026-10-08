@@ -27,7 +27,10 @@ const STORAGE_KEY = "moopata_activity_share_config_v1";
 // to cut down on decisions in the sheet — the card always renders
 // transparent (?bg=transparent) with details centered (?pos=center) now, so
 // a story/reel background photo can go underneath it without anyone having
-// to pick that every time.
+// to pick that every time. A "hide logo" checkbox (?logo=hide) was added
+// back later for people who don't want any app branding on what they post —
+// unlike bg/pos this isn't a default worth removing the choice for, since
+// most people do want the mark.
 // Named "Share..." from when it was first built, but there's no actual
 // navigator.share/OS share-sheet call anywhere here (or anywhere else in
 // the app) — every one of these buttons only ever produces a downloadable
@@ -56,6 +59,10 @@ export function ShareActivityButton({
   const [open, setOpen] = useState(false);
   const [style, setStyle] = useState<Style>("grid");
   const [lang, setLang] = useState<Lang>(defaultLang);
+  // Not persisted (unlike `style`) — same "a one-off choice per download"
+  // treatment as `lang` above, not something worth remembering across
+  // devices/sessions the way the card style is.
+  const [hideLogo, setHideLogo] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
@@ -103,7 +110,7 @@ export function ShareActivityButton({
 
   // bg/pos are no longer user choices (see the module comment) — always
   // transparent + centered.
-  const href = `/api/share/${activityId}?bg=transparent&style=${style}&pos=center&lang=${lang}`;
+  const href = `/api/share/${activityId}?bg=transparent&style=${style}&pos=center&lang=${lang}${hideLogo ? "&logo=hide" : ""}`;
 
   function buildFilename() {
     // e.g. "moopata-run-2026-09-19.png" instead of the same generic name
@@ -301,6 +308,16 @@ export function ShareActivityButton({
                 </button>
               ))}
             </div>
+
+            <label className="mb-3 flex items-center gap-2 text-xs text-neutral-400">
+              <input
+                type="checkbox"
+                checked={hideLogo}
+                onChange={(e) => setHideLogo(e.target.checked)}
+                className="h-4 w-4 rounded border-neutral-700 bg-neutral-950 accent-[#fc4c02]"
+              />
+              {tc("hideLogo")}
+            </label>
 
             {/* Checkerboard backdrop makes a transparent PNG's transparency
                 actually visible in the preview, instead of it just looking
