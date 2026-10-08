@@ -129,7 +129,7 @@ export async function GET(req: NextRequest) {
             <img src={mascotLogo} width={56} height={56} style={{ borderRadius: 14 }} />
           )}
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>MooPaTa</span>
+            {!hideLogo && <span style={{ fontSize: 30, fontWeight: 700, color: "white", textShadow }}>MooPaTa</span>}
             <span style={{ fontSize: 20, color: "#a3a3a3", textShadow }}>{periodLabel}</span>
           </div>
         </div>
