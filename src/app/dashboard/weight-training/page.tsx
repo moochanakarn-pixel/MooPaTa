@@ -91,7 +91,15 @@ export default async function WeightTrainingPage() {
       <h1 className="mb-1 text-xl font-bold">{t("title")}</h1>
       <p className="mb-8 text-sm text-neutral-500">{t("subtitle")}</p>
 
-      {sessions.length === 0 ? <p className="text-neutral-500">{t("emptyState")}</p> : <WeightTrainingTabs sessions={sessions} prItems={prItems} />}
+      {sessions.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-neutral-800 py-16 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mascot-face.png" alt="" className="h-16 w-16 object-contain" />
+          <p className="max-w-xs text-neutral-500">{t("emptyState")}</p>
+        </div>
+      ) : (
+        <WeightTrainingTabs sessions={sessions} prItems={prItems} />
+      )}
     </main>
   );
 }

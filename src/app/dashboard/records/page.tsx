@@ -170,7 +170,11 @@ export default async function RecordsPage() {
       <h1 className="mb-8 text-xl font-bold">{t("title")}</h1>
 
       {records.length === 0 ? (
-        <p className="text-neutral-500">{t("emptyState")}</p>
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-neutral-800 py-16 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mascot-face.png" alt="" className="h-16 w-16 object-contain" />
+          <p className="max-w-xs text-neutral-500">{t("emptyState")}</p>
+        </div>
       ) : (
         <>
           <div className="mb-6 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">

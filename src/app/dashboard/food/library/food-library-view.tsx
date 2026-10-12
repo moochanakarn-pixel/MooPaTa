@@ -265,7 +265,13 @@ export function FoodLibraryView({ foods }: { foods: LibraryFood[] }) {
   }
 
   if (foods.length === 0) {
-    return <p className="py-12 text-center text-sm text-neutral-600">ยังไม่มีเมนูในคลัง — บันทึกอาหารสักครั้งแล้วจะมาโผล่ที่นี่</p>;
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-neutral-800 py-16 text-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/mascot-face.png" alt="" className="h-16 w-16 object-contain" />
+        <p className="max-w-xs text-sm text-neutral-600">ยังไม่มีเมนูในคลัง — บันทึกอาหารสักครั้งแล้วจะมาโผล่ที่นี่</p>
+      </div>
+    );
   }
 
   // A deep link from an old diary entry can point at a food that has since

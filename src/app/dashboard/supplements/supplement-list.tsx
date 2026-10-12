@@ -108,7 +108,11 @@ export function SupplementList({ items }: { items: SupplementItem[] }) {
   return (
     <div>
       {items.length === 0 && !showAdd ? (
-        <p className="py-8 text-center text-sm text-neutral-600">{t("emptyState")}</p>
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-neutral-800 py-16 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/mascot-face.png" alt="" className="h-16 w-16 object-contain" />
+          <p className="max-w-xs text-sm text-neutral-600">{t("emptyState")}</p>
+        </div>
       ) : (
         <div className="mb-4 space-y-2">
           {items.map((item) => (
