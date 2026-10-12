@@ -866,6 +866,14 @@
     "errorOptionalNumber": "กรอก{field}ให้ถูกต้อง (ตัวเลขไม่ติดลบ)",
     "errorSaveFailed": "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง",
 
+    "celebrationHeading": "เยี่ยมมาก!",
+    "celebrationContinue": "ไปต่อ",
+    "celebrationDistance": "ระยะทางสะสมถึง {value} แล้ว!",
+    "celebrationCount": "บันทึกกิจกรรมครบ {count} ครั้งแล้ว!",
+    "celebrationStreak": "สถิติบันทึกต่อเนื่องใหม่ — {days} วันติดต่อกัน!",
+    "celebrationLift": "น้ำหนักสะสมที่ยกได้ถึง {value} กก. แล้ว!",
+    "celebrationPr": "PR ใหม่: {name} {weight} กก.!",
+
     "rpeCardioLevels": [
       { "level": "10", "label": "หนักสุดขีด", "desc": "รู้สึกเหมือนจะหายใจไม่ออก พูดไม่ได้เลยสักคำ" },
       { "level": "9", "label": "เกือบสุด", "desc": "พูดได้ไม่เกิน 2-3 คำ หายใจหอบมาก" },

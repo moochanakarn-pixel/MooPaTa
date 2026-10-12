@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { getSessionUserId } from "@/lib/session";
+import { buildHeatmapDays, computeStreaks } from "@/app/dashboard/activity-heatmap";
+import {
+  COUNT_MILESTONES,
+  DISTANCE_MILESTONES_KM,
+  LIFT_VOLUME_MILESTONES_KG,
+  STREAK_MILESTONES,
+  newlyCrossedMilestones,
+  type Celebration,
+} from "@/lib/achievements";
 import {
   INTENSITIES,
   MAX_DURATION_MIN,
@@ -11,6 +18,14 @@ import {
   optionalRpe,
   parseExercises,
 } from "@/lib/activity-validation";
+import { db } from "@/lib/db";
+import { getExerciseStats, getTotalLiftVolumeKg } from "@/lib/exercise-stats";
+import { getSessionUserId } from "@/lib/session";
+
+// Same window achievements/page.tsx uses for its streak milestone — a
+// celebration here has to agree with what that page would show, since it's
+// the same STREAK_MILESTONES ladder being diffed.
+const HEATMAP_WEEKS_BACK = 53;
 
 // Logs an activity Strava doesn't track (football, badminton, ...) into the
 // same Activity table synced activities use — provider=MANUAL with a random
@@ -63,6 +78,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_exercises" }, { status: 400 });
   }
 
+  // Achievements/exercise PRs are purely derived (recomputed fresh from the
+  // DB everywhere they're shown — nothing is ever marked "unlocked" in the
+  // database), so the only way to tell this specific submission just
+  // crossed a milestone is to snapshot the relevant totals before the write
+  // and diff them against the same totals after. exerciseStats is skipped
+  // entirely when nothing in this submission could set a PR — it's the one
+  // query here expensive enough (a full scan of every ExerciseSet the user
+  // has ever logged) to be worth not running on every plain run/ride log.
+  const heatmapSince = new Date(Date.now() - HEATMAP_WEEKS_BACK * 7 * 24 * 60 * 60 * 1000);
+  const [beforeAgg, beforeHeatmapRows, beforeLiftVolumeKg, beforeExerciseStats] = await Promise.all([
+    db.activity.aggregate({ where: { userId }, _count: { _all: true }, _sum: { distanceMeters: true } }),
+    db.activity.findMany({ where: { userId, startedAt: { gte: heatmapSince } }, select: { startedAt: true, distanceMeters: true } }),
+    getTotalLiftVolumeKg(userId),
+    exercises.length > 0 ? getExerciseStats(userId) : Promise.resolve([]),
+  ]);
+  const beforeKm = (beforeAgg._sum.distanceMeters ?? 0) / 1000;
+  const beforeCount = beforeAgg._count._all;
+  const beforeStreak = computeStreaks(buildHeatmapDays(beforeHeatmapRows)).longest;
+  // Keyed the same way getExerciseStats itself folds names (trimmed,
+  // lowercased) — absent from the map means this exact name has never had a
+  // weighted set logged before, same as an explicit `null` PR.
+  const priorPrByName = new Map(beforeExerciseStats.map((s) => [s.name.trim().toLowerCase(), s.prWeightKg]));
+
   const activity = await db.activity.create({
     data: {
       userId,
@@ -94,5 +132,50 @@ export async function POST(req: NextRequest) {
       },
     },
   });
-  return NextResponse.json({ ok: true, id: activity.id });
+
+  // "After" re-queries the same shapes rather than computing them by hand
+  // from the before-snapshot + this submission — the streak in particular
+  // isn't a simple +1 (today might already have had an activity, or
+  // `startedAt` could be backdated into the middle of the heatmap window),
+  // and a personal app's activity table is small enough that a second pass
+  // of the same cheap queries is simpler to trust than re-deriving it.
+  const [afterAgg, afterHeatmapRows, afterLiftVolumeKg] = await Promise.all([
+    db.activity.aggregate({ where: { userId }, _count: { _all: true }, _sum: { distanceMeters: true } }),
+    db.activity.findMany({ where: { userId, startedAt: { gte: heatmapSince } }, select: { startedAt: true, distanceMeters: true } }),
+    getTotalLiftVolumeKg(userId),
+  ]);
+  const afterKm = (afterAgg._sum.distanceMeters ?? 0) / 1000;
+  const afterCount = afterAgg._count._all;
+  const afterStreak = computeStreaks(buildHeatmapDays(afterHeatmapRows)).longest;
+
+  const celebrations: Celebration[] = [
+    ...newlyCrossedMilestones(DISTANCE_MILESTONES_KM, beforeKm, afterKm).map((value): Celebration => ({ type: "distance", value })),
+    ...newlyCrossedMilestones(COUNT_MILESTONES, beforeCount, afterCount).map((value): Celebration => ({ type: "count", value })),
+    ...newlyCrossedMilestones(STREAK_MILESTONES, beforeStreak, afterStreak).map((value): Celebration => ({ type: "streak", value })),
+    ...newlyCrossedMilestones(LIFT_VOLUME_MILESTONES_KG, beforeLiftVolumeKg, afterLiftVolumeKg).map(
+      (value): Celebration => ({ type: "liftVolume", value })
+    ),
+  ];
+
+  // New exercise PRs come straight from what was just submitted (no need to
+  // re-query exercise stats after the write) — compare each exercise's own
+  // heaviest submitted set against its prior all-time PR from the
+  // before-snapshot above. A tie doesn't count as "new."
+  for (const ex of exercises) {
+    let maxWeight: number | null = null;
+    let repsAtMax = 0;
+    for (const s of ex.sets) {
+      if (s.weightKg !== null && (maxWeight === null || s.weightKg > maxWeight)) {
+        maxWeight = s.weightKg;
+        repsAtMax = s.reps;
+      }
+    }
+    if (maxWeight === null) continue;
+    const prior = priorPrByName.get(ex.name.trim().toLowerCase()) ?? null;
+    if (prior === null || maxWeight > prior) {
+      celebrations.push({ type: "exercisePr", value: maxWeight, exerciseName: ex.name, reps: repsAtMax });
+    }
+  }
+
+  return NextResponse.json({ ok: true, id: activity.id, celebrations });
 }

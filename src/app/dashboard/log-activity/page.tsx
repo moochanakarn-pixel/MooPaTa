@@ -15,7 +15,7 @@ export default async function LogActivityPage() {
     getTranslations("common"),
     getExerciseStats(userId),
     getRecentWorkoutSessions(userId),
-    db.user.findUnique({ where: { id: userId }, select: { weightKg: true } }),
+    db.user.findUnique({ where: { id: userId }, select: { weightKg: true, unitSystem: true } }),
   ]);
 
   return (
@@ -33,7 +33,12 @@ export default async function LogActivityPage() {
       <h1 className="mb-1 text-xl font-bold">{t("title")}</h1>
       <p className="mb-8 text-sm text-neutral-500">{t("subtitle")}</p>
 
-      <LogActivityForm exerciseStats={exerciseStats} recentWorkoutSessions={recentWorkoutSessions} userWeightKg={user?.weightKg ?? null} />
+      <LogActivityForm
+        exerciseStats={exerciseStats}
+        recentWorkoutSessions={recentWorkoutSessions}
+        userWeightKg={user?.weightKg ?? null}
+        unitSystem={user?.unitSystem ?? "METRIC"}
+      />
     </main>
   );
 }

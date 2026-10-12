@@ -54,3 +54,27 @@ a {
 button:active {
   transform: scale(0.97);
 }
+
+/* Celebration overlay's pop-in (log-activity/celebration-overlay.tsx) — a
+   plain CSS keyframe rather than a JS animation library, since this is the
+   only place in the app that needs a one-shot "enter" animation (everything
+   else above is a continuous hover/press state). Slight overshoot (60% at
+   1.03 before settling at 1) reads as a small bounce without being a full
+   spring simulation. */
+@keyframes celebration-pop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.celebration-pop {
+  animation: celebration-pop 320ms ease-out;
+}

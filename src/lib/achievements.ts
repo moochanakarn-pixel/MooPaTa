@@ -25,3 +25,32 @@ export function nextMilestone(current: number, thresholds: number[]): { value: n
   const prev = [...thresholds].reverse().find((t) => t <= current) ?? 0;
   return { value: next, progress: next === prev ? 1 : (current - prev) / (next - prev) };
 }
+
+// Every threshold a before/after pair just crossed (plural, not just the
+// highest one) — a single big activity can jump straight past more than one
+// tier at once (e.g. the first-ever log already covering 150km crosses both
+// the 10 and 50 milestones), and each one is a real "first time" worth its
+// own celebration, not just the top one.
+export function newlyCrossedMilestones(thresholds: number[], before: number, after: number): number[] {
+  return thresholds.filter((t) => before < t && after >= t);
+}
+
+// What POST /api/activity/manual hands back to the client so it can show a
+// one-off celebration right after logging — achievements/PRs are otherwise
+// purely derived (recomputed fresh from the DB on every page load, nothing
+// ever marked "unlocked" anywhere), so the only way to know something was
+// *newly* reached is to snapshot the relevant totals before the write and
+// diff them against the same totals after. See that route for where these
+// get built.
+export type CelebrationType = "distance" | "count" | "streak" | "liftVolume" | "exercisePr";
+
+export interface Celebration {
+  type: CelebrationType;
+  // The milestone threshold just crossed for the four ladder types
+  // (km / activity count / streak days / kg lifted); the new PR weight
+  // (kg) for "exercisePr".
+  value: number;
+  // Only set for "exercisePr".
+  exerciseName?: string;
+  reps?: number;
+}

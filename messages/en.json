@@ -866,6 +866,14 @@
     "errorOptionalNumber": "Enter a valid {field} (a non-negative number)",
     "errorSaveFailed": "Save failed — please try again",
 
+    "celebrationHeading": "Nice work!",
+    "celebrationContinue": "Continue",
+    "celebrationDistance": "Lifetime distance just hit {value}!",
+    "celebrationCount": "You've logged {count} activities!",
+    "celebrationStreak": "New logging-streak record — {days} days in a row!",
+    "celebrationLift": "Lifetime weight lifted just hit {value} kg!",
+    "celebrationPr": "New PR: {name} {weight} kg!",
+
     "rpeCardioLevels": [
       { "level": "10", "label": "Maximal", "desc": "Feels like you can't breathe, can't speak at all" },
       { "level": "9", "label": "Nearly maximal", "desc": "Can only say 2-3 words, breathing very hard" },

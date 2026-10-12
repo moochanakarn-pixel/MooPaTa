@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { parseActivityText } from "@/lib/activity-import-parse";
+import type { Celebration } from "@/lib/achievements";
 import { LOGGABLE_ACTIVITY_TYPES } from "@/lib/activity-types";
 import { estimateCalories, type Intensity } from "@/lib/calorie-estimate";
 import type { ExerciseStat, WorkoutSession } from "@/lib/exercise-stats";
-import { formatActivityDate, type FormatLang } from "@/lib/format";
+import { formatActivityDate, type FormatLang, type UnitSystem } from "@/lib/format";
+import { CelebrationOverlay } from "./celebration-overlay";
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:ring-1 focus:ring-neutral-600";
@@ -182,12 +184,14 @@ export function LogActivityForm({
   exerciseStats = [],
   recentWorkoutSessions = [],
   userWeightKg = null,
+  unitSystem = "METRIC",
 }: {
   activityId?: string;
   initial?: LogActivityInitial;
   exerciseStats?: ExerciseStat[];
   recentWorkoutSessions?: WorkoutSession[];
   userWeightKg?: number | null;
+  unitSystem?: UnitSystem;
 }) {
   const router = useRouter();
   const t = useTranslations("logActivity");
@@ -253,6 +257,11 @@ export function LogActivityForm({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Only ever set on a successful *create* (never an edit — see save()
+  // below, which only reads `celebrations` off the response when
+  // `activityId` is unset) — holds the dashboard redirect until the user
+  // dismisses CelebrationOverlay.
+  const [celebrations, setCelebrations] = useState<Celebration[] | null>(null);
 
   // Live off the current `type` dropdown (not initial's), so switching
   // between e.g. Run and WeightTraining mid-edit swaps which of the three
@@ -598,6 +607,16 @@ export function LogActivityForm({
     });
     setSaving(false);
     if (res.ok) {
+      // Editing never celebrates — retroactively "unlocking" something on a
+      // backdated/corrected activity would be confusing, not rewarding —
+      // so only a fresh create reads the response body for this at all.
+      if (!activityId) {
+        const data: { celebrations?: Celebration[] } | null = await res.json().catch(() => null);
+        if (data?.celebrations?.length) {
+          setCelebrations(data.celebrations);
+          return; // held here until handleCelebrationContinue fires below
+        }
+      }
       router.push(activityId ? `/dashboard/activity/${activityId}` : "/dashboard");
       router.refresh();
     } else {
@@ -605,7 +624,15 @@ export function LogActivityForm({
     }
   }
 
+  function handleCelebrationContinue() {
+    setCelebrations(null);
+    router.push("/dashboard");
+    router.refresh();
+  }
+
   return (
+    <>
+    {celebrations && <CelebrationOverlay celebrations={celebrations} unit={unitSystem} onContinue={handleCelebrationContinue} />}
     <div className="space-y-4 rounded-2xl border border-neutral-800/80 bg-neutral-900/40 p-5">
       <div className="flex gap-1.5 text-xs">
         <button
@@ -1047,5 +1074,6 @@ export function LogActivityForm({
         </>
       )}
     </div>
+    </>
   );
 }

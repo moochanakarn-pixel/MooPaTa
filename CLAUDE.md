@@ -617,6 +617,62 @@ Strava (`Activity.provider === "STRAVA"`) ยังอยู่ครบแล�
     ที่สุดในแอพ) ตอนไม่ได้กดอะไรเลย ยืนยัน layout/สไตล์เหมือนเดิมทุกจุด ไม่มี element ไหนขยับ/เพี้ยน
     (เพราะ `:active`/`:hover` ไม่ได้ trigger ตอนไม่ได้โต้ตอบ), ไม่มี console error — `npx tsc --noEmit`,
     `npm run build`, `npm run test` (217 เทสผ่านหมด) ผ่านทั้งหมดก่อน commit
+- **ฉลองทันทีตอนปลดล็อก achievement ใหม่/ทำ PR ท่าเวทใหม่ (`CelebrationOverlay`,
+  `src/app/dashboard/log-activity/celebration-overlay.tsx`)** — รอบถัดมาของ "ทำอะไรเพิ่มได้อีกบ้าง"
+  (ผู้ใช้เลือกตัวเลือกนี้จาก `AskUserQuestion`, อีก 3 ทางเลือกคือ loading skeleton เพิ่ม/visual
+  consistency audit/ยังไม่ต้องการ) — เดิมต้องเปิด `/dashboard/achievements` เองถึงจะรู้ว่าปลดล็อก
+  หมุดหมายใหม่หรือทำ PR ได้หรือยัง ทั้งที่กำลังอยู่หน้าบันทึกกิจกรรมพอดี
+  - **Achievements/PR ทั้งหมดเป็นค่าที่คำนวณสดเสมอ ไม่มีอะไรถูก mark "ปลดล็อกแล้ว" ในฐานข้อมูลเลย** —
+    ทางเดียวที่จะรู้ว่า request นี้ "เพิ่งข้าม" หมุดหมายไปคือ snapshot ค่าที่เกี่ยวข้องทั้งหมด**ก่อน**
+    เขียน แล้วเทียบกับค่าเดียวกัน**หลัง**เขียน — `POST /api/activity/manual` (จุดเดียวที่ทำ ไม่รวม PATCH
+    แก้ไข — ดูด้านล่าง) คำนวณ before/after ของทั้ง 4 หมุดหมายใน `achievements.ts`
+    (`DISTANCE_MILESTONES_KM`/`COUNT_MILESTONES`/`STREAK_MILESTONES`/`LIFT_VOLUME_MILESTONES_KG`,
+    ใช้ query เดียวกับที่หน้า achievements ใช้อยู่แล้วทุกตัว: `db.activity.aggregate` สำหรับระยะทาง/
+    จำนวนครั้ง, `buildHeatmapDays`/`computeStreaks` ของ `activity-heatmap.tsx` สำหรับ `streaks.longest`
+    — ตัวเดียวกับที่หน้า achievements ใช้เป็น "bestStreak" ไม่ใช่ `current`, `getTotalLiftVolumeKg`
+    สำหรับน้ำหนักสะสม) แล้วส่ง `newlyCrossedMilestones(thresholds, before, after)`
+    (`achievements.ts`, ฟังก์ชันใหม่ — คืน**ทุก**threshold ที่ข้ามไปในรอบนี้ ไม่ใช่แค่ตัวสูงสุด เพราะ
+    กิจกรรมก้อนใหญ่ก้อนเดียวอาจข้ามหลายหมุดหมายพร้อมกันได้ เช่น log ครั้งแรกที่ระยะทาง 150 กม. ข้าม
+    ทั้ง 10/50/100 พร้อมกัน) — "after" คำนวณด้วยการ query ซ้ำหลัง `db.activity.create` จริง ๆ
+    (ไม่ใช่คำนวณจาก before + ค่าที่ส่งมาด้วยมือ) เพราะ streak ไม่ใช่ +1 ตรง ๆ เสมอ (วันนี้อาจมีกิจกรรม
+    อื่นอยู่แล้ว หรือ `startedAt` อาจ backdate เข้าไปกลางหน้าต่าง heatmap) ตารางกิจกรรมของแอพส่วนตัวเล็ก
+    พอที่ query ซ้ำรอบที่สองจะเชื่อถือได้ง่ายกว่าพยายาม derive เอง
+  - **PR ท่าเวท** ไม่ query ซ้ำหลังสร้าง — เทียบน้ำหนักสูงสุดที่ส่งมาในรอบนี้ (จาก `exercises:
+    ParsedExercise[]` ที่ validate ผ่านแล้ว) กับ PR เดิมของชื่อท่านั้นตรง ๆ (`getExerciseStats(userId)`
+    เรียกก่อนสร้าง, คีย์ด้วย trim+lowercase ตัวเดียวกับที่ `getExerciseStats` เองใช้พับชื่อท่า — ไม่มี
+    PR เดิมมาก่อนก็ถือว่า "ใหม่" เหมือนกัน) **เท่ากับ PR เดิมไม่ถือว่าใหม่** ต้องมากกว่าจริง ๆ —
+    `exerciseStats` ก่อนสร้างถูกข้าม query ไปเลยถ้า request นี้ไม่มี exercises ส่งมาเลย (กันสแกน
+    `ExerciseSet` ทั้งหมดของ user เปล่า ๆ สำหรับกิจกรรมคาร์ดิโอธรรมดา)
+  - **จำกัดแค่ create (`POST`) เท่านั้น ไม่รวม edit (`PATCH /api/activity/[id]`)** — ตั้งใจ: "ปลดล็อก"
+    ย้อนหลังจากการแก้ไข/backdate กิจกรรมเก่าจะดูน่าสับสนมากกว่าน่ายินดี (เช่น แก้ชื่อกิจกรรมเฉย ๆ แล้ว
+    เจอ popup ฉลอง หรือย้อนวันที่กิจกรรมไปแล้วดันไปชน milestone เดิมที่เคยข้ามไปแล้วจริง ๆ ตั้งนาน) —
+    PATCH route ไม่ถูกแตะเลย ยังคืน response เดิมทุกอย่าง
+  - **`CelebrationOverlay`** — ฟิกซ์โอเวอร์เลย์กลางจอ (`bg-black/70` backdrop, การ์ด
+    `rounded-3xl bg-neutral-900` ตรงกลาง, คีย์เฟรม `celebration-pop` ใหม่ใน `globals.css` ป๊อปเข้ามา
+    ด้วย scale overshoot เล็ก ๆ) แสดงรายการ celebration ทุกอันที่ได้ (ไอคอน + ข้อความ, ไอคอนเดียวกับ
+    ที่หน้า achievements ใช้อยู่แล้ว: 🏁 ระยะทาง/📋 จำนวนครั้ง/🔥 สตรีค/🏋️ น้ำหนักสะสม/🏅 PR ท่าเวท ตัวหลัง
+    มาจาก badge PR ที่หน้า achievements ใช้) ปิดได้ 3 ทาง (แตะพื้นหลัง/กด Esc/กดปุ่ม "ไปต่อ") แต่ทุกทาง
+    ทำสิ่งเดียวกันคือ "continue" ต่อ (ไม่มี cancel ให้เลือก เพราะนี่ไม่ใช่ action ที่ย้อนได้ แค่ยืนยันว่า
+    เห็นแล้ว) — `save()` ใน `log-activity-form.tsx` ไม่ redirect ทันทีเหมือนเดิมถ้า response (เฉพาะตอน
+    `!activityId`, สร้างใหม่) มี `celebrations.length > 0`: เก็บไว้ใน state แทน ค้าง redirect ไว้จนกว่า
+    จะกด "ไปต่อ" (`handleCelebrationContinue`) ถึงค่อย `router.push("/dashboard")` — ไม่มี celebration
+    เลย (กรณีส่วนใหญ่) behaviour เดิมทุกอย่างไม่เปลี่ยน (redirect ทันทีเหมือนก่อน)
+  - ข้อความแปล TH/EN ใหม่ 7 คีย์ใน `logActivity` namespace (`celebrationHeading`/`celebrationContinue`/
+    `celebrationDistance`/`celebrationCount`/`celebrationStreak`/`celebrationLift`/`celebrationPr`) —
+    ตัวเลขระยะทางผ่าน `formatDistanceKm(unit, lang)` เดียวกับทุกจุดในแอพ (เลยต้องส่ง `unitSystem` เป็น
+    prop ใหม่เข้า `LogActivityForm` ด้วย, `page.tsx` ดึงจาก `User.unitSystem` มาส่งให้ — หน้าแก้ไข
+    (`edit/page.tsx`) ไม่ส่งเพราะ celebration ไม่มีทางเกิดตอนแก้ไขอยู่แล้ว prop default เป็น `"METRIC"`)
+  - ทดสอบจริงด้วยการ seed user ที่มี 9 กิจกรรมวิ่งมาก่อน (log ครั้งที่ 10 ผ่านฟอร์มจริง ยืนยันเห็น
+    celebration "บันทึกกิจกรรมครบ 10 ครั้งแล้ว!") และ user เปล่าที่ log ครั้งแรกด้วยระยะทาง 10 กม. เป๊ะ
+    (ยืนยันเห็น "ระยะทางสะสมถึง 10.00 กม. แล้ว!" พร้อมไอคอน 🏁 ถูกต้อง, กด "ไปต่อ" แล้ว redirect ไป
+    `/dashboard` จริง) และ user ที่มี PR เบนช์เพรสเดิม 60 กก. แล้ว log กิจกรรมใหม่ด้วยเซ็ท 70 กก.
+    (ยืนยันเห็นทั้ง 🏋️ น้ำหนักสะสมและ 🏅 PR ใหม่พร้อมกันในโอเวอร์เลย์เดียว) — regression-check แก้ไข
+    กิจกรรมที่มีอยู่แล้วผ่านฟอร์มเดียวกัน (เปลี่ยนแค่ระยะเวลา) ยืนยันไม่มีโอเวอร์เลย์โผล่มาเลย, PATCH
+    ยัง 200 ปกติ, redirect ไปหน้ารายละเอียดกิจกรรมตามเดิม — เทส `newlyCrossedMilestones` ใหม่ 5 เทส
+    ใน `achievements.test.ts` (ไม่ข้าม threshold ที่ไม่ถึง, ข้ามพอดีหนึ่งตัว, ข้ามหลายตัวพร้อมกันจากการ
+    กระโดดครั้งใหญ่, ไม่ fire ซ้ำสำหรับ threshold ที่ข้ามไปแล้วก่อนหน้า, ตกที่ค่า threshold เป๊ะก็ถือว่า
+    ข้ามแล้ว) — `npx tsc --noEmit`, `npm run build`, `npm run test` (222 เทสผ่านหมด) ผ่านทั้งหมดก่อน
+    commit
 
 ### 3. Bottom nav (`src/app/dashboard/bottom-nav.tsx`)
 4 แท็บ: หน้าแรก (`/dashboard`) / ไดอารี่ (`/dashboard/food`) / เชิงลึก (`/dashboard/nutrition`,
