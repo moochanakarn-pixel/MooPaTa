@@ -24,3 +24,33 @@ input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* Micro-interaction polish, applied once globally rather than touching every
+   button/link individually — this app has no shared Button component, and a
+   grep found 51+ existing `hover:bg-*`/`hover:border-*`/`hover:text-*`
+   className strings with no matching `transition` utility alongside them, so
+   those hover colors snapped instantly instead of fading. Scoped to `button`
+   and `a` specifically (not a blanket `*` selector) because those are the
+   two element types every clickable control in the app is actually built
+   from — a `*` selector would also animate unrelated layout shifts (e.g. a
+   `<div>` whose height changes when content loads) that were never meant to
+   transition. Low specificity (plain element selectors) on purpose, so any
+   component that already sets its own `transition-*`/`duration-*` utility
+   keeps full control — this is only a sane default for the ones that don't. */
+button,
+a {
+  transition-property: background-color, border-color, color, opacity, transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+/* Tap/press feedback: a brief scale-down while a button is held, matching
+   the one place in the app that already hand-rolled this exact effect
+   (src/app/page.tsx's Google sign-in button, `active:scale-[0.98]`) — now
+   every button gets it for free. `a` is deliberately excluded: most links
+   in this app are full-width nav rows or card tiles, and shrinking an
+   entire row on tap reads as a glitch rather than feedback, whereas buttons
+   are consistently sized "do a thing" targets where it reads as intended. */
+button:active {
+  transform: scale(0.97);
+}
