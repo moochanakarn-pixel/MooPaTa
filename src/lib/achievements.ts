@@ -54,3 +54,48 @@ export interface Celebration {
   exerciseName?: string;
   reps?: number;
 }
+
+// One celebration per *exercise name* that just got a new all-time PR in
+// this submission — grouped by trimmed/lowercased name (the same fold
+// getExerciseStats uses) rather than looped per row, because nothing on the
+// manual-entry form stops someone from logging the same exercise as two
+// separate rows (e.g. a warm-up set entered on its own row before the
+// working sets). Comparing each row independently against the same prior
+// PR would fire one "new PR" celebration per row instead of once for the
+// exercise — this takes the heaviest submitted set per name first, then
+// diffs that against the name's prior PR exactly once.
+//
+// `priorPrByName` — keyed the same way, value is the prior all-time PR in
+// kg, or `null`/absent if this name has never had a weighted set logged
+// before (both read as "no prior PR" here). A tie doesn't count as "new."
+export function exercisePrCelebrations(
+  exercises: { name: string; sets: { weightKg: number | null; reps: number }[] }[],
+  priorPrByName: Map<string, number | null>
+): Celebration[] {
+  const submittedMaxByName = new Map<string, { weightKg: number; reps: number; displayName: string }>();
+  for (const ex of exercises) {
+    let maxWeight: number | null = null;
+    let repsAtMax = 0;
+    for (const s of ex.sets) {
+      if (s.weightKg !== null && (maxWeight === null || s.weightKg > maxWeight)) {
+        maxWeight = s.weightKg;
+        repsAtMax = s.reps;
+      }
+    }
+    if (maxWeight === null) continue;
+    const key = ex.name.trim().toLowerCase();
+    const existing = submittedMaxByName.get(key);
+    if (!existing || maxWeight > existing.weightKg) {
+      submittedMaxByName.set(key, { weightKg: maxWeight, reps: repsAtMax, displayName: ex.name });
+    }
+  }
+
+  const celebrations: Celebration[] = [];
+  for (const [key, { weightKg, reps, displayName }] of submittedMaxByName) {
+    const prior = priorPrByName.get(key) ?? null;
+    if (prior === null || weightKg > prior) {
+      celebrations.push({ type: "exercisePr", value: weightKg, exerciseName: displayName, reps });
+    }
+  }
+  return celebrations;
+}

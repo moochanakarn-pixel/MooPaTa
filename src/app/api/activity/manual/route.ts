@@ -5,6 +5,7 @@ import {
   DISTANCE_MILESTONES_KM,
   LIFT_VOLUME_MILESTONES_KG,
   STREAK_MILESTONES,
+  exercisePrCelebrations,
   newlyCrossedMilestones,
   type Celebration,
 } from "@/lib/achievements";
@@ -158,24 +159,9 @@ export async function POST(req: NextRequest) {
   ];
 
   // New exercise PRs come straight from what was just submitted (no need to
-  // re-query exercise stats after the write) — compare each exercise's own
-  // heaviest submitted set against its prior all-time PR from the
-  // before-snapshot above. A tie doesn't count as "new."
-  for (const ex of exercises) {
-    let maxWeight: number | null = null;
-    let repsAtMax = 0;
-    for (const s of ex.sets) {
-      if (s.weightKg !== null && (maxWeight === null || s.weightKg > maxWeight)) {
-        maxWeight = s.weightKg;
-        repsAtMax = s.reps;
-      }
-    }
-    if (maxWeight === null) continue;
-    const prior = priorPrByName.get(ex.name.trim().toLowerCase()) ?? null;
-    if (prior === null || maxWeight > prior) {
-      celebrations.push({ type: "exercisePr", value: maxWeight, exerciseName: ex.name, reps: repsAtMax });
-    }
-  }
+  // re-query exercise stats after the write) — see exercisePrCelebrations's
+  // own comment for why it groups by name before diffing.
+  celebrations.push(...exercisePrCelebrations(exercises, priorPrByName));
 
   return NextResponse.json({ ok: true, id: activity.id, celebrations });
 }
